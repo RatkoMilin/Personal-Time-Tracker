@@ -3,6 +3,7 @@
 Skipped when tkinter or a display is not available (run under xvfb-run on Linux CI).
 """
 
+import gc
 import os
 import sys
 import time
@@ -48,6 +49,8 @@ def player(tmp_path_factory):
     yield win
     win._quitting = True
     win.destroy()
+    del win
+    gc.collect()  # free Tk variables now, on this thread, not during a later test
     db.close()
 
 

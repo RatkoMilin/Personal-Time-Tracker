@@ -35,6 +35,21 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 
 **Tray:** zatvaranje prozora sklanja aplikaciju pored sata; tajmer radi dalje. Izlaz je u meniju.
 
+## Na telefonu
+
+Postoji i web verzija za telefon (folder `web/`): isti izgled, sva 4 skina i zvuci, lista unosa, CSV izvoz. Radi i bez interneta.
+
+**Adresa:** https://ratkomilin.github.io/Personal-Time-Tracker/
+
+- **iPhone (Safari):** otvori adresu → dugme Deli (kvadrat sa strelicom) → **Add to Home Screen**.
+- **Android (Chrome):** otvori adresu → meni ⋮ → **Install app** ili **Add to Home screen**.
+
+Posle toga se otvara kao obična aplikacija, preko celog ekrana.
+
+Podaci na telefonu su **odvojeni** od laptopa i čuvaju se samo u tom telefonu. Rezervnu kopiju pravi meni ☰ → Rezervna kopija → Sačuvaj; tu je i CSV izvoz (i za "Sve"). Na telefonu nema podsetnika za neaktivnost, jer telefon ne dozvoljava aplikaciji da prati da li ga koristiš dok je u pozadini. Tajmer i dalje ispravno računa vreme kad zatvoriš aplikaciju ili zaključaš ekran.
+
+Objava na tu adresu ide automatski (GitHub Actions, "Mobile web app") posle svake izmene u `web/` na grani main. Jednom treba uključiti: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
 ## Instalacija
 
 ### Gotov .exe (bez Pythona)
@@ -62,6 +77,7 @@ Novo izdanje: **Releases → Draft a new release**, upiši oznaku (npr. `v1.1.0`
 ```
 pip install -r requirements-dev.txt
 python -m pytest -q        # na Linuxu: xvfb-run -a python -m pytest -q
+pip install playwright && python -m playwright install chromium   # za testove web verzije
 python -m timetracker
 ```
 
@@ -75,3 +91,4 @@ python -m timetracker
 | `timetracker/ui/skin.py` | teme i iscrtani elementi: paneli, dugmad, LCD cifre, analogni sat |
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
 | `timetracker/ui/dialogs.py` | izmena unosa i podsetnik za neaktivnost |
+| `web/` | mobilna web verzija (HTML/CSS/JS, bez biblioteka), testovi u `tests/test_web.py` |
