@@ -36,17 +36,31 @@ class FakePlatform:
         return 0.0
 
 
-@pytest.fixture
-def app(tmp_path):
+@pytest.fixture(scope="module")
+def player(tmp_path_factory):
+    # One window per module: creating many Tk interpreters in one process is unreliable on Windows.
     from timetracker.ui.player import Player
 
-    db = Database(tmp_path / "t.db")
-    win = Player(db, Settings(tmp_path / "s.json"), tmp_path, platform=FakePlatform(), start_tracker=False)
+    tmp = tmp_path_factory.mktemp("ui")
+    db = Database(tmp / "t.db")
+    win = Player(db, Settings(tmp / "s.json"), tmp, platform=FakePlatform(), start_tracker=False)
     win.update()
     yield win
     win._quitting = True
     win.destroy()
     db.close()
+
+
+@pytest.fixture
+def app(player):
+    player.db._exec("DELETE FROM entries")
+    player.db._exec("DELETE FROM projects")
+    player.paused = False
+    player.day_offset = 0
+    player.task_var.set("")
+    player.project_var.set("")
+    player.refresh()
+    return player
 
 
 def test_play_pause_stop(app):

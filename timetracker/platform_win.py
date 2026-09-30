@@ -114,7 +114,8 @@ def set_autostart(name: str, enabled: bool) -> bool:
     import winreg
 
     try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+        # CreateKeyEx also opens the key; it only creates it on profiles where it is missing.
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, _RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
             if enabled:
                 winreg.SetValueEx(key, name, 0, winreg.REG_SZ, autostart_command())
             else:
