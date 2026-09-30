@@ -1,0 +1,3 @@
+# Optional but recommended: tray icon and screenshots. The app runs without them.
+Pillow>=10.0
+pystray>=0.19
