@@ -1,9 +1,8 @@
 """Windows integration through ctypes (no pywin32 needed).
 
-Provides idle time, the active window and its process, screenshots, a
-single-instance mutex, DPI awareness and the "start with Windows" registry
-entry. On other platforms every function degrades to a harmless fallback so
-the app (and the tests) still run during development.
+Provides idle time, a single-instance mutex, DPI awareness and the "start
+with Windows" registry entry. On other platforms every function degrades to a
+harmless fallback so the app (and the tests) still run during development.
 """
 
 from __future__ import annotations
@@ -13,9 +12,6 @@ import sys
 from pathlib import Path
 
 IS_WINDOWS = sys.platform == "win32"
-
-# Foreground processes that mean "the screen is locked / nobody is here".
-LOCK_PROCESSES = {"lockapp.exe", "logonui.exe"}
 
 if IS_WINDOWS:
     import ctypes
@@ -31,25 +27,9 @@ if IS_WINDOWS:
     _user32.GetLastInputInfo.restype = wintypes.BOOL
     _kernel32.GetTickCount.argtypes = []
     _kernel32.GetTickCount.restype = wintypes.DWORD
-    _user32.GetForegroundWindow.argtypes = []
-    _user32.GetForegroundWindow.restype = wintypes.HWND
-    _user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
-    _user32.GetWindowTextLengthW.restype = ctypes.c_int
-    _user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
-    _user32.GetWindowTextW.restype = ctypes.c_int
-    _user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
-    _user32.GetWindowThreadProcessId.restype = wintypes.DWORD
-    _kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-    _kernel32.OpenProcess.restype = wintypes.HANDLE
-    _kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
-                                                     ctypes.POINTER(wintypes.DWORD)]
-    _kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
-    _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-    _kernel32.CloseHandle.restype = wintypes.BOOL
     _kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]
     _kernel32.CreateMutexW.restype = wintypes.HANDLE
 
-    _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     _ERROR_ALREADY_EXISTS = 183
 
 
@@ -64,59 +44,6 @@ def idle_seconds() -> float:
     # Both values are 32-bit tick counts that wrap every ~49.7 days.
     millis = (_kernel32.GetTickCount() - info.dwTime) & 0xFFFFFFFF
     return millis / 1000.0
-
-
-def _process_path(pid: int) -> str:
-    handle = _kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-    if not handle:
-        return ""
-    try:
-        size = wintypes.DWORD(1024)
-        buf = ctypes.create_unicode_buffer(size.value)
-        if _kernel32.QueryFullProcessImageNameW(handle, 0, buf, ctypes.byref(size)):
-            return buf.value
-        return ""
-    finally:
-        _kernel32.CloseHandle(handle)
-
-
-def active_window() -> tuple[str, str] | None:
-    """Return (process executable name, window title) of the foreground window.
-
-    Returns None when no window has focus or the workstation is locked.
-    """
-    if not IS_WINDOWS:
-        return ("unknown", "")
-    hwnd = _user32.GetForegroundWindow()
-    if not hwnd:
-        return None
-    length = _user32.GetWindowTextLengthW(hwnd)
-    buf = ctypes.create_unicode_buffer(length + 1)
-    _user32.GetWindowTextW(hwnd, buf, length + 1)
-    pid = wintypes.DWORD()
-    _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-    exe = os.path.basename(_process_path(pid.value)) if pid.value else ""
-    if exe.lower() in LOCK_PROCESSES:
-        return None
-    return (exe or "nepoznato", buf.value)
-
-
-def take_screenshot(path: Path, max_width: int = 1600, quality: int = 60) -> bool:
-    """Capture all monitors into a downscaled JPEG. Returns False if unavailable."""
-    try:
-        from PIL import ImageGrab
-    except ImportError:
-        return False
-    try:
-        img = ImageGrab.grab(all_screens=True)
-    except Exception:
-        return False
-    if img.width > max_width:
-        ratio = max_width / img.width
-        img = img.resize((max_width, int(img.height * ratio)))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    img.convert("RGB").save(path, "JPEG", quality=quality)
-    return True
 
 
 def enable_dpi_awareness() -> None:

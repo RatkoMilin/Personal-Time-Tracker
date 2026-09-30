@@ -14,11 +14,6 @@ def test_idle_seconds_is_sane():
     assert isinstance(idle, float) and 0 <= idle < 50 * 86400
 
 
-def test_active_window_does_not_crash():
-    win = platform_win.active_window()
-    assert win is None or (isinstance(win[0], str) and isinstance(win[1], str))
-
-
 def test_single_instance_mutex(tmp_path):
     name = "PersonalTimeTrackerTestMutex"
     assert platform_win.acquire_single_instance(name, tmp_path) is True
@@ -34,9 +29,3 @@ def test_autostart_roundtrip():
         platform_win.set_autostart(name, False)
     assert not platform_win.is_autostart_enabled(name)
 
-
-def test_screenshot(tmp_path):
-    pytest.importorskip("PIL")
-    path = tmp_path / "shot.jpg"
-    if platform_win.take_screenshot(path):
-        assert path.stat().st_size > 0

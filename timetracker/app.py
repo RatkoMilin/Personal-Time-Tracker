@@ -25,16 +25,16 @@ def main(argv: list[str] | None = None) -> int:
 
         root = tk.Tk()
         root.withdraw()
-        messagebox.showinfo(APP_NAME, "Aplikacija već radi.\nPotraži ikonicu sata pored sata na taskbaru.")
+        messagebox.showinfo(APP_NAME, "Aplikacija već radi.\nPotraži ikonicu pored sata na taskbaru.")
         root.destroy()
         return 1
 
-    from .ui.main_window import MainWindow
+    from .ui.player import Player
 
     settings = Settings()
     db = Database(ddir / "timetracker.db")
     try:
-        app = MainWindow(db, settings, ddir, start_minimized=args.minimized or settings["start_minimized"])
+        app = Player(db, settings, ddir, start_minimized=args.minimized)
         app.mainloop()
     finally:
         db.close()

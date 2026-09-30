@@ -10,25 +10,11 @@ from pathlib import Path
 from . import APP_ID
 
 DEFAULTS: dict = {
-    # Idle detection: prompt to discard time when there was no keyboard/mouse input.
-    "idle_detection": True,
+    # Ask what to do with time without keyboard/mouse input (0 minutes = off).
     "idle_minutes": 5,
-    # App/window tracking: "off", "timer" (only while the timer runs) or "always".
-    "activity_mode": "timer",
-    # Screenshots (Time Doctor style). Off by default: they are a privacy risk
-    # and mostly useless for personal tracking.
-    "screenshots": False,
-    "screenshot_interval_min": 10,
-    "screenshot_retention_days": 30,
-    # Remind to start the timer after N minutes of activity without one (0 = off).
-    "reminder_minutes": 10,
-    # Show a notification when the timer has been running for N hours (0 = off).
-    "long_timer_hours": 4,
-    "minimize_to_tray": True,
-    "start_minimized": False,
-    "autostart": False,
-    "currency": "EUR",
-    "daily_goal_hours": 8,
+    "always_on_top": False,
+    "show_playlist": True,
+    "window_pos": "",
 }
 
 
@@ -60,10 +46,8 @@ class Settings:
             return
         if isinstance(stored, dict):
             for key, value in stored.items():
-                if key in DEFAULTS and isinstance(value, type(DEFAULTS[key])):
+                if key in DEFAULTS and type(value) is type(DEFAULTS[key]):
                     self._values[key] = value
-                elif key in DEFAULTS and isinstance(DEFAULTS[key], float) and isinstance(value, int):
-                    self._values[key] = float(value)
 
     def save(self) -> None:
         tmp = self.path.with_suffix(".tmp")
@@ -83,6 +67,3 @@ class Settings:
         for key, value in values.items():
             self[key] = value
         self.save()
-
-    def as_dict(self) -> dict:
-        return dict(self._values)

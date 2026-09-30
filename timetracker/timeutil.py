@@ -35,10 +35,6 @@ def fmt_hours(seconds: float) -> str:
     return f"{m}m"
 
 
-def fmt_decimal_hours(seconds: float) -> str:
-    return f"{seconds / 3600:.2f}"
-
-
 def fmt_date(ts: float) -> str:
     return datetime.fromtimestamp(ts).strftime(DATE_FMT)
 
@@ -93,36 +89,6 @@ def to_ts(d: date, hm: tuple[int, int]) -> float:
     return datetime(d.year, d.month, d.day, hm[0], hm[1]).timestamp()
 
 
-def parse_duration(text: str) -> float:
-    """Parse '1:30', '1h 30m', '90m', '1.5' (hours) into seconds."""
-    raw = text.strip().lower().replace(",", ".")
-    if not raw:
-        raise ValueError("Trajanje je prazno")
-    if ":" in raw:
-        parts = raw.split(":")
-        nums = [int(p) for p in parts]
-        while len(nums) < 3:
-            nums.append(0)
-        h, m, s = nums[:3]
-        return h * 3600 + m * 60 + s
-    if "h" in raw or "m" in raw:
-        total = 0.0
-        num = ""
-        for ch in raw:
-            if ch.isdigit() or ch == ".":
-                num += ch
-            elif ch == "h":
-                total += float(num or 0) * 3600
-                num = ""
-            elif ch == "m":
-                total += float(num or 0) * 60
-                num = ""
-        if num:
-            total += float(num) * 60
-        return total
-    return float(raw) * 3600
-
-
 def day_start(d: date) -> float:
     return datetime(d.year, d.month, d.day).timestamp()
 
@@ -161,15 +127,3 @@ def period_bounds(kind: str, today: date | None = None) -> tuple[float, float]:
         raise ValueError(f"Nepoznat period: {kind}")
     return day_start(a), day_start(b)
 
-
-def days_in_range(a: float, b: float) -> list[date]:
-    """All local calendar days touched by [a, b)."""
-    if b <= a:
-        return []
-    d = ts_to_date(a)
-    last = ts_to_date(b - 1e-6)
-    out = []
-    while d <= last:
-        out.append(d)
-        d += timedelta(days=1)
-    return out
