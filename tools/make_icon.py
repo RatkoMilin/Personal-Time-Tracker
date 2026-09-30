@@ -31,3 +31,12 @@ if __name__ == "__main__":
     big.save(out / "icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     draw(64).save(out / "icon.png")
     print("written", out)
+    # Mobile web app icons: opaque background so iOS/Android masks look right.
+    web = ROOT / "web" / "icons"
+    web.mkdir(parents=True, exist_ok=True)
+    for size, name in ((192, "icon-192.png"), (512, "icon-512.png"), (180, "apple-touch-icon.png")):
+        tile = Image.new("RGBA", (size, size), (43, 43, 58, 255))
+        inner = draw(int(size * 0.78))
+        tile.alpha_composite(inner, ((size - inner.width) // 2, (size - inner.height) // 2))
+        tile.convert("RGB").save(web / name)
+    print("written", web)

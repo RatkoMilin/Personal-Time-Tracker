@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Time Tracker</title>
+  <meta name="description" content="Lični time tracker u stilu starog Winampa">
+  <meta name="theme-color" content="#2b2b3a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Time Tracker">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-skin="matrix">
+  <main class="app">
+    <header class="titlebar">
+      <button id="menuBtn" class="menu-btn" aria-label="Meni"><span></span></button>
+      <span class="title">Personal Time Tracker</span>
+    </header>
+
+    <section class="panel lcd"><div class="inner">
+      <div class="lcd-left">
+        <span id="stateIcon" class="state-icon" aria-hidden="true"></span>
+        <svg id="clock" class="clock" aria-label="Vreme"></svg>
+        <svg id="dial" class="dial" viewBox="0 0 100 100" aria-label="Vreme"></svg>
+      </div>
+      <div class="lcd-right">
+        <div id="marquee" class="marquee"></div>
+        <div id="taskLine" class="task-line"></div>
+        <div id="elapsed" class="elapsed"></div>
+        <div id="info" class="info"></div>
+      </div>
+    </div></section>
+
+    <div class="fields">
+      <label class="field-label" for="task">Zadatak</label>
+      <label class="field-label" for="project">Projekat</label>
+      <div class="panel field"><div class="inner"><input id="task" autocomplete="off" enterkeyhint="go"></div></div>
+      <div class="panel field"><div class="inner"><input id="project" list="projects" autocomplete="off" enterkeyhint="go"></div></div>
+      <datalist id="projects"></datalist>
+    </div>
+
+    <div class="controls">
+      <button class="btn glyph" id="playBtn" aria-label="Start"><i class="g-play"></i></button>
+      <button class="btn glyph" id="pauseBtn" aria-label="Pauza"><i class="g-pause"></i></button>
+      <button class="btn glyph" id="stopBtn" aria-label="Stop"><i class="g-stop"></i></button>
+      <button class="btn glyph" id="exportBtn" aria-label="Izvezi CSV"><i class="g-eject"></i></button>
+      <span class="spacer"></span>
+      <button class="btn" id="plBtn" aria-label="Lista">PL</button>
+    </div>
+
+    <section id="playlist" class="playlist">
+      <div class="pl-head">
+        <button class="btn small glyph" id="prevDay" aria-label="Prethodni dan"><i class="g-prev"></i></button>
+        <span id="dayLabel" class="day-label"></span>
+        <button class="btn small glyph" id="nextDay" aria-label="Sledeći dan"><i class="g-next"></i></button>
+      </div>
+      <div class="panel list"><div class="inner"><ol id="list"></ol></div></div>
+      <div class="pl-foot">
+        <button class="btn" id="addBtn">+ Dodaj</button>
+        <span id="total" class="total"></span>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="entryDlg" class="sheet">
+    <form method="dialog">
+      <div class="sheet-title" id="entryTitle">Unos</div>
+      <label class="field-label" for="eDesc">Zadatak</label>
+      <div class="panel field"><div class="inner"><input id="eDesc" autocomplete="off"></div></div>
+      <label class="field-label" for="eProject">Projekat</label>
+      <div class="panel field"><div class="inner"><input id="eProject" list="projects" autocomplete="off"></div></div>
+      <div class="row3">
+        <label class="field-label" for="eDate">Datum</label>
+        <label class="field-label" for="eStart">Od</label>
+        <label class="field-label" for="eEnd">Do</label>
+        <div class="panel field"><div class="inner"><input id="eDate" type="date"></div></div>
+        <div class="panel field"><div class="inner"><input id="eStart" type="time"></div></div>
+        <div class="panel field"><div class="inner"><input id="eEnd" type="time"></div></div>
+      </div>
+      <p id="eError" class="error" role="alert"></p>
+      <div class="sheet-buttons">
+        <button class="btn" type="button" id="eContinue">▶ Nastavi</button>
+        <button class="btn" type="button" id="eDelete">Obriši</button>
+        <span class="spacer"></span>
+        <button class="btn" type="button" id="eCancel">Otkaži</button>
+        <button class="btn" type="button" id="eOk">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="menuDlg" class="sheet">
+    <form method="dialog">
+      <div class="sheet-title">Meni</div>
+      <div class="field-label">Skin</div>
+      <div class="skins" id="skins"></div>
+      <label class="check"><input type="checkbox" id="soundsChk"> Zvučni efekti</label>
+      <div class="field-label">Izvezi u Excel (CSV)</div>
+      <div class="exports" id="exports"></div>
+      <div class="field-label">Rezervna kopija</div>
+      <div class="sheet-buttons">
+        <button class="btn" type="button" id="backupBtn">Sačuvaj</button>
+        <button class="btn" type="button" id="restoreBtn">Učitaj</button>
+        <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+        <span class="spacer"></span>
+        <button class="btn" type="button" id="menuClose">Zatvori</button>
+      </div>
+      <p class="note">Podaci se čuvaju samo na ovom telefonu. Povremeno sačuvaj rezervnu kopiju.</p>
+    </form>
+  </dialog>
+
+  <script src="sounds.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

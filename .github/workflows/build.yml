@@ -26,6 +26,20 @@ jobs:
       - name: Tests (UI smoke tests under Xvfb)
         run: xvfb-run -a python -m pytest -q
 
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install pytest playwright
+          python -m playwright install --with-deps chromium
+      - name: Mobile web app tests (phone-sized Chromium)
+        run: python -m pytest -q tests/test_web.py
+
   windows:
     runs-on: windows-latest
     steps:
