@@ -13,7 +13,7 @@ tk = pytest.importorskip("tkinter")
 
 from timetracker.config import Settings  # noqa: E402
 from timetracker.db import Database  # noqa: E402
-from timetracker.tracker import IdleEvent  # noqa: E402
+from timetracker.tracker import IdleEnd, IdleStart  # noqa: E402
 
 
 def _has_display():
@@ -104,15 +104,51 @@ def test_playlist_continue_delete_and_days(app):
     assert app.db.get_entry(eid)
 
 
-def test_idle_discard(app, monkeypatch):
-    from timetracker.ui import dialogs
-
+def test_idle_reminder_pops_up_and_discards(app):
     now = time.time()
     eid = app.db.start_entry("rad", start=now - 3600)
-    monkeypatch.setattr(dialogs.IdleDialog, "show", lambda self: (self.destroy(), "discard")[1])
-    app._handle_idle(IdleEvent(eid, now - 1800, now - 60))
+    app.events.put(IdleStart(eid, now - 1800))
+    app._poll_events()
+    rem = app.reminder
+    assert rem is not None and rem.winfo_exists() and rem.idle_end is None
+    assert "tajmer i dalje radi" in rem.detail.cget("text").lower()
+    app.events.put(IdleEnd(eid, now - 1800, now - 60))
+    app._poll_events()
+    assert rem.idle_end == now - 60
+    rem.choose(rem.DISCARD)
+    assert app.reminder is None
     assert app.db.get_entry(eid).end_ts == pytest.approx(now - 1800)
     assert app.db.running_entry().start_ts == pytest.approx(now - 60)
+
+
+def test_idle_reminder_discard_and_stop_while_away(app):
+    now = time.time()
+    eid = app.db.start_entry("rad", start=now - 3600)
+    app.events.put(IdleStart(eid, now - 600))
+    app._poll_events()
+    app.reminder.choose("discard_stop")  # answered without an IdleEnd: ends at click time
+    assert app.db.running_entry() is None
+    assert app.db.get_entry(eid).end_ts == pytest.approx(now - 600)
+    assert app.state == app.PAUSED
+
+
+def test_every_skin_builds_and_ticks(app):
+    from timetracker.ui import dialogs, skin
+
+    app.task_var.set("skin test")
+    app.play()
+    for key in skin.THEMES:
+        app.set_skin(key)
+        assert skin.T.key == key and app.settings["skin"] == key
+        for _ in range(2):
+            app._tick()
+        app.update()
+        dlg = dialogs.EntryDialog(app, app.db)
+        dlg.cancel()
+        rem = dialogs.IdleReminder(app, 1, time.time() - 400, "x", lambda c, r: None)
+        rem.choose(rem.KEEP)
+    app.set_skin("matrix")
+    app.stop()
 
 
 def test_dialogs(app):
@@ -127,6 +163,3 @@ def test_dialogs(app):
     dlg.ok()
     assert dlg.result["end"] - dlg.result["start"] == 5400
     assert dlg.result["project"] == "Interno"
-    idle = dialogs.IdleDialog(app, 0, 900)
-    idle.cancel()
-    assert idle.result == "keep"

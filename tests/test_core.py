@@ -6,7 +6,7 @@ import pytest
 from timetracker import reports, timeutil
 from timetracker.config import Settings
 from timetracker.db import Database
-from timetracker.tracker import IdleEvent, Tracker
+from timetracker.tracker import IdleEnd, IdleStart, Tracker
 
 
 @pytest.fixture
@@ -147,17 +147,30 @@ def make_tracker(db, settings, plat):
     return Tracker(db, settings, queue.Queue(), platform=plat)
 
 
-def test_idle_event_when_user_returns(db, settings):
+def drain(q):
+    out = []
+    while not q.empty():
+        out.append(q.get_nowait())
+    return out
+
+
+def test_idle_reminder_starts_at_limit_and_ends_on_return(db, settings):
     plat = FakePlatform()
     t = make_tracker(db, settings, plat)
     eid = db.start_entry("x", start=ts(9))
     t.tick(ts(9, 1))
-    plat.idle = 360  # 6 min without input, threshold 5
-    t.tick(ts(9, 7))
+    plat.idle = 200  # under the 5 min limit: nothing yet
+    t.tick(ts(9, 4))
     assert t.events.empty()
+    plat.idle = 300  # limit reached: the reminder pops up right away
+    t.tick(ts(9, 5))
+    assert drain(t.events) == [IdleStart(eid, ts(9, 0))]
+    plat.idle = 900
+    t.tick(ts(9, 15))
+    assert t.events.empty()  # only one reminder per idle period
     plat.idle = 1
     t.tick(ts(9, 20))
-    assert t.events.get_nowait() == IdleEvent(eid, ts(9, 1), ts(9, 20))
+    assert drain(t.events) == [IdleEnd(eid, ts(9, 0), ts(9, 20))]
 
 
 def test_sleep_gap_counts_as_idle(db, settings):
@@ -165,10 +178,10 @@ def test_sleep_gap_counts_as_idle(db, settings):
     eid = db.start_entry("x", start=ts(9))
     t.tick(ts(10))
     t.tick(ts(11))  # laptop lid closed for an hour
-    assert t.events.get_nowait() == IdleEvent(eid, ts(10), ts(11))
+    assert drain(t.events) == [IdleStart(eid, ts(10)), IdleEnd(eid, ts(10), ts(11))]
 
 
-def test_no_idle_prompt_when_off_or_no_timer(db, settings):
+def test_no_idle_reminder_when_off_or_no_timer(db, settings):
     plat = FakePlatform()
     t = make_tracker(db, settings, plat)
     plat.idle = 600

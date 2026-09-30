@@ -1,8 +1,9 @@
 """Background idle watcher.
 
 Every few seconds it checks how long there has been no keyboard/mouse input and
-whether the laptop was asleep. When the user comes back after being away while
-the timer ran, it posts an IdleEvent to a queue that the UI thread drains.
+whether the laptop was asleep. While the timer runs it posts IdleStart as soon
+as the idle limit is reached (so a reminder can pop up right away) and IdleEnd
+when the user is back. The UI thread drains the queue.
 """
 
 from __future__ import annotations
@@ -18,7 +19,15 @@ from .db import Database
 
 
 @dataclass
-class IdleEvent:
+class IdleStart:
+    """No input for the idle limit (or the laptop slept) while the timer ran."""
+    entry_id: int
+    idle_start: float
+
+
+@dataclass
+class IdleEnd:
+    """The user is back after an IdleStart."""
     entry_id: int
     idle_start: float
     idle_end: float
@@ -60,12 +69,14 @@ class Tracker(threading.Thread):
         threshold = minutes * 60.0
         idle = self.platform.idle_seconds()
         if self._idle_since is None:
+            since = None
             if prev is not None and now - prev >= threshold:
-                # The loop did not run: the laptop was asleep.
-                self._idle_since, self._idle_entry_id = max(prev, running.start_ts), running.id
+                since = max(prev, running.start_ts)  # the loop did not run: the laptop was asleep
             elif idle >= threshold:
-                self._idle_since, self._idle_entry_id = max(now - idle, running.start_ts), running.id
+                since = max(now - idle, running.start_ts)
+            if since is not None:
+                self._idle_since, self._idle_entry_id = since, running.id
+                self.events.put(IdleStart(running.id, since))
         if self._idle_since is not None and idle < threshold:
-            if running.id == self._idle_entry_id and now - self._idle_since >= threshold:
-                self.events.put(IdleEvent(running.id, self._idle_since, now))
+            self.events.put(IdleEnd(self._idle_entry_id, self._idle_since, now))
             self._idle_since = None

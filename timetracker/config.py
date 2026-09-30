@@ -13,6 +13,7 @@ DEFAULTS: dict = {
     # Ask what to do with time without keyboard/mouse input (0 minutes = off).
     "idle_minutes": 5,
     "always_on_top": False,
+    "skin": "matrix",
     "show_playlist": True,
     "window_pos": "",
 }

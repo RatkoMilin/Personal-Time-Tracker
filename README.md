@@ -1,6 +1,17 @@
 # Personal Time Tracker
 
-Mali lični time tracker za Windows koji izgleda kao stari Winamp: zeleni LCD tajmer, dugmad PLAY / PAUZA / STOP i "plejlista" današnjih unosa. Sve je lokalno: nema naloga, servera ni slanja podataka.
+Mali lični time tracker za Windows koji izgleda kao stari Winamp: LCD tajmer, dugmad PLAY / PAUZA / STOP i "plejlista" današnjih unosa. Sve je lokalno: nema naloga, servera ni slanja podataka.
+
+## Skinovi
+
+Desni klik → **Skin**:
+
+| Skin | Izgled |
+|---|---|
+| Matrix (digitalni) | klasični Winamp: zelene LCD cifre na crnom, 3D dugmad |
+| Pastel (roze-plavi) | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava |
+| Drvo (analogni) | miran i najjednostavniji: drveni okvir, tamnozeleni panel, analogni sat sa kazaljkama umesto cifara |
+| Sajber (sivi) | oštar: odsečeni uglovi, iskošene cifre, siva sa cijan linijama |
 
 ## Kako se koristi
 
@@ -14,11 +25,11 @@ Mali lični time tracker za Windows koji izgleda kao stari Winamp: zeleni LCD ta
    - **+ DODAJ**: ručno dodaj vreme koje si zaboravio da pokreneš
 5. **⏏** izvozi CSV za Excel (ova nedelja, prošla nedelja, mesec...).
 
-Desni klik bilo gde (ili kvadratić gore levo) otvara meni: neaktivnost, uvek na vrhu, pokretanje sa Windows-om, izvoz, folder sa podacima, izlaz.
+Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za neaktivnost, uvek na vrhu, pokretanje sa Windows-om, izvoz, folder sa podacima, izlaz.
 
 `Ctrl+Space` pali i pauzira tajmer.
 
-**Neaktivnost:** ako tajmer radi, a ti nisi dirao tastaturu i miš duže od 5 minuta (ili si zatvorio laptop), po povratku te pita da li to vreme da odbaci ili zadrži.
+**Podsetnik za neaktivnost:** ako tajmer radi, a ti 5 minuta ne dirneš tastaturu ni miš, odmah iskoči prozor (uvek na vrhu, sa zvukom) koji broji koliko te nema. Kad se vratiš, prozor zamrzne to vreme i pita: **Odbaci** (tajmer nastavlja bez tog vremena), **Odbaci i stani** ili **Zadrži**. Isto važi i posle zatvaranja laptopa. Granica (5, 10, 15, 30 min ili isključeno) se menja u meniju.
 
 **Tray:** zatvaranje prozora sklanja aplikaciju pored sata; tajmer radi dalje. Izlaz je u meniju.
 
@@ -52,9 +63,9 @@ python -m timetracker
 | Fajl | Uloga |
 |---|---|
 | `timetracker/db.py` | SQLite: projekti i unosi |
-| `timetracker/tracker.py` | pozadinska provera neaktivnosti i sleep-a |
+| `timetracker/tracker.py` | pozadinska provera neaktivnosti i sleep-a (IdleStart / IdleEnd) |
 | `timetracker/platform_win.py` | Windows API preko ctypes (idle vreme, jedna instanca, autostart) |
 | `timetracker/reports.py` | zbirovi i CSV |
-| `timetracker/ui/skin.py` | Winamp izgled: LCD cifre, marquee, dugmad |
+| `timetracker/ui/skin.py` | teme i iscrtani elementi: paneli, dugmad, LCD cifre, analogni sat |
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
-| `timetracker/ui/dialogs.py` | izmena unosa i pitanje za neaktivnost |
+| `timetracker/ui/dialogs.py` | izmena unosa i podsetnik za neaktivnost |

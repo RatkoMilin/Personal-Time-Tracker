@@ -141,6 +141,19 @@ def is_autostart_enabled(name: str) -> bool:
         return False
 
 
+def alert_sound() -> bool:
+    """Play the Windows exclamation sound. Returns False where it is unavailable."""
+    if not IS_WINDOWS:
+        return False
+    try:
+        import winsound
+
+        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        return True
+    except (ImportError, RuntimeError):
+        return False
+
+
 def open_path(path: Path) -> None:
     """Open a file or folder with the default application."""
     if IS_WINDOWS:

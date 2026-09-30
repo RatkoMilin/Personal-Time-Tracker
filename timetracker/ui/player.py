@@ -1,4 +1,4 @@
-"""The main window: a small Winamp-style player with a playlist of time entries."""
+"""The main window: a small skinnable player with a playlist of time entries."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ import time
 import tkinter as tk
 from datetime import date, timedelta
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 
 from .. import APP_ID, APP_NAME, platform_win, reports, timeutil, tray
 from ..config import Settings
 from ..db import Database
-from ..tracker import IdleEvent, Tracker
+from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
-from .dialogs import EntryDialog, IdleDialog
+from .dialogs import EntryDialog, IdleReminder
 
 PL_WIDTH = 50  # playlist width in characters
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
@@ -35,12 +35,13 @@ class Player(tk.Tk):
         self._pl_ids: list[int] = []
         self._blink = False
         self._quitting = False
-        self._idle_open = False
         self._tray_key = None
+        self.reminder: IdleReminder | None = None
+        self.task_var = tk.StringVar()
+        self.project_var = tk.StringVar()
 
         self.title(APP_NAME)
         self.resizable(False, False)
-        skin.init(self)
         skin.set_window_icon(self)
         self.attributes("-topmost", settings["always_on_top"])
 
@@ -49,21 +50,14 @@ class Player(tk.Tk):
                               lambda: self.db.running_entry() is not None)
         self.tray_available = False
 
-        self._build_menu()
-        skin.TitleBar(self, APP_NAME.upper(), self._popup_menu).pack(fill="x")
-        self._build_main()
-        self._build_playlist()
-        if settings["show_playlist"]:
-            self.pl_frame.pack(fill="x")
-        self.bind("<Button-3>", self._popup_menu)  # root binding tag: any widget in this window
-        self.bind_all("<Control-space>", lambda e: self.play_pause())
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
         running = db.running_entry()
         if running:
             self.task_var.set(running.description)
             self.project_var.set(db.project_names().get(running.project_id, ""))
-        self.refresh()
+        self._build_ui()
+        self.bind("<Button-3>", self._popup_menu)  # root binding tag: any widget in this window
+        self.bind_all("<Control-space>", lambda e: self.play_pause())
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
         self._restore_position()
         if start_tracker:
             self.tracker.start()
@@ -75,82 +69,114 @@ class Player(tk.Tk):
 
     # ------------------------------------------------------------------ layout
 
+    def _build_ui(self):
+        T = skin.use(self, self.settings["skin"])
+        self.ui = tk.Frame(self, bg=T.body)
+        self.ui.pack(fill="both", expand=True)
+        self._build_menu()
+        skin.TitleBar(self.ui, APP_NAME, self._popup_menu).pack(fill="x")
+        self._build_main()
+        self._build_playlist()
+        if self.settings["show_playlist"]:
+            self.pl_frame.pack(fill="x")
+        self.refresh()
+
+    def set_skin(self, key: str):
+        if key == skin.T.key:
+            return
+        self.settings.update({"skin": key})
+        self.ui.destroy()
+        for menu in (self.menu, self.row_menu):
+            menu.destroy()
+        self._build_ui()
+
     def _build_main(self):
-        main = tk.Frame(self, bg=skin.BODY, padx=6, pady=4)
+        T = skin.T
+        main = tk.Frame(self.ui, bg=T.body, padx=skin.px(6), pady=skin.px(4))
         main.pack(fill="x")
 
-        well, lcd = skin.sunken(main, padx=6, pady=4)
-        well.pack(fill="x")
-        left = tk.Frame(lcd, bg=skin.LCD_BG)
-        left.pack(side="left")
-        self.state_icon = tk.Canvas(left, width=skin.px(12), height=skin.px(12), bg=skin.LCD_BG,
-                                    highlightthickness=0)
-        self.state_icon.pack(side="left", anchor="n", padx=(0, 6), pady=(2, 0))
-        self.clock = skin.SevenSegment(left)
-        self.clock.pack(side="left")
-        right = tk.Frame(lcd, bg=skin.LCD_BG)
-        right.pack(side="left", padx=(12, 0), fill="x", expand=True)
-        self.marquee = skin.Marquee(right, chars=24)
-        self.marquee.pack(anchor="w")
-        self.info = tk.Label(right, text="", bg=skin.LCD_BG, fg=skin.LCD_DIM, font=(skin.MONO, 8), justify="left",
+        panel = skin.Panel(main, pad=5)
+        panel.pack(fill="x")
+        lcd = panel.inner
+        self.clock = self.dial = self.marquee = None
+        if T.display == "analog":
+            self.dial = skin.AnalogDial(lcd)
+            self.dial.pack(side="left")
+            right = tk.Frame(lcd, bg=T.lcd_bg)
+            right.pack(side="left", padx=(skin.px(12), 0), fill="both", expand=True)
+            self.task_label = tk.Label(right, bg=T.lcd_bg, fg=T.lcd_text, font=T.font("sans", 11, "italic"),
+                                       anchor="w")
+            self.task_label.pack(fill="x", pady=(skin.px(4), 0))
+            self.elapsed_label = tk.Label(right, bg=T.lcd_bg, fg=T.lcd_on, font=T.font("sans", 20), anchor="w")
+            self.elapsed_label.pack(fill="x")
+        else:
+            self.state_icon = tk.Canvas(lcd, width=skin.px(12), height=skin.px(12), bg=T.lcd_bg,
+                                        highlightthickness=0)
+            self.state_icon.pack(side="left", anchor="n", padx=(0, skin.px(6)), pady=(skin.px(2), 0))
+            self.clock = skin.SevenSegment(lcd)
+            self.clock.pack(side="left")
+            right = tk.Frame(lcd, bg=T.lcd_bg)
+            right.pack(side="left", padx=(skin.px(12), 0), fill="x", expand=True)
+            if T.marquee:
+                self.marquee = skin.Marquee(right, chars=24)
+                self.marquee.pack(anchor="w")
+        self.info = tk.Label(right, text="", bg=T.lcd_bg, fg=T.lcd_dim, font=T.font("mono", 8), justify="left",
                              anchor="w")
-        self.info.pack(anchor="w", fill="x", pady=(2, 0))
+        self.info.pack(anchor="w", fill="x", pady=(skin.px(2), 0))
 
-        row = tk.Frame(main, bg=skin.BODY)
-        row.pack(fill="x", pady=(5, 0))
-        self.task_var = tk.StringVar()
-        self.project_var = tk.StringVar()
-        skin.label(row, "ZADATAK").grid(row=0, column=0, sticky="w")
-        skin.label(row, "PROJEKAT").grid(row=0, column=1, sticky="w", padx=(6, 0))
-        self.task_entry = skin.lcd_entry(row, self.task_var, 28)
-        self.task_entry.grid(row=1, column=0, sticky="we")
-        self.project_cb = ttk.Combobox(row, textvariable=self.project_var, style="Skin.TCombobox", width=16,
-                                       font=(skin.MONO, 10))
-        self.project_cb.grid(row=1, column=1, sticky="we", padx=(6, 0))
+        row = tk.Frame(main, bg=T.body)
+        row.pack(fill="x", pady=(skin.px(5), 0))
+        skin.label(row, "Zadatak").grid(row=0, column=0, sticky="w")
+        skin.label(row, "Projekat").grid(row=0, column=1, sticky="w", padx=(skin.px(6), 0))
+        task_panel, self.task_entry = skin.field(row, self.task_var, 26)
+        task_panel.grid(row=1, column=0, sticky="we")
+        proj_panel, self.project_cb = skin.combo(row, self.project_var, 15)
+        proj_panel.grid(row=1, column=1, sticky="we", padx=(skin.px(6), 0))
         row.columnconfigure(0, weight=1)
         for w in (self.task_entry, self.project_cb):
             w.bind("<Return>", self._enter)
             w.bind("<FocusOut>", lambda e: self._apply_fields(), add="+")
         self.project_cb.bind("<<ComboboxSelected>>", lambda e: self._apply_fields())
 
-        buttons = tk.Frame(main, bg=skin.BODY)
-        buttons.pack(fill="x", pady=(6, 2))
+        buttons = tk.Frame(main, bg=T.body)
+        buttons.pack(fill="x", pady=(skin.px(6), skin.px(2)))
         skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)").pack(side="left")
-        skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza").pack(side="left", padx=1)
+        skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza").pack(side="left", padx=2)
         skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop").pack(side="left")
         skin.SkinButton(buttons, self._export_menu, glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
-            side="left", padx=(6, 0))
+            side="left", padx=(skin.px(6), 0))
         skin.SkinButton(buttons, self.toggle_playlist, text="PL", tooltip="Prikaži/sakrij listu").pack(
             side="right")
 
     def _build_playlist(self):
-        self.pl_frame = tk.Frame(self, bg=skin.BODY, padx=6, pady=2)
-        head = tk.Frame(self.pl_frame, bg=skin.BODY)
-        head.pack(fill="x", pady=(0, 3))
+        T = skin.T
+        self.pl_frame = tk.Frame(self.ui, bg=T.body, padx=skin.px(6), pady=skin.px(2))
+        head = tk.Frame(self.pl_frame, bg=T.body)
+        head.pack(fill="x", pady=(0, skin.px(3)))
         skin.SkinButton(head, lambda: self.shift_day(1), glyph="prev", width=18, height=16,
                         tooltip="Prethodni dan").pack(side="left")
-        self.day_label = skin.label(head, "", fg=skin.GOLD)
+        self.day_label = skin.label(head, "", fg=T.accent)
         self.day_label.pack(side="left", expand=True)
         skin.SkinButton(head, lambda: self.shift_day(-1), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        well, inner = skin.sunken(self.pl_frame)
-        well.pack(fill="x")
-        self.listbox = tk.Listbox(inner, width=PL_WIDTH, height=8, bg=skin.LCD_BG, fg=skin.LCD_ON,
-                                  selectbackground=skin.SEL_BG, selectforeground=skin.WHITE, font=(skin.MONO, 9),
+        panel = skin.Panel(self.pl_frame, pad=2)
+        panel.pack(fill="x")
+        self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.lcd_bg, fg=T.lcd_text,
+                                  selectbackground=T.sel_bg, selectforeground=T.sel_fg, font=T.font("mono", 9),
                                   relief="flat", highlightthickness=0, activestyle="none", bd=0)
-        self.listbox.pack(fill="both", padx=2, pady=2)
+        self.listbox.pack(fill="both")
         self.listbox.bind("<Double-1>", lambda e: self.continue_selected())
         self.listbox.bind("<Delete>", lambda e: self.delete_selected())
         self.listbox.bind("<Return>", lambda e: self.edit_selected())
         self.listbox.bind("<Button-3>", self._row_menu)
 
-        foot = tk.Frame(self.pl_frame, bg=skin.BODY)
-        foot.pack(fill="x", pady=(3, 4))
-        skin.SkinButton(foot, self.add_entry, text="+ DODAJ", tooltip="Ručno dodaj vreme").pack(side="left")
-        skin.SkinButton(foot, self.edit_selected, text="IZMENI").pack(side="left", padx=2)
-        skin.SkinButton(foot, self.delete_selected, text="OBRIŠI").pack(side="left")
-        self.total_label = tk.Label(foot, text="", bg=skin.BODY, fg=skin.LCD_ON, font=(skin.MONO, 9, "bold"))
+        foot = tk.Frame(self.pl_frame, bg=T.body)
+        foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
+        skin.SkinButton(foot, self.add_entry, text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
+        skin.SkinButton(foot, self.edit_selected, text="Izmeni").pack(side="left", padx=2)
+        skin.SkinButton(foot, self.delete_selected, text="Obriši").pack(side="left")
+        self.total_label = tk.Label(foot, text="", bg=T.body, fg=T.text, font=T.font("mono", 9, "bold"))
         self.total_label.pack(side="right")
 
         self.row_menu = tk.Menu(self, tearoff=False)
@@ -160,12 +186,18 @@ class Player(tk.Tk):
 
     def _build_menu(self):
         self.menu = tk.Menu(self, tearoff=False)
+        skins = tk.Menu(self.menu, tearoff=False)
+        self.skin_var = tk.StringVar(value=skin.T.key)
+        for theme in skin.THEMES.values():
+            skins.add_radiobutton(label=theme.name, value=theme.key, variable=self.skin_var,
+                                  command=lambda: self.set_skin(self.skin_var.get()))
+        self.menu.add_cascade(label="Skin", menu=skins)
         self.idle_var = tk.IntVar(value=self.settings["idle_minutes"])
         idle = tk.Menu(self.menu, tearoff=False)
         for minutes, text in IDLE_CHOICES:
             idle.add_radiobutton(label=text, value=minutes, variable=self.idle_var,
                                  command=lambda: self.settings.update({"idle_minutes": self.idle_var.get()}))
-        self.menu.add_cascade(label="Pitaj za neaktivnost posle", menu=idle)
+        self.menu.add_cascade(label="Podsetnik za neaktivnost posle", menu=idle)
         self.top_var = tk.BooleanVar(value=self.settings["always_on_top"])
         self.menu.add_checkbutton(label="Uvek na vrhu", variable=self.top_var, command=self._toggle_top)
         self.autostart_var = tk.BooleanVar(value=platform_win.is_autostart_enabled(APP_ID))
@@ -324,8 +356,9 @@ class Player(tk.Tk):
         self._update_display()
 
     def _fill_playlist(self):
+        T = skin.T
         day = date.today() - timedelta(days=self.day_offset)
-        self.day_label.configure(text=timeutil.fmt_day_header(day).upper())
+        self.day_label.configure(text=T.tx(timeutil.fmt_day_header(day)))
         a, b = timeutil.day_bounds(day)
         now = time.time()
         projects = self.db.project_names()
@@ -344,16 +377,18 @@ class Player(tk.Tk):
                 left = left[: room - 1] + "~"
             self.listbox.insert("end", left.ljust(room) + " " + right)
             if e.running:
-                self.listbox.itemconfigure("end", fg=skin.WHITE)
+                self.listbox.itemconfigure("end", fg=T.lcd_on)
             self._pl_ids.append(e.id)
         if not self._pl_ids:
             self.listbox.insert("end", "  nema unosa za ovaj dan")
-            self.listbox.itemconfigure(0, fg=skin.LCD_DIM)
+            self.listbox.itemconfigure(0, fg=T.lcd_dim)
         elif sel and sel[0] < len(self._pl_ids):
             self.listbox.selection_set(sel[0])
-        self.total_label.configure(text=f"UKUPNO {timeutil.fmt_clock(reports.total_between(self.db, a, b, now))}")
+        total = timeutil.fmt_clock(reports.total_between(self.db, a, b, now))
+        self.total_label.configure(text=T.tx(f"Ukupno {total}"))
 
     def _update_display(self):
+        T = skin.T
         running = self.db.running_entry()
         now = time.time()
         state = self.state
@@ -366,29 +401,34 @@ class Player(tk.Tk):
             secs = 0
         h, rem = divmod(int(secs), 3600)
         text = f"{min(h, 99):02d}:{rem // 60:02d}:{rem % 60:02d}"
-        if state == self.PAUSED and self._blink:
-            self.clock.set("  :  :  ")
-        else:
-            self.clock.set(text, skin.LCD_ON if state != self.STOPPED else skin.LCD_DIM)
-        self._draw_state_icon(state)
-
         task = self.task_var.get().strip() or "(bez naziva)"
         project = self.project_var.get().strip()
-        if state == self.STOPPED:
-            title = f"{APP_NAME.upper()}: upiši zadatak i pritisni PLAY"
-        else:
-            title = f"{task}" + (f" - {project}" if project else "")
-        self.marquee.set_text(title)
-
         today = reports.total_between(self.db, *timeutil.period_bounds("today"), now)
-        week = reports.total_between(self.db, *timeutil.period_bounds("this_week"), now)
-        idle = self.settings["idle_minutes"]
-        self.info.configure(text=f"DANAS   {timeutil.fmt_clock(today)}\nNEDELJA {timeutil.fmt_clock(week)}"
-                                 f"   {'IDLE ' + str(idle) + 'm' if idle else 'IDLE OFF'}")
-        if running:
-            self.title(f"{text} {task} - {APP_NAME}")
+
+        if self.dial is not None:
+            self.dial.set_seconds(secs)
+            status = {self.PLAYING: "u toku", self.PAUSED: "pauza", self.STOPPED: "stoji"}[state]
+            self.task_label.configure(text=(task + (f" · {project}" if project else ""))[:34]
+                                      if state != self.STOPPED else "upiši zadatak i pritisni ▶")
+            self.elapsed_label.configure(text=f"{h}:{rem // 60:02d}:{rem % 60:02d}",
+                                         fg=T.lcd_on if state == self.PLAYING else T.lcd_dim)
+            self.info.configure(text=f"danas {timeutil.fmt_hours(today)}  ·  {status}")
         else:
-            self.title(APP_NAME)
+            if state == self.PAUSED and self._blink and T.blink:
+                self.clock.set("  :  :  ")
+            else:
+                self.clock.set(text, T.lcd_on if state != self.STOPPED else T.lcd_dim)
+            self._draw_state_icon(state)
+            if self.marquee is not None:
+                title = (f"{task}" + (f" - {project}" if project else "") if state != self.STOPPED
+                         else f"{APP_NAME}: upiši zadatak i pritisni PLAY")
+                self.marquee.set_text(title)
+            week = reports.total_between(self.db, *timeutil.period_bounds("this_week"), now)
+            idle = self.settings["idle_minutes"]
+            self.info.configure(text=T.tx(f"Danas   {timeutil.fmt_clock(today)}\nNedelja {timeutil.fmt_clock(week)}"
+                                          f"   {'Idle ' + str(idle) + 'm' if idle else 'Idle off'}"))
+
+        self.title(f"{text} {task} - {APP_NAME}" if running else APP_NAME)
         tip = f"{text} {task}" if running else f"{APP_NAME}: tajmer stoji"
         key = (state, task, int(now // 60))
         if key != self._tray_key:
@@ -396,16 +436,17 @@ class Player(tk.Tk):
             self.tray.update(running is not None, tip)
 
     def _draw_state_icon(self, state: str):
+        T = skin.T
         c = self.state_icon
         c.delete("all")
         s = skin.px(12)
         if state == self.PLAYING:
-            c.create_polygon(1, 1, 1, s - 1, s - 1, s / 2, fill=skin.LCD_ON)
+            c.create_polygon(1, 1, 1, s - 1, s - 1, s / 2, fill=T.lcd_on)
         elif state == self.PAUSED:
-            c.create_rectangle(1, 1, s * 0.4, s - 1, fill=skin.LCD_ON, width=0)
-            c.create_rectangle(s * 0.6, 1, s - 1, s - 1, fill=skin.LCD_ON, width=0)
+            c.create_rectangle(1, 1, s * 0.4, s - 1, fill=T.lcd_on, width=0)
+            c.create_rectangle(s * 0.6, 1, s - 1, s - 1, fill=T.lcd_on, width=0)
         else:
-            c.create_rectangle(1, 1, s - 1, s - 1, fill=skin.LCD_DIM, width=0)
+            c.create_rectangle(1, 1, s - 1, s - 1, fill=T.lcd_dim, width=0)
 
     def _tick(self):
         if self._quitting:
@@ -449,26 +490,31 @@ class Player(tk.Tk):
                 ev = self.events.get_nowait()
                 if callable(ev):
                     ev()
-                elif isinstance(ev, IdleEvent):
-                    self._handle_idle(ev)
+                elif isinstance(ev, IdleStart):
+                    self._idle_started(ev)
+                elif isinstance(ev, IdleEnd):
+                    if self.reminder is not None and self.reminder.entry_id == ev.entry_id:
+                        self.reminder.user_back(ev.idle_end)
         except queue.Empty:
             pass
         self.after(500, self._poll_events)
 
-    def _handle_idle(self, ev: IdleEvent):
+    def _idle_started(self, ev: IdleStart):
+        """Idle limit reached while the timer runs: pop up the reminder right away."""
         entry = self.db.get_entry(ev.entry_id)
-        if self._idle_open or entry is None or not entry.running:
+        if self.reminder is not None or entry is None or not entry.running:
             return
-        self._idle_open = True
-        try:
-            self.show()
-            choice = IdleDialog(self, ev.idle_start, ev.idle_end).show()
-        finally:
-            self._idle_open = False
-        if choice in (IdleDialog.DISCARD, IdleDialog.DISCARD_STOP):
-            self.db.discard_interval(entry.id, ev.idle_start, ev.idle_end,
-                                     continue_after=(choice == IdleDialog.DISCARD))
-            self.paused = choice == IdleDialog.DISCARD_STOP
+        self.reminder = IdleReminder(self, entry.id, ev.idle_start, entry.description, self._idle_answered)
+        if not platform_win.alert_sound():
+            self.bell()
+
+    def _idle_answered(self, choice: str, reminder: IdleReminder):
+        self.reminder = None
+        if choice in (IdleReminder.DISCARD, IdleReminder.DISCARD_STOP):
+            self.db.discard_interval(reminder.entry_id, reminder.idle_start, reminder.idle_end,
+                                     continue_after=(choice == IdleReminder.DISCARD))
+            if choice == IdleReminder.DISCARD_STOP:
+                self.paused = True
         self.refresh()
 
     # -------------------------------------------------------------- lifecycle
