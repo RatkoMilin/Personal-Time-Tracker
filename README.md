@@ -39,8 +39,9 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 
 ### Gotov .exe (bez Pythona)
 
-1. Na GitHub-u: **Actions → Test and build → poslednji uspešan run**.
-2. Preuzmi **PersonalTimeTracker-windows** i raspakuj `PersonalTimeTracker.exe`.
+1. Na GitHub-u otvori **Releases** i preuzmi `PersonalTimeTracker.exe` iz poslednjeg izdanja.
+   (Najnoviji build bilo koje grane: **Actions → Test and build → run → Artifacts**, zip sa exe-om.)
+2. Stavi exe u stalan folder (ne u Downloads), jer "Pokreni sa Windows-om" pamti njegovu putanju.
 3. Pokreni. SmartScreen će upozoriti jer exe nije potpisan: **More info → Run anyway**.
 
 ### Iz izvornog koda
@@ -49,6 +50,8 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 2. Dvoklik na `run.bat`.
 
 Svoj exe praviš sa `build.bat` (rezultat: `dist\PersonalTimeTracker.exe`).
+
+Novo izdanje: **Releases → Draft a new release**, upiši oznaku (npr. `v1.1.0`) i objavi; GitHub Actions napravi exe i okači ga na izdanje.
 
 ## Podaci
 
