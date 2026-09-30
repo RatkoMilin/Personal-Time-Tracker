@@ -14,6 +14,7 @@ DEFAULTS: dict = {
     "idle_minutes": 5,
     "always_on_top": False,
     "skin": "matrix",
+    "sounds": True,
     "show_playlist": True,
     "window_pos": "",
 }

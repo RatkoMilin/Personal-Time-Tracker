@@ -154,6 +154,19 @@ def alert_sound() -> bool:
         return False
 
 
+def play_wav(path: Path) -> bool:
+    """Play a WAV file asynchronously (cuts off a sound that is still playing). False where unavailable."""
+    if not IS_WINDOWS:
+        return False
+    try:
+        import winsound
+
+        winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+        return True
+    except (ImportError, RuntimeError):
+        return False
+
+
 def open_path(path: Path) -> None:
     """Open a file or folder with the default application."""
     if IS_WINDOWS:

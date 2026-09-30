@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from .. import APP_ID, APP_NAME, platform_win, reports, timeutil, tray
+from .. import APP_ID, APP_NAME, platform_win, reports, sounds, timeutil, tray
 from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
@@ -49,6 +49,7 @@ class Player(tk.Tk):
         self.tray = tray.Tray(self.events.put, self.show, self.play_pause, self.quit_app,
                               lambda: self.db.running_entry() is not None)
         self.tray_available = False
+        self.sounds = sounds.SoundPlayer(data_dir / "sounds", lambda: self.settings["sounds"], lambda: skin.T.key)
 
         running = db.running_entry()
         if running:
@@ -71,6 +72,7 @@ class Player(tk.Tk):
 
     def _build_ui(self):
         T = skin.use(self, self.settings["skin"])
+        self.sounds.prepare(T.key)
         self.ui = tk.Frame(self, bg=T.body)
         self.ui.pack(fill="both", expand=True)
         self._build_menu()
@@ -89,6 +91,14 @@ class Player(tk.Tk):
         for menu in (self.menu, self.row_menu):
             menu.destroy()
         self._build_ui()
+        self.sounds.play("start")  # a taste of the new skin
+
+    def _click(self, command):
+        """Wrap a button command so it plays the skin's click sound first."""
+        def run():
+            self.sounds.play("click")
+            command()
+        return run
 
     def _build_main(self):
         T = skin.T
@@ -143,9 +153,9 @@ class Player(tk.Tk):
         skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)").pack(side="left")
         skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza").pack(side="left", padx=2)
         skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop").pack(side="left")
-        skin.SkinButton(buttons, self._export_menu, glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
+        skin.SkinButton(buttons, self._click(self._export_menu), glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
             side="left", padx=(skin.px(6), 0))
-        skin.SkinButton(buttons, self.toggle_playlist, text="PL", tooltip="Prikaži/sakrij listu").pack(
+        skin.SkinButton(buttons, self._click(self.toggle_playlist), text="PL", tooltip="Prikaži/sakrij listu").pack(
             side="right")
 
     def _build_playlist(self):
@@ -153,11 +163,11 @@ class Player(tk.Tk):
         self.pl_frame = tk.Frame(self.ui, bg=T.body, padx=skin.px(6), pady=skin.px(2))
         head = tk.Frame(self.pl_frame, bg=T.body)
         head.pack(fill="x", pady=(0, skin.px(3)))
-        skin.SkinButton(head, lambda: self.shift_day(1), glyph="prev", width=18, height=16,
+        skin.SkinButton(head, self._click(lambda: self.shift_day(1)), glyph="prev", width=18, height=16,
                         tooltip="Prethodni dan").pack(side="left")
         self.day_label = skin.label(head, "", fg=T.accent)
         self.day_label.pack(side="left", expand=True)
-        skin.SkinButton(head, lambda: self.shift_day(-1), glyph="next", width=18, height=16,
+        skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
         panel = skin.Panel(self.pl_frame, pad=2)
@@ -173,9 +183,9 @@ class Player(tk.Tk):
 
         foot = tk.Frame(self.pl_frame, bg=T.body)
         foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
-        skin.SkinButton(foot, self.add_entry, text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
-        skin.SkinButton(foot, self.edit_selected, text="Izmeni").pack(side="left", padx=2)
-        skin.SkinButton(foot, self.delete_selected, text="Obriši").pack(side="left")
+        skin.SkinButton(foot, self._click(self.add_entry), text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
+        skin.SkinButton(foot, self._click(self.edit_selected), text="Izmeni").pack(side="left", padx=2)
+        skin.SkinButton(foot, self._click(self.delete_selected), text="Obriši").pack(side="left")
         self.total_label = tk.Label(foot, text="", bg=T.body, fg=T.text, font=T.font("mono", 9, "bold"))
         self.total_label.pack(side="right")
 
@@ -192,6 +202,9 @@ class Player(tk.Tk):
             skins.add_radiobutton(label=theme.name, value=theme.key, variable=self.skin_var,
                                   command=lambda: self.set_skin(self.skin_var.get()))
         self.menu.add_cascade(label="Skin", menu=skins)
+        self.sounds_var = tk.BooleanVar(value=self.settings["sounds"])
+        self.menu.add_checkbutton(label="Zvučni efekti", variable=self.sounds_var,
+                                  command=lambda: self.settings.update({"sounds": self.sounds_var.get()}))
         self.idle_var = tk.IntVar(value=self.settings["idle_minutes"])
         idle = tk.Menu(self.menu, tearoff=False)
         for minutes, text in IDLE_CHOICES:
@@ -231,6 +244,7 @@ class Player(tk.Tk):
             return
         self.db.start_entry(self.task_var.get(), self.db.project_id(self.project_var.get()))
         self.paused = False
+        self.sounds.play("start")
         self.refresh()
 
     def pause(self):
@@ -238,6 +252,7 @@ class Player(tk.Tk):
             self._apply_fields()
             self.db.stop_running()
             self.paused = True
+            self.sounds.play("pause")
             self.refresh()
         elif self.paused:
             self.play()
@@ -250,6 +265,8 @@ class Player(tk.Tk):
 
     def stop(self):
         self._apply_fields()
+        if self.db.running_entry() or self.paused:
+            self.sounds.play("stop")
         self.db.stop_running()
         self.paused = False
         self.task_var.set("")
@@ -294,6 +311,7 @@ class Player(tk.Tk):
         if not e or e.running:
             return
         self.db.start_entry(e.description, e.project_id)
+        self.sounds.play("start")
         self.task_var.set(e.description)
         self.project_var.set(self.db.project_names().get(e.project_id, ""))
         self.paused = False
@@ -505,7 +523,8 @@ class Player(tk.Tk):
         if self.reminder is not None or entry is None or not entry.running:
             return
         self.reminder = IdleReminder(self, entry.id, ev.idle_start, entry.description, self._idle_answered)
-        if not platform_win.alert_sound():
+        # The reminder always makes a sound, even with effects off (then the plain system one).
+        if not self.sounds.play("alert") and not platform_win.alert_sound():
             self.bell()
 
     def _idle_answered(self, choice: str, reminder: IdleReminder):

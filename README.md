@@ -13,6 +13,8 @@ Desni klik → **Skin**:
 | Drvo (analogni) | miran i najjednostavniji: drveni okvir, tamnozeleni panel, analogni sat sa kazaljkama umesto cifara |
 | Sajber (sivi) | oštar: odsečeni uglovi, iskošene cifre, siva sa cijan linijama |
 
+Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Matrix digitalne pištaljke, Pastel mehuriće, Drvo kucanje u drvo, Sajber zvuk mača (izvlačenje, zamah, zvek). Zvuci se prave u kodu (`timetracker/sounds.py`), nema audio fajlova. Isključuju se u meniju: **Zvučni efekti**. Podsetnik za neaktivnost i tada pusti sistemski zvuk.
+
 ## Kako se koristi
 
 1. Upiši **zadatak** (i po želji **projekat**) i pritisni **▶** ili Enter.
@@ -66,6 +68,7 @@ python -m timetracker
 | `timetracker/tracker.py` | pozadinska provera neaktivnosti i sleep-a (IdleStart / IdleEnd) |
 | `timetracker/platform_win.py` | Windows API preko ctypes (idle vreme, jedna instanca, autostart) |
 | `timetracker/reports.py` | zbirovi i CSV |
+| `timetracker/sounds.py` | sintetizovani zvučni efekti po skinu |
 | `timetracker/ui/skin.py` | teme i iscrtani elementi: paneli, dugmad, LCD cifre, analogni sat |
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
 | `timetracker/ui/dialogs.py` | izmena unosa i podsetnik za neaktivnost |
