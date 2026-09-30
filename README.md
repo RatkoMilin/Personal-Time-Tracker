@@ -50,6 +50,17 @@ Podaci na telefonu su **odvojeni** od laptopa i čuvaju se samo u tom telefonu. 
 
 Objava na tu adresu ide automatski (GitHub Actions, "Mobile web app") posle svake izmene u `web/` na grani main. Jednom treba uključiti: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
+## Na e-ink telefonu (Mudita Kompakt)
+
+Android aplikacija `TimeTracker-Kompakt.apk` nosi istu web verziju u sebi, ali u **E-ink** skinu: crno na belom, krupna slova, bez animacija i treptanja, a tajmer pokazuje sate i minute, pa se ekran osvežava jednom u minuti umesto svake sekunde (manje "duhova" i manja potrošnja baterije). Zvuci su podrazumevano isključeni. Ne treba joj internet.
+
+Instalacija:
+1. Preuzmi `TimeTracker-Kompakt.apk` sa stranice **Releases** (ili iz **Actions → Test and build → Artifacts → TimeTracker-android**).
+2. Na računaru otvori **Mudita Center** (3.1.0 ili noviji) i poveži Kompakt kablom.
+3. **Manage Files → App Installers → Add App Files** i izaberi APK, pa ga na telefonu instaliraj.
+
+CSV izvoz i rezervna kopija se čuvaju u folder **Download** na telefonu. Nova verzija APK-a se instalira preko stare i podaci ostaju (sve verzije su potpisane istim ključem, `android/ptt-sideload.jks`, koji služi samo za ovu ličnu aplikaciju).
+
 ## Instalacija
 
 ### Gotov .exe (bez Pythona)
@@ -92,3 +103,4 @@ python -m timetracker
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
 | `timetracker/ui/dialogs.py` | izmena unosa i podsetnik za neaktivnost |
 | `web/` | mobilna web verzija (HTML/CSS/JS, bez biblioteka), testovi u `tests/test_web.py` |
+| `android/` | Android aplikacija (WebView sa `web/` u sebi) za Mudita Kompakt; gradi je GitHub Actions |

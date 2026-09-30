@@ -129,7 +129,7 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -143,7 +143,7 @@ def test_every_skin_renders(page):
         if shots:
             page.wait_for_timeout(600)
             page.screenshot(path=str(Path(shots) / f"web_{skin}.png"), full_page=True)
-    assert db(page)["settings"]["skin"] == "cyber"
+    assert db(page)["settings"]["skin"] == "eink"
 
 
 def test_csv_export_and_backup_restore(page, tmp_path):
@@ -171,20 +171,67 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 20
+    assert len(result) == 25
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v1')")
-    cached = page.evaluate("caches.open('ptt-v1').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v2')")
+    cached = page.evaluate("caches.open('ptt-v2').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
+
+
+KOMPAKT = {"viewport": {"width": 320, "height": 533}, "device_scale_factor": 1.5, "is_mobile": True, "has_touch": True}
+
+
+def test_eink_device_starts_quiet_black_and_white_and_stays_still(browser, server):
+    """The Android build (Mudita Kompakt) opens ?device=eink: e-ink skin, sounds off, minute-level display."""
+    ctx = browser.new_context(**KOMPAKT)
+    pg = ctx.new_page()
+    errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.goto(server + "index.html?device=eink")
+    pg.wait_for_selector("#clock polygon")
+    data = db(pg)
+    assert data["settings"]["skin"] == "eink" and data["settings"]["sounds"] is False
+    assert pg.evaluate("document.documentElement.scrollWidth") <= 320
+    # hours:minutes only -> 4 digits (7 segments each) + 1 colon (2 dots)
+    assert pg.locator("#clock polygon").count() == 4 * 7 + 2
+    pg.fill("#task", "Čitanje")
+    pg.click("#playBtn")
+    pg.wait_for_timeout(300)
+    # Within the same minute nothing on screen may change: every DOM write is an e-ink redraw.
+    mutations = pg.evaluate("""() => new Promise(resolve => {
+        let n = 0;
+        const obs = new MutationObserver(list => { n += list.length; });
+        obs.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+        setTimeout(() => { obs.disconnect(); resolve(n); }, 2500);
+    })""")
+    assert mutations == 0
+    shots = os.environ.get("PTT_WEB_SHOTS")
+    if shots:
+        pg.screenshot(path=str(Path(shots) / "web_eink_kompakt.png"), full_page=True)
+    assert errors == []
+    ctx.close()
+
+
+def test_android_bridge_receives_exports(page):
+    page.evaluate("""() => { window.saved = []; window.AndroidBridge = {
+        saveFile: (name, text, type) => window.saved.push([name, type, text.length]) }; }""")
+    page.click("#exportBtn")
+    page.click("#exports [data-kind=all]")
+    page.click("#backupBtn")
+    saved = page.evaluate("window.saved")
+    assert [s[1] for s in saved] == ["text/csv", "application/json"]
+    assert saved[0][0].startswith("vreme_sve_") and saved[1][0].startswith("timetracker-backup-")
+    assert page.evaluate("window.PTT.back()") is True  # closes the open menu
+    assert page.evaluate("window.PTT.back()") is False

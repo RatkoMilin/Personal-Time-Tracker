@@ -40,6 +40,32 @@ jobs:
       - name: Mobile web app tests (phone-sized Chromium)
         run: python -m pytest -q tests/test_web.py
 
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build APK (e-ink app for Mudita Kompakt)
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+      - name: Name the APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk TimeTracker-Kompakt.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TimeTracker-android
+          path: TimeTracker-Kompakt.apk
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TimeTracker-Kompakt.apk
+
   windows:
     runs-on: windows-latest
     steps:

@@ -33,6 +33,16 @@ body[data-skin="cyber"] {
   --sans: Bahnschrift, "DIN Alternate", "Arial Narrow", "Roboto Condensed", sans-serif;
   --label-weight: 700; --label-style: normal; --upper: uppercase; --radius: 0px;
 }
+body[data-skin="eink"] {
+  /* E-ink (Mudita Kompakt): pure black on white, thick lines, big text, nothing that moves. */
+  --body: #ffffff; --body-light: #000000; --body-dark: #000000; --text: #000000; --accent: #000000;
+  --lcd-bg: #ffffff; --lcd-on: #000000; --lcd-off: #ffffff; --lcd-dim: #6b6b6b; --lcd-text: #000000;
+  --btn-face: #ffffff; --btn-light: #000000; --btn-dark: #000000; --btn-glyph: #000000;
+  --sel-bg: #000000; --sel-fg: #ffffff;
+  --sans: Roboto, "Noto Sans", Arial, "DejaVu Sans", sans-serif;
+  --mono: "Roboto Mono", "Noto Sans Mono", "DejaVu Sans Mono", monospace;
+  --label-weight: 700; --label-style: normal; --upper: none; --radius: 6px;
+}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
@@ -161,3 +171,30 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, .55); }
 .check { display: flex; align-items: center; gap: 8px; margin: 12px 0 2px; font-size: 14px; }
 .check input { width: 20px; height: 20px; accent-color: var(--accent); }
 .note { font-size: 12px; opacity: .8; margin: 10px 0 0; }
+
+/* ---------------------------------------------------------------- e-ink */
+body[data-skin="eink"] *, body[data-skin="eink"] *::before, body[data-skin="eink"] *::after { animation: none !important; transition: none !important; }
+body[data-skin="eink"] .titlebar { border-bottom: 2px solid #000; }
+body[data-skin="eink"] .titlebar::before { display: none; }
+body[data-skin="eink"] .title { font-size: 16px; letter-spacing: 0; }
+body[data-skin="eink"] .panel { border: 2px solid #000; border-radius: var(--radius); }
+body[data-skin="eink"] .panel > .inner { border-radius: calc(var(--radius) - 2px); }
+body[data-skin="eink"] .btn { border: 2px solid #000; border-radius: var(--radius); font-weight: 700; min-width: 52px; height: 46px; }
+body[data-skin="eink"] .btn.small { height: 38px; }
+body[data-skin="eink"] .btn:active { background: #000; color: #fff; }
+body[data-skin="eink"] .lcd > .inner { flex-direction: column; align-items: stretch; gap: 6px; }
+body[data-skin="eink"] .lcd-left { justify-content: center; }
+body[data-skin="eink"] .clock { width: min(62vw, 230px); }
+body[data-skin="eink"] .lcd-right { text-align: center; }
+body[data-skin="eink"] .marquee { font: 700 17px var(--sans); white-space: nowrap; text-overflow: ellipsis; }
+body[data-skin="eink"] .info { font-size: 14px; color: #000; }
+body[data-skin="eink"] .field-label { font-size: 14px; }
+body[data-skin="eink"] .field input { font: 18px var(--sans); color-scheme: light; }
+body[data-skin="eink"] .list ol { font: 16px var(--sans); }
+body[data-skin="eink"] .list li { padding: 11px 10px; border-bottom: 1px solid #000; }
+body[data-skin="eink"] .list li:last-child { border-bottom: 0; }
+body[data-skin="eink"] .list li.running { font-weight: 700; }
+body[data-skin="eink"] .day-label, body[data-skin="eink"] .total { font-size: 15px; }
+body[data-skin="eink"] dialog.sheet { border: 2px solid #000; border-radius: var(--radius); }
+body[data-skin="eink"] dialog.sheet::backdrop { background: rgba(255, 255, 255, .85); }
+body[data-skin="eink"] .skins .btn.active { outline: 3px solid #000; }

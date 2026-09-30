@@ -110,6 +110,13 @@
       alert: () => [[0, ring(2350, 0.4)], [0, noise(0.05, { tau: 0.01, seed: 9 })], [0.25, ring(2637, 0.45)],
                     [0.25, noise(0.05, { tau: 0.01, seed: 10 })]],
     },
+    eink: {  // quiet paper-like taps and a soft chime
+      start: () => [[0, tick(1400)], [0.1, tick(1800)]],
+      pause: () => [[0, tick(1500)]],
+      stop: () => [[0, tick(1800)], [0.1, tick(1400)]],
+      click: () => [[0, tick(2200)]],
+      alert: () => [[0, tone(880, 880, 0.35, "sine", 0.01, 0.12)], [0.3, tone(660, 660, 0.45, "sine", 0.01, 0.15)]],
+    },
   };
 
   let ctx = null;

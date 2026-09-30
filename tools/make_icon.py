@@ -40,3 +40,10 @@ if __name__ == "__main__":
         tile.alpha_composite(inner, ((size - inner.width) // 2, (size - inner.height) // 2))
         tile.convert("RGB").save(web / name)
     print("written", web)
+    # Android launcher icons (the Kompakt shows them in grayscale anyway).
+    res = ROOT / "android" / "app" / "src" / "main" / "res"
+    for folder, size in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
+        out_dir = res / f"mipmap-{folder}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        draw(size).save(out_dir / "ic_launcher.png")
+    print("written", res)
