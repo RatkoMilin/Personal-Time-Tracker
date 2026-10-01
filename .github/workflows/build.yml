@@ -96,6 +96,17 @@ jobs:
           Rename-Item dist\PersonalTimeTracker.old.exe PersonalTimeTracker.exe
           Get-Process PersonalTimeTracker | Stop-Process -Force
           Start-Sleep -Seconds 2
+      - name: Restart-after-update smoke test (the new exe starts once the old process is gone)
+        shell: pwsh
+        run: |
+          $env:PTT_DATA_DIR = "$env:RUNNER_TEMP\ptt-smoke-restart"
+          $old = Start-Process -FilePath pwsh -ArgumentList '-NoProfile', '-Command', 'Start-Sleep -Seconds 6' -PassThru
+          Start-Process -FilePath dist\PersonalTimeTracker.exe -ArgumentList '--minimized', '--after-update', $old.Id
+          Start-Sleep -Seconds 16
+          if (-not $old.HasExited) { throw "the stand-in for the old version did not exit" }
+          if (-not (Get-Process PersonalTimeTracker -ErrorAction SilentlyContinue)) { throw "exe did not start after the old process exited" }
+          Get-Process PersonalTimeTracker | Stop-Process -Force
+          Start-Sleep -Seconds 2
       - uses: actions/upload-artifact@v4
         with:
           name: PersonalTimeTracker-windows

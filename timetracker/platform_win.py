@@ -47,6 +47,8 @@ if IS_WINDOWS:
     _kernel32.CloseHandle.restype = wintypes.BOOL
     _kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]
     _kernel32.CreateMutexW.restype = wintypes.HANDLE
+    _kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    _kernel32.WaitForSingleObject.restype = wintypes.DWORD
 
     _ERROR_ALREADY_EXISTS = 183
     _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
@@ -136,6 +138,29 @@ def set_app_user_model_id(app_id: str) -> None:
 
 _mutex_handle = None
 _lock_file = None
+
+
+def wait_for_exit(pid: int, timeout: float) -> bool:
+    """Wait until process pid has exited (True) or timeout seconds passed (False)."""
+    if IS_WINDOWS:
+        synchronize, wait_timeout = 0x00100000, 0x00000102
+        handle = _kernel32.OpenProcess(synchronize, False, pid)
+        if not handle:  # already gone (or not ours to watch)
+            return True
+        try:
+            return _kernel32.WaitForSingleObject(handle, int(timeout * 1000)) != wait_timeout
+        finally:
+            _kernel32.CloseHandle(handle)
+    import time
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return True
+        time.sleep(0.1)
+    return False
 
 
 def acquire_single_instance(name: str, lock_dir: Path) -> bool:

@@ -13,7 +13,10 @@ from .db import Database
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="timetracker", description=APP_NAME)
     parser.add_argument("--minimized", action="store_true", help="start hidden in the system tray")
+    parser.add_argument("--after-update", type=int, metavar="PID", help="wait for the replaced version to exit")
     args = parser.parse_args(argv)
+    if args.after_update:
+        platform_win.wait_for_exit(args.after_update, 20)
 
     platform_win.enable_dpi_awareness()
     platform_win.set_app_user_model_id(APP_ID)
