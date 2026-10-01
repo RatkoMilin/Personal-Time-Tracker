@@ -7,7 +7,7 @@
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačak"],
                  ["coffee", "My Passion"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
-                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#3d302c",
+                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";

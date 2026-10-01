@@ -211,14 +211,15 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
     ),
     Theme(
         key="coffee", name="My Passion",
-        body="#3d302c", body_light="#5a4740", body_dark="#211a17", text="#e9dcd6", accent="#c3b1ab",
-        lcd_bg="#211a17", lcd_on="#e3f2f7", lcd_off="#2f2522", lcd_dim="#8a6c62", lcd_text="#d4e7ee",
-        btn_face="#634e47", btn_light="#80645b", btn_dark="#342925", btn_glyph="#e3f2f7",
-        sel_bg="#80645b", sel_fg="#ffffff",
+        # almost black coffee: the darkest browns of the palette, the lighter ones only for edges
+        body="#171211", body_light="#2a211e", body_dark="#090706", text="#d9cbc5", accent="#a48980",
+        lcd_bg="#0e0b0a", lcd_on="#e3f2f7", lcd_off="#1c1614", lcd_dim="#6d564e", lcd_text="#d4e7ee",
+        btn_face="#2f2522", btn_light="#42342f", btn_dark="#130e0d", btn_glyph="#e3f2f7",
+        sel_bg="#4c3b36", sel_fg="#ffffff",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
-        shape="round", radius=9, panel_outline="#80645b", title_style="coffee", segments="ice", meter="coffee",
-        layers=("#634e47", "#4c3b36", "#342925"), glow="#6f8f99",
+        shape="round", radius=9, panel_outline="#4c3b36", title_style="coffee", segments="ice", meter="coffee",
+        layers=("#2f2522", "#211a17", "#130e0d"), glow="#5f7f89",
     ),
 )}
 
@@ -324,9 +325,9 @@ def draw_iced_americano(c: tk.Canvas, cx: float, cy: float, h: float) -> None:
     """A tall glass of iced americano: dark coffee, a few ice cubes and a straw."""
     top_w, bot_w = h * 0.62, h * 0.46
     y0, y1 = cy - h / 2, cy + h / 2
-    c.create_line(cx + top_w * 0.15, y0 - h * 0.12, cx + top_w * 0.05, y1 - h * 0.25, fill="#e9dcd6", width=2)
+    c.create_line(cx + top_w * 0.15, y0 - h * 0.12, cx + top_w * 0.05, y1 - h * 0.25, fill="#d9cbc5", width=2)
     c.create_polygon(cx - top_w / 2 + 1, y0 + h * 0.2, cx + top_w / 2 - 1, y0 + h * 0.2, cx + bot_w / 2 - 1, y1 - 1,
-                     cx - bot_w / 2 + 1, y1 - 1, fill="#2a1d18", outline="")
+                     cx - bot_w / 2 + 1, y1 - 1, fill="#130e0d", outline="")
     for dx, dy in ((-0.14, 0.32), (0.12, 0.42), (-0.05, 0.58)):
         s = h * 0.17
         x, y = cx + dx * h, y0 + dy * h
@@ -1271,16 +1272,16 @@ class ProductivityMeter(tk.Canvas):
     def _coffee(self, x0: float, x1: float, cy: float, prod: float) -> None:
         """A glass of coffee lying down; at 80%+ the words show through the ice."""
         r = px(8)
-        round_rect(self, x0, cy - r, x1, cy + r, r, fill="#211a17", outline="#80645b")
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill="#0e0b0a", outline="#4c3b36")
         xp = x0 + (x1 - x0) * prod
         if xp - x0 > r:
             steps = 6  # layered espresso: darker at the bottom, crema on top
             for k in range(steps):
                 y0 = cy - r + 2 * r * k / steps
-                color = blend("#a48980", "#3d302c", k / (steps - 1))
+                color = blend("#634e47", "#1c1614", k / (steps - 1))
                 self.create_rectangle(x0 + r * 0.6, y0, xp - r * 0.6, y0 + 2 * r / steps + 1, fill=color,
                                       outline="")
-            round_rect(self, x0, cy - r, xp, cy + r, r, fill="", outline="#80645b")
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill="", outline="#4c3b36")
             for k, fx in enumerate((0.2, 0.45, 0.7) if prod < self.CAT_AT else ()):  # ice cubes floating in it
                 x = x0 + (xp - x0) * fx
                 if x + px(5) < xp - r * 0.6:
@@ -1291,7 +1292,7 @@ class ProductivityMeter(tk.Canvas):
             font = T.font("sans", 9, "bold")
             for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                 self.create_text((x0 + x1) / 2 + dx, cy + dy, text=self.COFFEE_TEXT, font=font,
-                                 fill=blend("#3d302c", T.glow or "#ffffff", 0.9))
+                                 fill=blend("#1c1614", T.glow or "#ffffff", 0.9))
             self.create_text((x0 + x1) / 2, cy, text=self.COFFEE_TEXT, font=font, fill="#f2fafc")
 
     # ------------------------------------------------------------ the cat

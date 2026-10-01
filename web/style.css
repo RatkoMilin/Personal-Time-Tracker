@@ -394,8 +394,8 @@ body[data-skin="dandelion"] {
   background: linear-gradient(to bottom, #fdfbf9 0, #fdfbf9 34%, #f9e7ed 50%, #f9e7ed 82%, #d8edc6 100%) fixed;
 }
 body[data-skin="dandelion"].meadow-yellow { --flower: #f4c430; }
-body[data-skin="dandelion"] .app { position: relative; padding-right: 74px; padding-bottom: 56px; min-height: 100vh; }
-body[data-skin="dandelion"] .dandelion { display: block; position: absolute; top: 0; right: 0; bottom: 40px; width: 82px;
+body[data-skin="dandelion"] .app { position: relative; padding-right: 84px; padding-bottom: 56px; min-height: 100vh; }
+body[data-skin="dandelion"] .dandelion { display: block; position: absolute; top: 0; right: 0; bottom: 40px; width: 100px;
   height: calc(100% - 40px); pointer-events: none; overflow: visible; z-index: 2; }
 body[data-skin="dandelion"] .dandelion .head.can-blow { pointer-events: auto; cursor: pointer; }
 body[data-skin="dandelion"] .dandelion .man { pointer-events: auto; cursor: pointer; }
@@ -436,28 +436,28 @@ body[data-skin="dandelion"] .skins .btn.active { outline: 2px solid var(--accent
 
 /* ---------------------------------------------------------------- My Passion (iced americano) */
 body[data-skin="coffee"] {
-  --body: #3d302c; --body-light: #5a4740; --body-dark: #211a17; --text: #e9dcd6; --accent: #c3b1ab;
-  --lcd-bg: #211a17; --lcd-on: #e3f2f7; --lcd-off: #2f2522; --lcd-dim: #8a6c62; --lcd-text: #d4e7ee;
-  --btn-face: #634e47; --btn-light: #80645b; --btn-dark: #342925; --btn-glyph: #e3f2f7;
-  --sel-bg: #80645b; --sel-fg: #ffffff; --ice: rgba(235, 248, 252, .86); --ice-glow: 0 0 6px rgba(190, 230, 242, .55);
+  --body: #171211; --body-light: #2a211e; --body-dark: #090706; --text: #d9cbc5; --accent: #a48980;
+  --lcd-bg: #0e0b0a; --lcd-on: #e3f2f7; --lcd-off: #1c1614; --lcd-dim: #6d564e; --lcd-text: #d4e7ee;
+  --btn-face: #2f2522; --btn-light: #42342f; --btn-dark: #130e0d; --btn-glyph: #e3f2f7;
+  --sel-bg: #4c3b36; --sel-fg: #ffffff; --ice: rgba(235, 248, 252, .86); --ice-glow: 0 0 6px rgba(190, 230, 242, .55);
   --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
   --label-weight: 700; --label-style: normal; --upper: none; --radius: 10px;
-  background: linear-gradient(to bottom, #3d302c, #342925 60%, #2f2522);
+  background: linear-gradient(to bottom, #1c1614, #130e0d 60%, #090706);
 }
 body[data-skin="coffee"] .titlebar::before { display: none; }
 body[data-skin="coffee"] .title { background: none; font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
 body[data-skin="coffee"] .title::before, body[data-skin="coffee"] .title::after { content: ""; width: 15px; height: 20px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cline x1='14' y1='0' x2='12.5' y2='22' stroke='%23e9dcd6' stroke-width='1.6'/%3E%3Cpolygon points='3,9 21,9 18.5,31 5.5,31' fill='%232a1d18'/%3E%3Crect x='6' y='11' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='12.5' y='14' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='8.5' y='19' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Cpolygon points='2,4 22,4 19,31 5,31' fill='none' stroke='%23d4e7ee' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat; }
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cline x1='14' y1='0' x2='12.5' y2='22' stroke='%23e9dcd6' stroke-width='1.6'/%3E%3Cpolygon points='3,9 21,9 18.5,31 5.5,31' fill='%23130e0d'/%3E%3Crect x='6' y='11' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='12.5' y='14' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='8.5' y='19' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Cpolygon points='2,4 22,4 19,31 5,31' fill='none' stroke='%23d4e7ee' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat; }
 body[data-skin="coffee"] .title, body[data-skin="coffee"] .field-label, body[data-skin="coffee"] .day-label,
 body[data-skin="coffee"] .total, body[data-skin="coffee"] .marquee {
   color: var(--ice); text-shadow: var(--ice-glow); font-weight: 700; }
-body[data-skin="coffee"] .panel { padding: 3px; border: 1px solid #80645b; border-radius: var(--radius);
-  background: linear-gradient(to bottom, #634e47, #4c3b36); }
-body[data-skin="coffee"] .panel > .inner { border-radius: calc(var(--radius) - 3px); box-shadow: 0 0 0 2px #342925; }
+body[data-skin="coffee"] .panel { padding: 3px; border: 1px solid #4c3b36; border-radius: var(--radius);
+  background: linear-gradient(to bottom, #2f2522, #211a17); }
+body[data-skin="coffee"] .panel > .inner { border-radius: calc(var(--radius) - 3px); box-shadow: 0 0 0 2px #130e0d; }
 body[data-skin="coffee"] .clock { filter: drop-shadow(0 0 3px rgba(210, 238, 247, .55)); }
-body[data-skin="coffee"] .btn { border: 1px solid #80645b; border-radius: 9px; background: linear-gradient(#80645b, #634e47);
+body[data-skin="coffee"] .btn { border: 1px solid #4c3b36; border-radius: 9px; background: linear-gradient(#392c28, #261d1b);
   color: var(--btn-glyph); }
-body[data-skin="coffee"] .btn:active { background: #342925; }
+body[data-skin="coffee"] .btn:active { background: #090706; }
 body[data-skin="coffee"] .list li.running { color: var(--ice); text-shadow: var(--ice-glow); }
 body[data-skin="coffee"] dialog.sheet { border-radius: var(--radius); }
 body[data-skin="coffee"] .skins .btn.active { outline: 2px solid var(--accent); }
