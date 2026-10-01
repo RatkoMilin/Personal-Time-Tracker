@@ -225,6 +225,13 @@ def _ping(freq: float = 2100, dur: float = 0.45, tau: float = 0.16) -> list[floa
     return [sum(v) for v in zip(*parts)]
 
 
+def _bell(freq: float = 1760, dur: float = 0.9, tau: float = 0.35) -> list[float]:
+    """A clear little bell: ding (the pomodoro round is over)."""
+    parts = [tone(freq * r, freq * r, dur, attack=0.002, tau=tau * k, amp=a)
+             for r, a, k in ((1.0, 1.0, 1.0), (2.0, 0.5, 0.7), (3.01, 0.25, 0.5), (4.2, 0.12, 0.35))]
+    return [sum(v) for v in zip(*parts)]
+
+
 def _pour(dur: float = 0.5, seed: int = 81) -> list[float]:
     """Sand running through the neck of the glass: a soft, grainy hiss."""
     hiss = noise(dur, amp=0.7, seed=seed, lowpass=(0.35, 0.3), highpass=0.25,
@@ -245,7 +252,7 @@ def _kit(skin: str) -> dict:
             "pause": [(0, _pour(0.16, seed=82))],
             "stop": [(0, _wind(0.6, seed=45, falling=True))] + _rustle(0, 0.25, 8, seed=83),
             "click": _rustle(0, 0.03, 3, seed=84),
-            "flip": [(0, _ping(1300, 0.35, 0.1)), (0.12, _ping(1700, 0.3, 0.08)), (0.15, _pour(0.45, seed=85))],
+            "flip": [(0, _bell()), (0.3, _pour(0.45, seed=85))],                    # ding: a round is over
             "alert": [(0, _wind(0.5, seed=46)), (0.3, _ping(1500, 0.3, 0.1))] + _rustle(0, 0.6, 12, seed=86),
         }
     elif skin == "dandelion":
