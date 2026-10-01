@@ -90,6 +90,20 @@ def test_play_pause_stop_and_playlist(page):
     assert page.locator("#playlist").is_visible()
 
 
+def test_pause_play_continues_the_clock(page):
+    page.fill("#task", "Nastavak")
+    page.click("#playBtn")
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 10 * 60000")
+    page.click("#pauseBtn")
+    page.click("#pauseBtn")  # play again: a new entry, the clock carries on from 10 minutes
+    assert len(db(page)["entries"]) == 2
+    page.wait_for_function("document.title.startsWith('00:10')")
+    page.click("#stopBtn")
+    page.click("#list li >> nth=1")
+    page.click("#eContinue")
+    page.wait_for_function("document.title.startsWith('00:10')")
+
+
 def test_running_timer_survives_reload(page):
     page.fill("#task", "Dugačak zadatak")
     page.press("#task", "Enter")

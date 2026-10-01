@@ -263,3 +263,20 @@ def test_activity_not_counted_while_idle_or_locked(db, settings):
     t.tick(ts(10))
     t.tick(ts(10) + 2)
     assert productivity.summarize(db, ts(0), ts(23), now=ts(11)).total == 2
+
+
+def test_task_total_adds_up_todays_entries_of_one_task(tmp_path):
+    from datetime import datetime
+
+    from timetracker import reports
+    from timetracker.db import Database
+
+    db = Database(tmp_path / "t.db")
+    d = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0).timestamp()
+    pid = db.project_id("A")
+    db.add_entry("pisanje", pid, d - 3600, d - 3000)          # 10 min
+    db.add_entry("pisanje", None, d - 2900, d - 2800)         # other project: not counted
+    db.add_entry("sastanak", pid, d - 2700, d - 2400)         # other task: not counted
+    db.add_entry("pisanje", pid, d - 2000, d - 1700)          # 5 min after a pause
+    assert reports.task_total(db, "pisanje", pid, now=d) == 900
+    db.close()
