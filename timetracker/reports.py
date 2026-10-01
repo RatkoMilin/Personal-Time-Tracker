@@ -20,6 +20,18 @@ def total_between(db: Database, a: float, b: float, now: float | None = None) ->
                for e in db.entries_between(a, b))
 
 
+def task_total(db: Database, description: str, project_id: int | None, now: float | None = None) -> float:
+    """Today's seconds on one task (same name and project), the running entry included.
+
+    Pausing and continuing (or "Nastavi" from the list) starts a new entry each time, so the gaps stay
+    out of the reports; the clock shows this total, so it carries on instead of starting from zero.
+    """
+    now = time.time() if now is None else now
+    a = timeutil.day_start(timeutil.ts_to_date(now))
+    return sum(e.duration(now) for e in db.entries_between(a, now + 1)
+               if e.description == description and e.project_id == project_id)
+
+
 def export_csv(db: Database, path: str, a: float, b: float, now: float | None = None) -> int:
     """Write entries overlapping [a, b) to a CSV that Excel opens directly. Returns the row count."""
     now = time.time() if now is None else now

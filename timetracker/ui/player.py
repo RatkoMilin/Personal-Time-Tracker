@@ -569,11 +569,12 @@ class Player(tk.Tk):
         running = self.db.running_entry()
         now = time.time()
         state = self.state
+        # The clock shows today's total for the task, so pause / play and "Nastavi" continue counting.
         if running:
-            secs = running.duration(now)
+            secs = reports.task_total(self.db, running.description, running.project_id, now)
         elif self.paused:
             last = self.db.entries_between(now - 86400 * 7, now + 1)
-            secs = last[-1].duration(now) if last else 0
+            secs = reports.task_total(self.db, last[-1].description, last[-1].project_id, now) if last else 0
         else:
             secs = 0
         h, rem = divmod(int(secs), 3600)

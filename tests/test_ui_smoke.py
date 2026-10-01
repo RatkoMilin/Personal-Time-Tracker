@@ -486,3 +486,29 @@ def test_coffee_skin_meter_words_at_80_percent(app):
     app._tick()
     app.update()
     app.set_skin("matrix")
+
+
+def test_pause_play_and_continue_keep_counting(app):
+    app.set_skin("matrix")
+    app.task_var.set("Nastavak")
+    app.project_var.set("")
+    app.play()
+    entry = app.db.running_entry()
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 600, None)  # 10 min in
+    app.pause()
+    app._update_display()
+    assert app._clock_text >= "00:10:00"
+    app.pause()  # play again: a new entry, but the clock carries on
+    app._update_display()
+    assert app._clock_text >= "00:10:00" and len([e for e in app.db.entries_between(time.time() - 3600, time.time() + 1)
+                                                  if e.description == "Nastavak"]) == 2
+    app.stop()
+    app._update_display()
+    assert app._clock_text == "00:00:00"
+    app.refresh()
+    app.listbox.selection_clear(0, "end")
+    app.listbox.selection_set(len(app._pl_ids) - 1)  # the last "Nastavak" entry
+    app.continue_selected()
+    app._update_display()
+    assert app.task_var.get() == "Nastavak" and app._clock_text >= "00:10:00"
+    app.stop()

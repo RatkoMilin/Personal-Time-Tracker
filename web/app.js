@@ -63,6 +63,15 @@
     return e;
   }
 
+  // Today's time on one task (same name and project): each pause / continue is a new entry, so the gaps
+  // stay out of the reports, while the clock adds them up and carries on.
+  function taskTotal(task, now = Date.now()) {
+    const a = new Date(now); a.setHours(0, 0, 0, 0);
+    return entriesBetween(a.getTime(), now + 1)
+      .filter(e => e.description === task.description && e.projectId === task.projectId)
+      .reduce((sum, e) => sum + ((e.end ?? now) - e.start), 0);
+  }
+
   function entriesBetween(a, b) {
     return db.entries.filter(e => e.start < b && (e.end == null || e.end > a)).sort((x, y) => x.start - y.start);
   }
@@ -505,10 +514,11 @@
   function renderDisplay() {
     const now = Date.now(), r = running(), st = state();
     let ms = 0;
-    if (r) ms = now - r.start;
+    // The clock shows today's total for the task, so pause / play and "Nastavi" continue counting.
+    if (r) ms = taskTotal(r, now);
     else if (st === "paused") {
       const last = entriesBetween(now - 7 * 86400000, now + 1).pop();
-      ms = last ? (last.end ?? now) - last.start : 0;
+      ms = last ? taskTotal(last, now) : 0;
     }
     const s = Math.floor(ms / 1000);
     const text = eink() ? `${pad(Math.min(99, Math.floor(s / 3600)))}:${pad(Math.floor(s / 60) % 60)}`
