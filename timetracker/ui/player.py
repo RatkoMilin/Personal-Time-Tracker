@@ -20,7 +20,7 @@ from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
-FIELD_TOP = "#d8edc6"  # the meadow's first green (Maslačak skin)
+FIELD_TOP = "#d8edc6"  # the meadow's first green (Maslačko skin)
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
 EXPORTS = [("Ova nedelja", "this_week"), ("Prošla nedelja", "last_week"), ("Ovaj mesec", "this_month"),
            ("Prošli mesec", "last_month"), ("Ova godina", "this_year")]
@@ -200,7 +200,8 @@ class Player(tk.Tk):
 
         buttons = tk.Frame(main, bg=T.body)
         buttons.pack(fill="x", pady=(skin.px(6), skin.px(2)))
-        skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)").pack(side="left")
+        self.play_btn = skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)")
+        self.play_btn.pack(side="left")
         skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza").pack(side="left", padx=2)
         skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop").pack(side="left")
         skin.SkinButton(buttons, self._click(self._export_menu), glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
@@ -322,6 +323,8 @@ class Player(tk.Tk):
         self._scramble()
         if skin.T.confetti:
             skin.confetti(self)
+        if skin.T.play_fx == "bullet":  # My Passion: the play button gets shot
+            self.play_btn.bullet_hole()
 
     def pause(self):
         if self.db.running_entry():

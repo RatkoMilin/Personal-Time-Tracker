@@ -1,4 +1,4 @@
-"""Maslačak skin: a dandelion clock down the right side of the window and a meadow in the distance.
+"""Maslačko skin: a dandelion clock down the right side of the window and a meadow in the distance.
 
 The flower is a 24-petal clock. At noon all petals are yellow; every hour two more (clockwise from the
 top) turn into grey seeds, so at midnight it is a full seed head. Between 00:00 and 01:00 a click blows

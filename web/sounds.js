@@ -123,9 +123,20 @@
     }
     return out;
   };
-  const gunshot = () => add(noise(0.6, { tau: 0.01, seed: 31, lowpass: [0.95, 0.4] }),
-                            tone(120, 42, 0.6, "sine", 0.001, 0.07, 0.9),
-                            noise(0.6, { tau: 0.14, amp: 0.22, seed: 32, lowpass: [0.1, 0.03] }));
+  const gunshot = () => {  // short crack, deep muzzle blast, slapback from the walls, driven hard (as on the laptop)
+    const dur = 0.66;
+    const dry = add(noise(dur, { tau: 0.004, amp: 0.7, seed: 31, lowpass: [0.9, 0.5] }),
+                    noise(dur, { tau: 0.09, amp: 1.6, seed: 33, lowpass: [0.12, 0.025] }),
+                    tone(85, 32, dur, "sine", 0.001, 0.16, 1.3),
+                    noise(dur, { tau: 0.25, amp: 0.3, seed: 32, lowpass: [0.05, 0.02] }));
+    const out = new Float32Array(dry.length + Math.floor(0.17 * RATE));
+    out.set(dry);
+    for (const [delay, gain] of [[0.07, 0.35], [0.16, 0.2]]) {
+      const k = Math.floor(delay * RATE);
+      for (let i = 0; i < dry.length; i++) out[i + k] += dry[i] * gain;
+    }
+    return out.map(v => Math.tanh(1.8 * v));
+  };
   const steam = (dur = 0.75) => noise(dur, { seed: 61, lowpass: [0.55, 0.75], highpass: 0.3,
     shape: f => Math.min(1, f / 0.12) * Math.min(1, (1 - f) / 0.35) * (0.7 + 0.3 * Math.sin(f * 70)) });
   const clink = (f, seed = 71, amp = 1) => add(...[[1, 1, 0.05], [1.47, 0.6, 0.035], [2.09, 0.45, 0.025], [2.56, 0.3, 0.02]]

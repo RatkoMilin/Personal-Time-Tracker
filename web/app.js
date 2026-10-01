@@ -4,7 +4,7 @@
 
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
-                 ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačak"],
+                 ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
                  ["coffee", "My Passion"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
                         mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211",
@@ -314,7 +314,7 @@
     }, 3800);
   }
 
-  // Maslačak: a 24-petal dandelion clock down the right side (as on the laptop). At noon all petals are
+  // Maslačko: a 24-petal dandelion clock down the right side (as on the laptop). At noon all petals are
   // yellow, every hour two turn into grey seeds; between 00:00 and 01:00 a tap blows the seeds away and the
   // little gentleman slides down into the meadow. Two yellow petals come back every hour; he returns at noon.
   const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -425,6 +425,20 @@
     return true;
   }
 
+  // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
+  function bulletHole() {
+    const btn = $("playBtn");
+    btn.querySelectorAll(".hole").forEach(h => h.remove());
+    const hole = document.createElement("span");
+    hole.className = "hole";
+    Object.assign(hole.style, { left: rand(35, 65) + "%", top: rand(35, 65) + "%" });
+    hole.style.setProperty("--rot", rand(0, 360) + "deg");
+    hole.innerHTML = '<i class="smoke"></i>';
+    btn.appendChild(hole);
+    setTimeout(() => hole.remove(), 2400);
+    return hole;
+  }
+
   // Matrix: on play/pause the digits jumble like a broken clock, then settle one by one.
   let scrambleUntil = 0;
   function scramble() {
@@ -479,6 +493,7 @@
     commit();
     scramble();
     if (skin() === "setsuna") confetti();
+    if (skin() === "coffee") bulletHole();
   }
 
   function pause() {

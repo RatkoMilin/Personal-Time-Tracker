@@ -187,11 +187,19 @@ def _rustle(start: float, dur: float, grains: int, seed: int = 51) -> list[tuple
 
 
 def _gunshot() -> list[float]:
-    """Revolver: the crack, a low boom and the room ringing out."""
-    crack = noise(0.6, tau=0.010, amp=1.0, seed=31, lowpass=(0.95, 0.4))
-    boom = tone(120, 42, 0.6, attack=0.001, tau=0.07, amp=0.9)
-    room = noise(0.6, tau=0.14, amp=0.22, seed=32, lowpass=(0.1, 0.03))
-    return [a + b + c for a, b, c in zip(crack, boom, room)]
+    """Revolver: a short sharp crack, a deep muzzle blast and the room echoing, driven hard like a real shot."""
+    dur = 0.66
+    crack = noise(dur, tau=0.004, amp=0.7, seed=31, lowpass=(0.9, 0.5))
+    blast = noise(dur, tau=0.09, amp=1.6, seed=33, lowpass=(0.12, 0.025))  # the low rumble of the blast
+    boom = tone(85, 32, dur, attack=0.001, tau=0.16, amp=1.3)
+    room = noise(dur, tau=0.25, amp=0.3, seed=32, lowpass=(0.05, 0.02))
+    dry = [a + b + c + d for a, b, c, d in zip(crack, blast, boom, room)]
+    out = dry + [0.0] * int(0.17 * RATE)
+    for delay, gain in ((0.07, 0.35), (0.16, 0.2)):  # slapback from the walls
+        k = int(delay * RATE)
+        for i, v in enumerate(dry):
+            out[i + k] += v * gain
+    return [math.tanh(1.8 * v) for v in out]  # saturated: loud and punchy
 
 
 def _steam(dur: float = 0.75) -> list[float]:
