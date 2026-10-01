@@ -398,6 +398,15 @@ body[data-skin="dandelion"] .app { position: relative; padding-right: 74px; padd
 body[data-skin="dandelion"] .dandelion { display: block; position: absolute; top: 0; right: 0; bottom: 40px; width: 82px;
   height: calc(100% - 40px); pointer-events: none; overflow: visible; z-index: 2; }
 body[data-skin="dandelion"] .dandelion .head.can-blow { pointer-events: auto; cursor: pointer; }
+body[data-skin="dandelion"] .dandelion .man { pointer-events: auto; cursor: pointer; }
+body[data-skin="dandelion"] .dandelion .wave-arm, body[data-skin="dandelion"] .dandelion .man.waving .rest-arm { display: none; }
+body[data-skin="dandelion"] .dandelion .man.waving .wave-arm { display: inline; }
+body[data-skin="dandelion"] .dandelion .man.waving .forearm { animation: ptt-wave 1.4s ease-in-out; }
+@keyframes ptt-wave {  /* the raised forearm sways left and right twice (as on the laptop) */
+  0%, 100% { transform: rotate(0deg); } 12.5% { transform: rotate(25deg); } 37.5% { transform: rotate(-25deg); }
+  62.5% { transform: rotate(25deg); } 87.5% { transform: rotate(-25deg); }
+}
+
 body[data-skin="dandelion"] .dandelion .seed, body[data-skin="dandelion"] .dandelion .man {
   transition: transform 2.4s ease-out, opacity 2.4s ease-in; }
 body[data-skin="dandelion"] .dandelion.blowing .seed { transform: translate(var(--dx), var(--dy)) rotate(-25deg); opacity: 0; }

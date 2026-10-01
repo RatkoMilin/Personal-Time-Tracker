@@ -86,11 +86,20 @@ def draw_seed(c: tk.Canvas, cx: float, cy: float, angle: float, r: float, tags) 
     c.create_oval(ex - 1, ey - 1, ex + 1, ey + 1, fill="#9a9a9a", outline="", tags=tags)
 
 
-def draw_gentleman(c: tk.Canvas, sx: float, sy: float, tags="man") -> None:
+def wave_angle(f: float) -> float | None:
+    """Waving at moment f (0..1) of the animation: the raised forearm's tilt in degrees (negative: to the
+    left), swinging left and right twice; None while the arm is down at the start and the end."""
+    if f < 0.1 or f > 0.92:
+        return None
+    return 25 * math.sin((f - 0.1) / 0.82 * 2 * math.pi * 2)
+
+
+def draw_gentleman(c: tk.Canvas, sx: float, sy: float, tags="man", wave: float | None = None) -> None:
     """The little gentleman holding the stem (at x=sx) with his left hand and left leg.
 
     He faces us, so his left side is towards the stem on our right. Black top hat, long curled moustache,
-    short golden ornamental waistcoat over a white shirt.
+    short golden ornamental waistcoat over a white shirt. wave raises his free right arm and tilts the forearm
+    by that many degrees.
     """
     ink, skin_c = "#2b2b2b", "#f1cfb0"
     bx = sx - px(11)  # body axis
@@ -106,9 +115,16 @@ def draw_gentleman(c: tk.Canvas, sx: float, sy: float, tags="man") -> None:
     # Arms: the left one reaches up to the stem, the right one waves.
     c.create_line(bx + px(3), top + px(15), bx + px(7), top + px(10), sx - px(1), top + px(7), fill="#f7f4ee",
                   width=max(2, px(2.2)), capstyle="round", joinstyle="round", tags=tags)
-    c.create_line(bx - px(3), top + px(15), bx - px(8), top + px(18), bx - px(11), top + px(13), fill="#f7f4ee",
-                  width=max(2, px(2.2)), capstyle="round", joinstyle="round", tags=tags)
-    for hx, hy in ((sx - px(1), top + px(7)), (bx - px(11), top + px(13))):
+    shoulder = (bx - px(3), top + px(15))
+    if wave is None:  # hanging out to the side
+        elbow, hand = (bx - px(8), top + px(18)), (bx - px(11), top + px(13))
+    else:  # upper arm out, forearm up, swaying
+        a = math.radians(wave)
+        elbow = (bx - px(10.5), top + px(13))
+        hand = (elbow[0] + math.sin(a) * px(7), elbow[1] - math.cos(a) * px(7))
+    c.create_line(*shoulder, *elbow, *hand, fill="#f7f4ee", width=max(2, px(2.2)), capstyle="round",
+                  joinstyle="round", tags=tags)
+    for hx, hy in ((sx - px(1), top + px(7)), hand):
         c.create_oval(hx - px(1.6), hy - px(1.6), hx + px(1.6), hy + px(1.6), fill=skin_c, outline="", tags=tags)
     # Body: white shirt, short golden waistcoat with little ornaments, dark trousers.
     c.create_rectangle(bx - px(3.5), top + px(21), bx + px(3.5), top + px(28), fill="#3a3540", outline="",
@@ -152,6 +168,7 @@ class DandelionColumn(tk.Canvas):
         self.bands, self.blown_day, self.on_blow, self.clock = bands, blown_day, on_blow, clock
         self.key = None
         self.animating = False
+        self.arm: float | None = None  # waving forearm tilt
         self.bind("<Configure>", lambda e: self.draw())
         self.bind("<Button-1>", self._clicked)
 
@@ -210,7 +227,7 @@ class DandelionColumn(tk.Canvas):
         self._draw_head(petals)
         self.config(cursor="hand2" if can_blow else "")
         if man:
-            draw_gentleman(self, self.stem_x(self.man_y()), self.man_y())
+            draw_gentleman(self, self.stem_x(self.man_y()), self.man_y(), wave=self.arm)
         draw_field(self, 0, w, ft, h, yellow, seed=11)
 
     @staticmethod
@@ -249,6 +266,31 @@ class DandelionColumn(tk.Canvas):
         cx, cy, r = self.head()
         if math.hypot(event.x - cx, event.y - cy) <= r + px(4):
             self.blow()
+            return
+        box = self.bbox("man")
+        if box and box[0] - px(3) <= event.x <= box[2] + px(3) and box[1] - px(3) <= event.y <= box[3] + px(3):
+            self.wave()
+
+    def wave(self) -> bool:
+        """A click on the gentleman: he waves twice, left and right."""
+        if self.animating or not self.find_withtag("man"):
+            return False
+        self.animating = True
+        frames = 40
+
+        def step(i=0):
+            if not self.winfo_exists():
+                return
+            self.arm = wave_angle(i / frames)
+            self.draw()
+            if i < frames:
+                self.after(40, step, i + 1)
+            else:
+                self.arm = None
+                self.animating = False
+
+        step()
+        return True
 
     def blow(self) -> bool:
         """Blow the seed head (only between 00:00 and 01:00 before it was blown)."""

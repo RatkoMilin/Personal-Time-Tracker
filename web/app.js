@@ -345,8 +345,13 @@
       line([[bx - 2, t + 27], [bx - 3, t + 35], [bx - 5, t + 41]], "#3a3540", 2.4) +
       `<ellipse cx="${sx - 1}" cy="${t + 31}" rx="2" ry="2" fill="${ink}"/><ellipse cx="${bx - 5.5}" cy="${t + 41.5}" rx="2.5" ry="1.5" fill="${ink}"/>` +
       line([[bx + 3, t + 15], [bx + 7, t + 10], [sx - 1, t + 7]], "#f7f4ee", 2.2) +
-      line([[bx - 3, t + 15], [bx - 8, t + 18], [bx - 11, t + 13]], "#f7f4ee", 2.2) +
-      `<circle cx="${sx - 1}" cy="${t + 7}" r="1.6" fill="#f1cfb0"/><circle cx="${bx - 11}" cy="${t + 13}" r="1.6" fill="#f1cfb0"/>` +
+      `<g class="rest-arm">` + line([[bx - 3, t + 15], [bx - 8, t + 18], [bx - 11, t + 13]], "#f7f4ee", 2.2) +
+      `<circle cx="${bx - 11}" cy="${t + 13}" r="1.6" fill="#f1cfb0"/></g>` +
+      `<g class="wave-arm">` + line([[bx - 3, t + 15], [bx - 10.5, t + 13]], "#f7f4ee", 2.2) +
+      `<g class="forearm" style="transform-origin:${f1(bx - 10.5)}px ${f1(t + 13)}px">` +
+      line([[bx - 10.5, t + 13], [bx - 10.5, t + 6]], "#f7f4ee", 2.2) +
+      `<circle cx="${bx - 10.5}" cy="${t + 6}" r="1.6" fill="#f1cfb0"/></g></g>` +
+      `<circle cx="${sx - 1}" cy="${t + 7}" r="1.6" fill="#f1cfb0"/>` +
       `<rect x="${bx - 3.5}" y="${t + 21}" width="7" height="7" fill="#3a3540"/>` +
       `<rect x="${bx - 4}" y="${t + 13}" width="8" height="9" fill="#f7f4ee" stroke="${ink}" stroke-width=".6"/>` +
       `<polygon points="${[[-4, 14], [-1, 14], [0, 20], [1, 14], [4, 14], [4, 21], [0, 22.5], [-4, 21]].map(([x, y]) => `${bx + x},${t + y}`).join(" ")}" fill="#d4a017" stroke="#8a6510" stroke-width=".6"/>` +
@@ -397,6 +402,17 @@
     void svg.getBoundingClientRect();
     svg.classList.add("blowing");
     setTimeout(() => { blowing = false; renderDandelion(true); }, 2900);
+    return true;
+  }
+
+  // A tap on the gentleman: he waves twice, left and right.
+  function waveGentleman() {
+    const man = document.querySelector("#dandelion .man");
+    if (!man || blowing) return false;
+    man.classList.remove("waving");
+    void man.getBoundingClientRect();
+    man.classList.add("waving");
+    setTimeout(() => man.classList.remove("waving"), 1700);
     return true;
   }
 
@@ -762,7 +778,10 @@
       commit();
       if (db.settings.showPlaylist && skin() === "pastel") bubbles();  // bubbles rising over the list
     }, "pl"));
-    $("dandelion").addEventListener("click", e => { if (e.target.closest(".head")) blowDandelion(); });
+    $("dandelion").addEventListener("click", e => {
+      if (e.target.closest(".head")) blowDandelion();
+      else if (e.target.closest(".man")) waveGentleman();
+    });
     $("prevDay").addEventListener("click", withClick(() => { dayOffset++; render(); }));
     $("nextDay").addEventListener("click", withClick(() => { dayOffset = Math.max(0, dayOffset - 1); render(); }));
     $("addBtn").addEventListener("click", withClick(() => openEntry(null)));

@@ -425,7 +425,7 @@ def test_dandelion_clock_states():
 
 
 def test_dandelion_skin_blow_after_midnight(app):
-    from timetracker.ui import skin
+    from timetracker.ui import dandelion, skin
 
     app.set_skin("dandelion")
     if not app.settings["show_playlist"]:
@@ -437,6 +437,19 @@ def test_dandelion_skin_blow_after_midnight(app):
     side.draw()
     assert not side.blow()  # only between 00:00 and 01:00
     assert side.find_withtag("man") and len(side.find_withtag("petal")) == 18
+    x0, y0, x1, y1 = side.bbox("man")
+    side._clicked(type("E", (), {"x": (x0 + x1) / 2, "y": (y0 + y1) / 2})())  # a click on the gentleman
+    assert side.animating and not app.settings["dandelion_blown"]
+    deadline = time.time() + 5
+    while side.animating and time.time() < deadline:
+        app.update()
+        time.sleep(0.02)
+    assert side.arm is None
+    swings = [dandelion.wave_angle(i / 100) for i in range(101)]
+    assert swings[0] is None and swings[-1] is None
+    tilts = [a for a in swings if a is not None]
+    assert max(tilts) > 20 and min(tilts) < -20
+    assert sum(1 for x, y in zip(tilts, tilts[1:]) if x < 0 <= y) >= 2  # twice left and right
     side.clock = lambda: datetime(2026, 10, 1, 0, 20)
     side.draw()
     cx, cy, r = side.head()

@@ -207,6 +207,8 @@ def test_dandelion_blows_only_after_midnight(browser, server):
     pg.wait_for_selector("#dandelion .man")
     assert pg.locator("#dandelion .petal").count() == 18 and pg.locator("#dandelion .seed").count() == 6
     assert pg.evaluate("window.PTT.blowDandelion()") is False
+    pg.click("#dandelion .man", force=True)  # he waves
+    assert pg.locator("#dandelion .man.waving").count() == 1
     assert pg.evaluate("document.documentElement.scrollWidth") <= 390
     shots = os.environ.get("PTT_WEB_SHOTS")
     if shots:
