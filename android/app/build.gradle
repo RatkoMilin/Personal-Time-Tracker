@@ -1,0 +1,52 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.ratkomilin.timetracker"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ratkomilin.timetracker"
+        minSdk 26
+        targetSdk 34
+        // Every CI build gets a higher number, so a new APK installs over the old one (keeping the data).
+        versionCode Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER") ?: "1")
+        versionName "1.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+    }
+
+    signingConfigs {
+        // A fixed key checked into the repo, only for sideloading this personal app. It keeps the
+        // signature identical across builds; Android refuses updates signed with a different key.
+        sideload {
+            storeFile file("../ptt-sideload.jks")
+            storePassword "timetracker"
+            keyAlias "ptt"
+            keyPassword "timetracker"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.sideload
+            minifyEnabled false
+        }
+        debug {
+            signingConfig signingConfigs.sideload
+        }
+    }
+
+    sourceSets {
+        // The app ships the same web/ folder that GitHub Pages serves.
+        main.assets.srcDirs = ["../../web"]
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "androidx.webkit:webkit:1.11.0"
+}

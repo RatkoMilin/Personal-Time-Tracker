@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 import pytest
 
-from timetracker import reports, timeutil
+from timetracker import productivity, reports, timeutil
 from timetracker.config import Settings
 from timetracker.db import Database
 from timetracker.tracker import IdleEnd, IdleStart, Tracker
@@ -27,9 +27,13 @@ def ts(h, m=0, day=date(2026, 9, 30)):
 
 class FakePlatform:
     idle = 0.0
+    window = None
 
     def idle_seconds(self):
         return self.idle
+
+    def active_window(self):
+        return self.window
 
 
 # ------------------------------------------------------------------ timeutil
@@ -195,3 +199,67 @@ def test_no_idle_reminder_when_off_or_no_timer(db, settings):
     plat.idle = 0
     t.tick(ts(9, 12))
     assert t.events.empty()
+
+
+# -------------------------------------------------------------- productivity
+
+@pytest.mark.parametrize("exe,title,expected", [
+    ("chrome.exe", "Ponuda 2026 - Google Docs - Google Chrome", ("productive", "Google Docs")),
+    ("WINWORD.EXE", "Ugovor.docx - Word", ("productive", "Word")),
+    ("msedge.exe", "Budžet - Google Sheets \u2014 Microsoft\u200b Edge", ("productive", "Google Sheets")),
+    ("chrome.exe", "Cat video - YouTube - Google Chrome", ("distracting", "YouTube")),
+    ("firefox.exe", "(3) Facebook - Mozilla Firefox", ("distracting", "Facebook")),
+    ("chrome.exe", "Instagram - Google Chrome", ("distracting", "Instagram")),
+    ("chrome.exe", "Patike | Zalando - Google Chrome", ("distracting", "Kupovina")),
+    ("chrome.exe", "Amazon.de: Kopfhörer - Google Chrome", ("distracting", "Kupovina")),
+    ("chrome.exe", "Word tips for beginners - YouTube - Google Chrome", ("distracting", "YouTube")),
+    ("Photoshop.exe", "Adobe Photoshop 2026", ("neutral", "Photoshop")),
+    ("explorer.exe", "Downloads", ("neutral", "explorer")),
+])
+def test_classifier(exe, title, expected):
+    assert productivity.Classifier().classify(exe, title) == expected
+
+
+def test_classifier_extra_words_from_settings():
+    c = productivity.Classifier(extra_productive=["Figma", "blender.exe"], extra_distracting=["9gag"])
+    assert c.classify("chrome.exe", "Logo - Figma - Google Chrome") == ("productive", "Figma")
+    assert c.classify("blender.exe", "scene.blend") == ("productive", "blender")
+    assert c.classify("chrome.exe", "Funny - 9GAG - Google Chrome") == ("distracting", "9gag")
+
+
+def test_activity_is_tracked_without_titles_and_summarized(db, settings):
+    plat = FakePlatform()
+    t = make_tracker(db, settings, plat)
+    plat.window = ("WINWORD.EXE", "Tajni ugovor.docx - Word")
+    for i in range(31):  # 60 s of Word
+        t.tick(ts(9) + i * 2)
+    plat.window = ("chrome.exe", "Something - YouTube - Google Chrome")
+    for i in range(1, 16):  # 30 s of YouTube
+        t.tick(ts(9) + 60 + i * 2)
+    plat.window = ("explorer.exe", "Downloads")
+    t.tick(ts(9) + 92)
+    rows = db.activity_between(ts(0), ts(23))
+    assert [(c, l) for _, _, c, l in rows] == [("productive", "Word"), ("distracting", "YouTube"),
+                                                ("neutral", "explorer")]
+    assert all("Tajni" not in l for _, _, _, l in rows)
+    s = productivity.summarize(db, ts(0), ts(23), now=ts(10))
+    assert s.seconds["productive"] == 60 and s.seconds["distracting"] == 30 and s.seconds["neutral"] == 2
+    assert s.share("productive") == pytest.approx(60 / 92)
+    assert s.labels["distracting"] == [("YouTube", 30.0)]
+
+
+def test_activity_not_counted_while_idle_or_locked(db, settings):
+    plat = FakePlatform()
+    t = make_tracker(db, settings, plat)
+    plat.window = ("WINWORD.EXE", "x - Word")
+    for i in range(31):
+        t.tick(ts(9) + i * 2)
+    plat.idle = 400  # away for more than the 5 min limit: the last 400 s are not work
+    t.tick(ts(9) + 62)
+    plat.idle, plat.window = 0, None  # locked screen
+    t.tick(ts(9) + 64)
+    assert productivity.summarize(db, ts(0), ts(23), now=ts(10)).total == 0
+    plat.window = ("WINWORD.EXE", "x - Word")
+    t.tick(ts(10))
+    t.tick(ts(10) + 2)
+    assert productivity.summarize(db, ts(0), ts(23), now=ts(11)).total == 2

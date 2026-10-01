@@ -7,11 +7,13 @@ import gc
 import os
 import sys
 import time
+from datetime import date, datetime
 
 import pytest
 
 tk = pytest.importorskip("tkinter")
 
+from timetracker import timeutil  # noqa: E402
 from timetracker.config import Settings  # noqa: E402
 from timetracker.db import Database  # noqa: E402
 from timetracker.tracker import IdleEnd, IdleStart  # noqa: E402
@@ -35,6 +37,9 @@ pytestmark = pytest.mark.skipif(not _has_display(), reason="no display")
 class FakePlatform:
     def idle_seconds(self):
         return 0.0
+
+    def active_window(self):
+        return None
 
 
 @pytest.fixture(scope="module")
@@ -89,8 +94,8 @@ def test_play_pause_stop(app):
 
 
 def test_playlist_continue_delete_and_days(app):
-    now = time.time()
-    eid = app.db.add_entry("jutro", app.db.project_id("P"), now - 7200, now - 3600)
+    today = timeutil.day_start(date.today())  # fixed times inside today, whatever the clock says
+    eid = app.db.add_entry("jutro", app.db.project_id("P"), today + 60, today + 120)
     app.refresh()
     assert "jutro [P]" in app.listbox.get(0)
     app.listbox.selection_set(0)
@@ -166,3 +171,58 @@ def test_dialogs(app):
     dlg.ok()
     assert dlg.result["end"] - dlg.result["start"] == 5400
     assert dlg.result["project"] == "Interno"
+
+
+def test_new_entry_just_after_midnight_defaults_to_today(app, monkeypatch):
+    from timetracker.ui import dialogs
+
+    d = date.today()
+    monkeypatch.setattr(dialogs.time, "time", lambda: datetime(d.year, d.month, d.day, 0, 5).timestamp())
+    dlg = dialogs.EntryDialog(app, app.db, day=d)
+    assert dlg.date.get() == timeutil.fmt_date(timeutil.day_start(d))
+    assert (dlg.start.get(), dlg.end.get()) == ("00:00", "00:05")
+    dlg.cancel()
+
+
+def test_productivity_meter_and_dashboard(app):
+    from datetime import timedelta
+
+    from timetracker.ui import dialogs
+
+    # Yesterday is entirely in the past, so nothing is clipped at "now" whatever the clock says.
+    yesterday = timeutil.day_start(date.today() - timedelta(days=1))
+    app.db.add_activity("productive", "Google Docs", yesterday + 3600, yesterday + 2 * 3600)
+    app.db.add_activity("distracting", "YouTube", yesterday + 3 * 3600, yesterday + 3 * 3600 + 1200)
+    app.shift_day(1)
+    app.update()
+    assert app.meter.shares == pytest.approx((0.75, 0.0, 0.25))
+    app.show_productivity()
+    dlg = [w for w in app.winfo_children() if isinstance(w, dialogs.ProductivityDialog)][-1]
+    dlg.update()
+    labels = [w.cget("text") for w in dlg.body.winfo_children()[1].inner.winfo_children()]
+    assert labels[0].lower().startswith("produktivno  1h 00m  (75%)")
+    assert "YouTube" in labels[3]
+    dlg.destroy()
+    app.shift_day(-1)
+    app.db._exec("DELETE FROM activity")
+    app.refresh()
+    assert app.meter.shares is None
+
+
+def test_minimize_to_mini_bar_and_restore(app):
+    app.task_var.set("Mini test")
+    app.play()
+    app._maybe_show_mini()  # not minimized: nothing happens (and wm_state, not the timer state, is checked)
+    assert app.mini is None
+    app.show_mini()
+    app.update()
+    assert app.mini is not None and app.mini.winfo_viewable() and not app.winfo_viewable()
+    app._update_display()
+    assert app.mini.task.cget("text") == "Mini test"
+    assert app.mini.time.cget("text").count(":") == 2
+    app.mini.play.command()  # pause from the mini bar
+    assert app.state == app.PAUSED
+    app.show()
+    app.update()
+    assert app.winfo_viewable() and not app.mini.winfo_viewable()
+    app.stop()

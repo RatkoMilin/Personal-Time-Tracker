@@ -79,7 +79,45 @@
     shape: f => Math.pow(Math.sin(Math.PI * f), 2) });
   const tick = (f = 3000) => add(tone(f, f, 0.06, "sine", 0.004, 0.01), noise(0.06, { tau: 0.003, amp: 0.5, seed: 11 }));
 
+  function glide(points, dur, amp = 1, tremolo = 0) {
+    const n = Math.floor(dur * RATE), out = new Float32Array(n), weights = [1, 0.55, 0.35, 0.22, 0.12];
+    let phase = 0;
+    for (let i = 0; i < n; i++) {
+      const frac = i / Math.max(1, n - 1);
+      let f = points[points.length - 1][1];
+      for (let k = 0; k < points.length - 1; k++) {
+        const [f0, a0] = points[k], [f1, a1] = points[k + 1];
+        if (frac >= f0 && frac <= f1) { f = a0 + (a1 - a0) * (frac - f0) / Math.max(1e-9, f1 - f0); break; }
+      }
+      f *= 1 + 0.01 * Math.sin(2 * Math.PI * 6 * i / RATE);
+      phase += 2 * Math.PI * f / RATE;
+      let v = 0;
+      weights.forEach((w, k) => { v += w * Math.sin((k + 1) * phase); });
+      let env = Math.min(1, frac / 0.08) * Math.min(1, (1 - frac) / 0.35);
+      if (tremolo) env *= 0.65 + 0.35 * Math.sin(2 * Math.PI * tremolo * i / RATE);
+      out[i] = amp * (v / 2.2) * env;
+    }
+    return out;
+  }
+  const meow = (high = 1, dur = 0.38, falling = false) => glide(falling
+    ? [[0, 520 * high], [0.3, 880 * high], [1, 470 * high]] : [[0, 560 * high], [0.35, 900 * high], [1, 640 * high]], dur);
+  const pluck = (f, dur = 0.25) => add(tone(f, f, dur, "sine", 0.004, 0.07), tone(f * 2, f * 2, dur, "sine", 0.004, 0.03, 0.35));
+
   const KITS = {
+    cat: {
+      start: () => [[0, glide([[0, 380], [1, 720]], 0.16, 1, 28)], [0.15, meow(1.1, 0.24)]],
+      pause: () => [[0, meow(1.3, 0.2)]],
+      stop: () => [[0, meow(1, 0.45, true)]],
+      click: () => [[0, knock(2.2, 0.35, 12)]],
+      alert: () => [[0, meow(1, 0.36)], [0.42, meow(1.15, 0.36)]],
+    },
+    setsuna: {
+      start: () => [[0, pluck(784)], [0.08, pluck(988)], [0.16, pluck(1175)]],
+      pause: () => [[0, pluck(988)]],
+      stop: () => [[0, pluck(1175)], [0.08, pluck(988)], [0.16, pluck(784)]],
+      click: () => [[0, pluck(1568, 0.12)]],
+      alert: () => [[0, 784], [0.09, 1175], [0.18, 1568], [0.36, 784], [0.45, 1175], [0.54, 1568]].map(([t, f]) => [t, pluck(f)]),
+    },
     matrix: {
       start: () => [[0, blip(880)], [0.06, blip(1320)], [0.12, blip(1760, 0.06)]],
       pause: () => [[0, blip(1320, 0.035)], [0.07, blip(1320, 0.035)]],
@@ -109,6 +147,13 @@
       click: () => [[0, tick()]],
       alert: () => [[0, ring(2350, 0.4)], [0, noise(0.05, { tau: 0.01, seed: 9 })], [0.25, ring(2637, 0.45)],
                     [0.25, noise(0.05, { tau: 0.01, seed: 10 })]],
+    },
+    eink: {  // quiet paper-like taps and a soft chime
+      start: () => [[0, tick(1400)], [0.1, tick(1800)]],
+      pause: () => [[0, tick(1500)]],
+      stop: () => [[0, tick(1800)], [0.1, tick(1400)]],
+      click: () => [[0, tick(2200)]],
+      alert: () => [[0, tone(880, 880, 0.35, "sine", 0.01, 0.12)], [0.3, tone(660, 660, 0.45, "sine", 0.01, 0.15)]],
     },
   };
 

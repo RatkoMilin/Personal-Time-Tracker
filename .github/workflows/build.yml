@@ -40,6 +40,32 @@ jobs:
       - name: Mobile web app tests (phone-sized Chromium)
         run: python -m pytest -q tests/test_web.py
 
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build APK (e-ink app for Mudita Kompakt)
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+      - name: Name the APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk TimeTracker-Kompakt.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TimeTracker-android
+          path: TimeTracker-Kompakt.apk
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TimeTracker-Kompakt.apk
+
   windows:
     runs-on: windows-latest
     steps:
@@ -51,10 +77,25 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Tests (including real Windows API calls)
         run: python -m pytest -q
+      - name: Stamp the release version (enables self-update)
+        if: github.event_name == 'release'
+        shell: bash
+        run: echo "VERSION = \"${GITHUB_REF_NAME#v}\"" > timetracker/_build.py
       - name: Build exe
         run: >
           python -m PyInstaller --noconfirm --onefile --windowed --name PersonalTimeTracker
           --icon assets/icon.ico --add-data "assets;assets" --hidden-import pystray._win32 main.pyw
+      - name: Self-update smoke test (a running exe can be renamed)
+        shell: pwsh
+        run: |
+          $env:PTT_DATA_DIR = "$env:RUNNER_TEMP\ptt-smoke"
+          Start-Process -FilePath dist\PersonalTimeTracker.exe
+          Start-Sleep -Seconds 10
+          if (-not (Get-Process PersonalTimeTracker -ErrorAction SilentlyContinue)) { throw "exe did not start" }
+          Rename-Item dist\PersonalTimeTracker.exe PersonalTimeTracker.old.exe
+          Rename-Item dist\PersonalTimeTracker.old.exe PersonalTimeTracker.exe
+          Get-Process PersonalTimeTracker | Stop-Process -Force
+          Start-Sleep -Seconds 2
       - uses: actions/upload-artifact@v4
         with:
           name: PersonalTimeTracker-windows

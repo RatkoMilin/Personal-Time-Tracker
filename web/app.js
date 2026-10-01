@@ -3,9 +3,13 @@
   "use strict";
 
   const KEY = "ptt.v1";
-  const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Drvo (analogni)"],
-                 ["cyber", "Sajber (sivi)"]];
-  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b" };
+  const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Orah (analogni)"],
+                 ["cyber", "Silver samuraj"], ["cat", "Mačkasti"],
+                 ["setsuna", "Setsuna Orange"], ["eink", "E-ink (crno-belo)"]];
+  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
+                        eink: "#ffffff" };
+  // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
+  const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
   const EXPORTS = [["Ova nedelja", "this_week"], ["Prošla nedelja", "last_week"], ["Ovaj mesec", "this_month"],
                    ["Prošli mesec", "last_month"], ["Ova godina", "this_year"], ["Sve", "all"]];
   const WEEKDAYS = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
@@ -15,7 +19,7 @@
 
   function load() {
     const empty = { projects: [], entries: [], nextId: 1,
-                    settings: { skin: "matrix", sounds: true, showPlaylist: true },
+                    settings: { skin: EINK_DEVICE ? "eink" : "matrix", sounds: !EINK_DEVICE, showPlaylist: true },
                     ui: { task: "", project: "", paused: false } };
     try {
       const data = JSON.parse(localStorage.getItem(KEY));
@@ -120,11 +124,15 @@
     return node;
   }
 
-  function buildClock(style) {
+  let clockPattern = "88:88:88";
+  let lastClock = "";
+
+  function buildClock(style, pattern = "88:88:88") {
     const svg = $("clock");
     svg.innerHTML = "";
+    clockPattern = pattern;
+    lastClock = "";
     const dw = 20, dh = 36, t = style === "sharp" ? 3.5 : 4.5, gap = 5, colonW = 9, skew = style === "sharp" ? 0.2 : 0;
-    const pattern = "88:88:88";
     const width = [...pattern].reduce((w, ch) => w + (ch === ":" ? colonW : dw + gap), 0) + skew * dh;
     svg.setAttribute("viewBox", `0 0 ${width} ${dh + 2}`);
     const sk = pts => skew ? pts.map((v, i) => (i % 2 === 0 ? v + (dh - pts[i + 1]) * skew : v)) : pts;
@@ -164,8 +172,10 @@
   }
 
   function setClock(text, on) {
+    if (text + on === lastClock) return;  // no DOM writes when nothing changed (e-ink redraws on every write)
+    lastClock = text + on;
     const off = "var(--lcd-off)";
-    [...text.padStart(8)].forEach((ch, i) => {
+    [...text.padStart(clockPattern.length)].forEach((ch, i) => {
       const cell = segCells[i];
       const paint = (node, lit) => {
         const c = lit ? on : off;
@@ -210,8 +220,15 @@
   let dayOffset = 0;
   let blink = false;
   let marqueeOffset = 0;
-  const skin = () => db.settings.skin;
+  // On the Kompakt (e-ink device) there is only the e-ink skin, whatever was saved.
+  const skin = () => EINK_DEVICE ? "eink" : db.settings.skin;
   const upper = s => (skin() === "matrix" || skin() === "cyber") ? s.toUpperCase() : s;
+  const eink = () => skin() === "eink";
+  // E-ink shows hours:minutes only, so the screen changes once a minute instead of every second.
+  const dur = ms => eink() ? `${Math.floor(ms / 3600000)}:${pad(Math.floor(ms / 60000) % 60)}` : clock(ms);
+  function setText(node, text) {
+    if (node.textContent !== text) node.textContent = text;
+  }
 
   function sound(event, force = false) {
     if ((db.settings.sounds || force) && window.PTTSounds) window.PTTSounds.play(skin(), event);
@@ -225,7 +242,9 @@
   function applySkin() {
     document.body.dataset.skin = skin();
     document.querySelector('meta[name="theme-color"]').setAttribute("content", THEME_COLOR[skin()]);
-    buildClock(skin() === "pastel" ? "round" : skin() === "cyber" ? "sharp" : "hex");
+    const style = ["pastel", "cat", "setsuna"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    buildClock(style, eink() ? "88:88" : "88:88:88");
+    playlistKey = "";
     buildDial();
     renderSkinButtons();
   }
@@ -292,7 +311,8 @@
       ms = last ? (last.end ?? now) - last.start : 0;
     }
     const s = Math.floor(ms / 1000);
-    const text = `${pad(Math.min(99, Math.floor(s / 3600)))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    const text = eink() ? `${pad(Math.min(99, Math.floor(s / 3600)))}:${pad(Math.floor(s / 60) % 60)}`
+      : `${pad(Math.min(99, Math.floor(s / 3600)))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
     const task = $("task").value.trim() || "(bez naziva)";
     const project = $("project").value.trim();
     const today = totalBetween(...periodBounds("today"), now);
@@ -304,30 +324,39 @@
       $("elapsed").classList.toggle("dim", st !== "playing");
       $("info").textContent = `danas ${hours(today)}  ·  ${{ playing: "u toku", paused: "pauza", stopped: "stoji" }[st]}`;
     } else {
-      if (st === "paused" && blink) setClock("  :  :  ", "var(--lcd-on)");
+      if (st === "paused" && blink && !eink()) setClock(clockPattern.replace(/8/g, " "), "var(--lcd-on)");
       else setClock(text, st === "stopped" ? "var(--lcd-dim)" : "var(--lcd-on)");
-      $("stateIcon").className = "state-icon " + st;
+      const icon = "state-icon " + st;
+      if ($("stateIcon").className !== icon) $("stateIcon").className = icon;
       const title = st === "stopped" ? "Upiši zadatak i pritisni PLAY" : task + (project ? ` - ${project}` : "");
       const chars = Math.max(10, Math.floor($("marquee").clientWidth / 8.6));
       let shown = title;
-      if (title.length > chars) {
+      if (title.length > chars && !eink()) {  // e-ink: static text, cut off with an ellipsis by CSS
         const loop = title + "  ***  ";
         shown = (loop + loop).slice(marqueeOffset % loop.length).slice(0, chars);
       }
-      $("marquee").textContent = shown;
+      setText($("marquee"), shown);
       const week = totalBetween(...periodBounds("this_week"), now);
-      $("info").textContent = upper(`Danas   ${clock(today)}\nNedelja ${clock(week)}`);
+      setText($("info"), upper(`Danas   ${dur(today)}\nNedelja ${dur(week)}`));
     }
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
+  let playlistKey = "";
+
   function renderPlaylist() {
     const day = addDays(new Date(), -dayOffset);
-    $("dayLabel").textContent = dayHeader(day);
     const a = dayStart(day), b = addDays(day, 1).getTime(), now = Date.now();
+    const entries = entriesBetween(a, b);
+    const names = new Map(db.projects.map(p => [p.id, p.name]));
+    const key = JSON.stringify([dayHeader(day), db.settings.showPlaylist, totalBetween(a, b, now) / (eink() ? 60000 : 1000) | 0,
+      entries.map(e => [e.id, e.description, names.get(e.projectId), e.start, e.end,
+                        ((e.end ?? now) - e.start) / (eink() ? 60000 : 1000) | 0])]);
+    if (key === playlistKey) return;  // unchanged: skip the rebuild (and an e-ink redraw)
+    playlistKey = key;
+    $("dayLabel").textContent = dayHeader(day);
     const list = $("list");
     list.innerHTML = "";
-    const entries = entriesBetween(a, b);
     entries.forEach((e, i) => {
       const li = document.createElement("li");
       if (e.end == null) li.className = "running";
@@ -335,7 +364,7 @@
       li.innerHTML = `<span class="when"></span><span class="name"></span><span class="dur"></span>`;
       li.children[0].textContent = `${i + 1}. ${hm(e.start)}-${e.end == null ? "..." : hm(e.end)}`;
       li.children[1].textContent = name;
-      li.children[2].textContent = clock((e.end ?? now) - e.start);
+      li.children[2].textContent = dur((e.end ?? now) - e.start);
       li.addEventListener("click", () => openEntry(e));
       list.appendChild(li);
     });
@@ -345,7 +374,7 @@
       li.textContent = "nema unosa za ovaj dan";
       list.appendChild(li);
     }
-    $("total").textContent = upper(`Ukupno ${clock(totalBetween(a, b, now))}`);
+    $("total").textContent = upper(`Ukupno ${dur(totalBetween(a, b, now))}`);
     $("playlist").hidden = !db.settings.showPlaylist;
   }
 
@@ -373,7 +402,8 @@
     editing = entry;
     const day = addDays(new Date(), -dayOffset);
     const end = entry ? entry.end : (dayOffset === 0 ? Date.now() : new Date(day.getFullYear(), day.getMonth(), day.getDate(), 17).getTime());
-    const start = entry ? entry.start : end - 3600000;
+    // A new entry defaults to the last hour, but never before midnight of the day being viewed.
+    const start = entry ? entry.start : Math.max(end - 3600000, dayStart(day));
     $("entryTitle").textContent = upper(entry ? "Izmeni unos" : "Dodaj unos");
     $("eDesc").value = entry ? entry.description : "";
     $("eProject").value = entry ? projectName(entry.projectId) : "";
@@ -451,6 +481,10 @@
   }
 
   async function deliver(name, text, type) {
+    if (window.AndroidBridge) {  // Android app: save into Downloads through the native side
+      window.AndroidBridge.saveFile(name, text, type);
+      return;
+    }
     const file = new File([text], name, { type });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === "AbortError") return; }
@@ -494,6 +528,8 @@
   function renderSkinButtons() {
     const box = $("skins");
     box.innerHTML = "";
+    box.hidden = $("skinsLabel").hidden = EINK_DEVICE;
+    if (EINK_DEVICE) return;
     for (const [key, label] of SKINS) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "btn" + (key === skin() ? " active" : ""); b.textContent = label;
@@ -532,7 +568,17 @@
     $("stopBtn").addEventListener("click", stop);
     $("exportBtn").addEventListener("click", withClick(() => { $("soundsChk").checked = db.settings.sounds; $("menuDlg").showModal(); }));
     $("menuBtn").addEventListener("click", withClick(() => { $("soundsChk").checked = db.settings.sounds; $("menuDlg").showModal(); }));
-    $("plBtn").addEventListener("click", withClick(() => { db.settings.showPlaylist = !db.settings.showPlaylist; commit(); }));
+    $("plBtn").addEventListener("click", withClick(() => {
+      db.settings.showPlaylist = !db.settings.showPlaylist;
+      commit();
+      if (db.settings.showPlaylist && skin() === "pastel") {  // faint bubbles rising through the list
+        const pl = $("playlist");
+        pl.classList.remove("bubbling");
+        void pl.offsetWidth;
+        pl.classList.add("bubbling");
+        setTimeout(() => pl.classList.remove("bubbling"), 2800);
+      }
+    }));
     $("prevDay").addEventListener("click", withClick(() => { dayOffset++; render(); }));
     $("nextDay").addEventListener("click", withClick(() => { dayOffset = Math.max(0, dayOffset - 1); render(); }));
     $("addBtn").addEventListener("click", withClick(() => openEntry(null)));
@@ -559,12 +605,20 @@
       renderDisplay();
       if (running() && dayOffset === 0 && blink) renderPlaylist();
     }, 500);
-    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http") && !window.AndroidBridge) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }
   }
 
   // Exposed for tests.
-  window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, KEY };
+  // Android back button: close an open sheet first; returns true when it handled the press.
+  function back() {
+    for (const id of ["entryDlg", "menuDlg"]) {
+      if ($(id).open) { $(id).close(); return true; }
+    }
+    return false;
+  }
+
+  window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY };
   init();
 })();

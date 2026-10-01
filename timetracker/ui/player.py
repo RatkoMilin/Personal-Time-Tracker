@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import queue
+import threading
 import time
 import tkinter as tk
 from datetime import date, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from .. import APP_ID, APP_NAME, platform_win, reports, sounds, timeutil, tray
+from .. import APP_ID, APP_NAME, __version__, platform_win, productivity, reports, sounds, timeutil, tray, updater
 from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
-from .dialogs import EntryDialog, IdleReminder
+from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog
 
 PL_WIDTH = 50  # playlist width in characters
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
@@ -37,6 +38,7 @@ class Player(tk.Tk):
         self._quitting = False
         self._tray_key = None
         self.reminder: IdleReminder | None = None
+        self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
         self.project_var = tk.StringVar()
 
@@ -59,10 +61,15 @@ class Player(tk.Tk):
         self.bind("<Button-3>", self._popup_menu)  # root binding tag: any widget in this window
         self.bind_all("<Control-space>", lambda e: self.play_pause())
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.bind("<Unmap>", self._on_unmap)
         self._restore_position()
         if start_tracker:
             self.tracker.start()
             self.tray_available = self.tray.start()
+            exe = updater.running_exe()
+            if exe:
+                updater.cleanup(exe, self.data_dir / "update")
+            self.after(30_000, self._schedule_update_check)
         if start_minimized and self.tray_available:
             self.withdraw()
         self.after(500, self._poll_events)
@@ -87,6 +94,9 @@ class Player(tk.Tk):
         if key == skin.T.key:
             return
         self.settings.update({"skin": key})
+        if self.mini is not None:  # rebuilt in the new skin the next time it is shown
+            self.mini.destroy()
+            self.mini = None
         self.ui.destroy()
         for menu in (self.menu, self.row_menu):
             menu.destroy()
@@ -123,6 +133,10 @@ class Player(tk.Tk):
             self.state_icon = tk.Canvas(lcd, width=skin.px(12), height=skin.px(12), bg=T.lcd_bg,
                                         highlightthickness=0)
             self.state_icon.pack(side="left", anchor="n", padx=(0, skin.px(6)), pady=(skin.px(2), 0))
+            if T.clock_deco == "oranges":
+                fruit = tk.Canvas(lcd, width=skin.px(30), height=skin.px(36), bg=T.lcd_bg, highlightthickness=0)
+                skin.draw_orange(fruit, skin.px(15), skin.px(21), skin.px(11))
+                fruit.pack(side="left", padx=(0, skin.px(6)))
             self.clock = skin.SevenSegment(lcd)
             self.clock.pack(side="left")
             right = tk.Frame(lcd, bg=T.lcd_bg)
@@ -170,7 +184,7 @@ class Player(tk.Tk):
         skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        panel = skin.Panel(self.pl_frame, pad=2)
+        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern)
         panel.pack(fill="x")
         self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.lcd_bg, fg=T.lcd_text,
                                   selectbackground=T.sel_bg, selectforeground=T.sel_fg, font=T.font("mono", 9),
@@ -180,6 +194,9 @@ class Player(tk.Tk):
         self.listbox.bind("<Delete>", lambda e: self.delete_selected())
         self.listbox.bind("<Return>", lambda e: self.edit_selected())
         self.listbox.bind("<Button-3>", self._row_menu)
+
+        self.meter = skin.ProductivityMeter(self.pl_frame, self._click(self.show_productivity))
+        self.meter.pack(fill="x", pady=(skin.px(3), 0))
 
         foot = tk.Frame(self.pl_frame, bg=T.body)
         foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
@@ -213,6 +230,15 @@ class Player(tk.Tk):
         self.menu.add_cascade(label="Podsetnik za neaktivnost posle", menu=idle)
         self.top_var = tk.BooleanVar(value=self.settings["always_on_top"])
         self.menu.add_checkbutton(label="Uvek na vrhu", variable=self.top_var, command=self._toggle_top)
+        self.update_var = tk.BooleanVar(value=self.settings["auto_update"])
+        self.menu.add_checkbutton(label="Automatsko ažuriranje", variable=self.update_var,
+                                  command=lambda: self.settings.update({"auto_update": self.update_var.get()}))
+        version = updater.build_version()
+        self.menu.add_command(label=f"Proveri ažuriranje (verzija {version or __version__ + ' dev'})",
+                              command=lambda: self.check_for_update(manual=True))
+        self.mini_var = tk.BooleanVar(value=self.settings["mini_bar"])
+        self.menu.add_checkbutton(label="Umanjeno: mini traka dole", variable=self.mini_var,
+                                  command=lambda: self.settings.update({"mini_bar": self.mini_var.get()}))
         self.autostart_var = tk.BooleanVar(value=platform_win.is_autostart_enabled(APP_ID))
         self.menu.add_checkbutton(label="Pokreni sa Windows-om", variable=self.autostart_var,
                                   command=self._toggle_autostart,
@@ -358,9 +384,12 @@ class Player(tk.Tk):
         self.refresh()
 
     def toggle_playlist(self):
-        show = not self.pl_frame.winfo_ismapped()
+        show = not self.settings["show_playlist"]  # not winfo_ismapped: false until the first redraw
         if show:
             self.pl_frame.pack(fill="x")
+            if skin.T.pl_pattern == "bubbles":
+                self.update_idletasks()
+                self.pl_panel.bubble_burst()
         else:
             self.pl_frame.pack_forget()
         self.settings.update({"show_playlist": show})
@@ -404,6 +433,20 @@ class Player(tk.Tk):
             self.listbox.selection_set(sel[0])
         total = timeutil.fmt_clock(reports.total_between(self.db, a, b, now))
         self.total_label.configure(text=T.tx(f"Ukupno {total}"))
+        self._update_meter()
+
+    def _viewed_day(self) -> date:
+        return date.today() - timedelta(days=self.day_offset)
+
+    def _update_meter(self):
+        s = productivity.summarize(self.db, *timeutil.day_bounds(self._viewed_day()))
+        self.meter.set(s.seconds[productivity.PRODUCTIVE], s.seconds[productivity.NEUTRAL],
+                       s.seconds[productivity.DISTRACTING], s.total)
+
+    def show_productivity(self):
+        day = self._viewed_day()
+        ProductivityDialog(self, productivity.summarize(self.db, *timeutil.day_bounds(day)),
+                           skin.T.tx(timeutil.fmt_day_header(day)))
 
     def _update_display(self):
         T = skin.T
@@ -447,6 +490,9 @@ class Player(tk.Tk):
                                           f"   {'Idle ' + str(idle) + 'm' if idle else 'Idle off'}"))
 
         self.title(f"{text} {task} - {APP_NAME}" if running else APP_NAME)
+        if self.mini is not None and self.mini.winfo_viewable():
+            self.mini.update_view(state, text if running or state == self.PAUSED else "--:--:--",
+                                  task if state != self.STOPPED else "tajmer stoji")
         tip = f"{text} {task}" if running else f"{APP_NAME}: tajmer stoji"
         key = (state, task, int(now // 60))
         if key != self._tray_key:
@@ -474,6 +520,9 @@ class Player(tk.Tk):
         running = self.db.running_entry()
         if running and self.day_offset == 0 and running.id in self._pl_ids and self._blink:
             self._fill_playlist()
+        self._meter_ticks = getattr(self, "_meter_ticks", 0) + 1
+        if self._meter_ticks % 30 == 0:  # activity is recorded with or without a timer: refresh every 15 s
+            self._update_meter()
         self.after(500, self._tick)
 
     # ---------------------------------------------------------------- actions
@@ -536,6 +585,54 @@ class Player(tk.Tk):
                 self.paused = True
         self.refresh()
 
+    # ---------------------------------------------------------------- updates
+
+    def _schedule_update_check(self):
+        if self._quitting:
+            return
+        if self.settings["auto_update"]:
+            self.check_for_update()
+        self.after(6 * 3600 * 1000, self._schedule_update_check)
+
+    def check_for_update(self, manual: bool = False):
+        """Look for a newer release in the background; download it and install it when found."""
+        def work():
+            try:
+                found = updater.check(updater.build_version())
+                if found is None:
+                    if manual:
+                        self.events.put(lambda: messagebox.showinfo(
+                            "Ažuriranje", "Imaš najnoviju verziju." if updater.build_version()
+                            else "Samoažuriranje radi samo u exe verziji sa stranice Releases.", parent=self))
+                    return
+                path = updater.download(found, self.data_dir / "update")
+                self.events.put(lambda: self._apply_update(path, found.version))
+            except Exception as exc:  # offline, GitHub down, bad download: try again later
+                if manual:
+                    msg = f"Provera nije uspela:\n{exc}"
+                    self.events.put(lambda: messagebox.showwarning("Ažuriranje", msg, parent=self))
+
+        threading.Thread(target=work, name="updater", daemon=True).start()
+
+    def _apply_update(self, new_exe, version: str):
+        exe = updater.running_exe()
+        if exe is None or self._quitting:
+            return
+        if self.reminder is not None or self.grab_current() is not None:  # an open dialog: try again later
+            self.after(5 * 60 * 1000, lambda: self._apply_update(new_exe, version))
+            return
+        try:
+            updater.install(new_exe, exe)
+        except OSError:
+            return
+        if self.winfo_viewable():
+            self.settings.update({"window_pos": f"{self.winfo_x()},{self.winfo_y()}"})
+        self._quitting = True
+        self.tracker.stop()
+        self.tray.stop()
+        updater.restart(exe)
+        self.destroy()
+
     # -------------------------------------------------------------- lifecycle
 
     def _restore_position(self):
@@ -550,9 +647,29 @@ class Player(tk.Tk):
             self.geometry(f"+{x}+{y}")
 
     def show(self):
+        if self.mini is not None:
+            self.mini.withdraw()
         self.deiconify()
         self.lift()
         self.focus_force()
+
+    def _on_unmap(self, event):
+        # Minimize button: swap the window for the see-through mini bar at the bottom of the screen.
+        if event.widget is self and not self._quitting and self.settings["mini_bar"]:
+            self.after(10, self._maybe_show_mini)
+
+    def _maybe_show_mini(self):
+        if self._quitting or self.wm_state() != "iconic":  # wm_state: `state` is the timer state here
+            return
+        self.show_mini()
+
+    def show_mini(self):
+        self.withdraw()
+        if self.mini is None:
+            self.mini = MiniBar(self, self.show, self.play_pause)
+        self.mini.show(platform_win.work_area())
+        self._update_display()
+        self.mini._place()
 
     def on_close(self):
         if self.tray_available:
@@ -577,4 +694,6 @@ class Player(tk.Tk):
         self._quitting = True
         self.tracker.stop()
         self.tray.stop()
+        if self.mini is not None:
+            self.mini.destroy()
         self.destroy()
