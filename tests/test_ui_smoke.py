@@ -207,3 +207,22 @@ def test_productivity_meter_and_dashboard(app):
     app.db._exec("DELETE FROM activity")
     app.refresh()
     assert app.meter.shares is None
+
+
+def test_minimize_to_mini_bar_and_restore(app):
+    app.task_var.set("Mini test")
+    app.play()
+    app._maybe_show_mini()  # not minimized: nothing happens (and wm_state, not the timer state, is checked)
+    assert app.mini is None
+    app.show_mini()
+    app.update()
+    assert app.mini is not None and app.mini.winfo_viewable() and not app.winfo_viewable()
+    app._update_display()
+    assert app.mini.task.cget("text") == "Mini test"
+    assert app.mini.time.cget("text").count(":") == 2
+    app.mini.play.command()  # pause from the mini bar
+    assert app.state == app.PAUSED
+    app.show()
+    app.update()
+    assert app.winfo_viewable() and not app.mini.winfo_viewable()
+    app.stop()

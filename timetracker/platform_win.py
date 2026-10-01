@@ -100,6 +100,17 @@ def active_window() -> tuple[str, str] | None:
     return (exe or "nepoznato", buf.value)
 
 
+def work_area() -> tuple[int, int, int, int] | None:
+    """(left, top, right, bottom) of the desktop without the taskbar, or None where unknown."""
+    if not IS_WINDOWS:
+        return None
+    rect = wintypes.RECT()
+    SPI_GETWORKAREA = 0x0030
+    if ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(rect), 0):
+        return rect.left, rect.top, rect.right, rect.bottom
+    return None
+
+
 def enable_dpi_awareness() -> None:
     """Keep tkinter crisp on high-DPI laptop screens."""
     if not IS_WINDOWS:

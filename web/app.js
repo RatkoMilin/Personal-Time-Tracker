@@ -3,8 +3,8 @@
   "use strict";
 
   const KEY = "ptt.v1";
-  const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Drvo (analogni)"],
-                 ["cyber", "Sajber (sivi)"], ["cat", "Mačkasti"],
+  const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Orah (analogni)"],
+                 ["cyber", "Silver samuraj"], ["cat", "Mačkasti"],
                  ["setsuna", "Setsuna Orange"], ["eink", "E-ink (crno-belo)"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
                         eink: "#ffffff" };
@@ -220,7 +220,8 @@
   let dayOffset = 0;
   let blink = false;
   let marqueeOffset = 0;
-  const skin = () => db.settings.skin;
+  // On the Kompakt (e-ink device) there is only the e-ink skin, whatever was saved.
+  const skin = () => EINK_DEVICE ? "eink" : db.settings.skin;
   const upper = s => (skin() === "matrix" || skin() === "cyber") ? s.toUpperCase() : s;
   const eink = () => skin() === "eink";
   // E-ink shows hours:minutes only, so the screen changes once a minute instead of every second.
@@ -527,6 +528,8 @@
   function renderSkinButtons() {
     const box = $("skins");
     box.innerHTML = "";
+    box.hidden = $("skinsLabel").hidden = EINK_DEVICE;
+    if (EINK_DEVICE) return;
     for (const [key, label] of SKINS) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "btn" + (key === skin() ? " active" : ""); b.textContent = label;
@@ -565,7 +568,17 @@
     $("stopBtn").addEventListener("click", stop);
     $("exportBtn").addEventListener("click", withClick(() => { $("soundsChk").checked = db.settings.sounds; $("menuDlg").showModal(); }));
     $("menuBtn").addEventListener("click", withClick(() => { $("soundsChk").checked = db.settings.sounds; $("menuDlg").showModal(); }));
-    $("plBtn").addEventListener("click", withClick(() => { db.settings.showPlaylist = !db.settings.showPlaylist; commit(); }));
+    $("plBtn").addEventListener("click", withClick(() => {
+      db.settings.showPlaylist = !db.settings.showPlaylist;
+      commit();
+      if (db.settings.showPlaylist && skin() === "pastel") {  // faint bubbles rising through the list
+        const pl = $("playlist");
+        pl.classList.remove("bubbling");
+        void pl.offsetWidth;
+        pl.classList.add("bubbling");
+        setTimeout(() => pl.classList.remove("bubbling"), 2800);
+      }
+    }));
     $("prevDay").addEventListener("click", withClick(() => { dayOffset++; render(); }));
     $("nextDay").addEventListener("click", withClick(() => { dayOffset = Math.max(0, dayOffset - 1); render(); }));
     $("addBtn").addEventListener("click", withClick(() => openEntry(null)));

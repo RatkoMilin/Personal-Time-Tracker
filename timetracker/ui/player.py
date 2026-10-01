@@ -14,7 +14,7 @@ from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
-from .dialogs import EntryDialog, IdleReminder, ProductivityDialog
+from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog
 
 PL_WIDTH = 50  # playlist width in characters
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
@@ -37,6 +37,7 @@ class Player(tk.Tk):
         self._quitting = False
         self._tray_key = None
         self.reminder: IdleReminder | None = None
+        self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
         self.project_var = tk.StringVar()
 
@@ -59,6 +60,7 @@ class Player(tk.Tk):
         self.bind("<Button-3>", self._popup_menu)  # root binding tag: any widget in this window
         self.bind_all("<Control-space>", lambda e: self.play_pause())
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.bind("<Unmap>", self._on_unmap)
         self._restore_position()
         if start_tracker:
             self.tracker.start()
@@ -87,6 +89,9 @@ class Player(tk.Tk):
         if key == skin.T.key:
             return
         self.settings.update({"skin": key})
+        if self.mini is not None:  # rebuilt in the new skin the next time it is shown
+            self.mini.destroy()
+            self.mini = None
         self.ui.destroy()
         for menu in (self.menu, self.row_menu):
             menu.destroy()
@@ -174,7 +179,7 @@ class Player(tk.Tk):
         skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern)
+        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern)
         panel.pack(fill="x")
         self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.lcd_bg, fg=T.lcd_text,
                                   selectbackground=T.sel_bg, selectforeground=T.sel_fg, font=T.font("mono", 9),
@@ -220,6 +225,9 @@ class Player(tk.Tk):
         self.menu.add_cascade(label="Podsetnik za neaktivnost posle", menu=idle)
         self.top_var = tk.BooleanVar(value=self.settings["always_on_top"])
         self.menu.add_checkbutton(label="Uvek na vrhu", variable=self.top_var, command=self._toggle_top)
+        self.mini_var = tk.BooleanVar(value=self.settings["mini_bar"])
+        self.menu.add_checkbutton(label="Umanjeno: mini traka dole", variable=self.mini_var,
+                                  command=lambda: self.settings.update({"mini_bar": self.mini_var.get()}))
         self.autostart_var = tk.BooleanVar(value=platform_win.is_autostart_enabled(APP_ID))
         self.menu.add_checkbutton(label="Pokreni sa Windows-om", variable=self.autostart_var,
                                   command=self._toggle_autostart,
@@ -365,9 +373,12 @@ class Player(tk.Tk):
         self.refresh()
 
     def toggle_playlist(self):
-        show = not self.pl_frame.winfo_ismapped()
+        show = not self.settings["show_playlist"]  # not winfo_ismapped: false until the first redraw
         if show:
             self.pl_frame.pack(fill="x")
+            if skin.T.pl_pattern == "bubbles":
+                self.update_idletasks()
+                self.pl_panel.bubble_burst()
         else:
             self.pl_frame.pack_forget()
         self.settings.update({"show_playlist": show})
@@ -468,6 +479,9 @@ class Player(tk.Tk):
                                           f"   {'Idle ' + str(idle) + 'm' if idle else 'Idle off'}"))
 
         self.title(f"{text} {task} - {APP_NAME}" if running else APP_NAME)
+        if self.mini is not None and self.mini.winfo_viewable():
+            self.mini.update_view(state, text if running or state == self.PAUSED else "--:--:--",
+                                  task if state != self.STOPPED else "tajmer stoji")
         tip = f"{text} {task}" if running else f"{APP_NAME}: tajmer stoji"
         key = (state, task, int(now // 60))
         if key != self._tray_key:
@@ -574,9 +588,29 @@ class Player(tk.Tk):
             self.geometry(f"+{x}+{y}")
 
     def show(self):
+        if self.mini is not None:
+            self.mini.withdraw()
         self.deiconify()
         self.lift()
         self.focus_force()
+
+    def _on_unmap(self, event):
+        # Minimize button: swap the window for the see-through mini bar at the bottom of the screen.
+        if event.widget is self and not self._quitting and self.settings["mini_bar"]:
+            self.after(10, self._maybe_show_mini)
+
+    def _maybe_show_mini(self):
+        if self._quitting or self.wm_state() != "iconic":  # wm_state: `state` is the timer state here
+            return
+        self.show_mini()
+
+    def show_mini(self):
+        self.withdraw()
+        if self.mini is None:
+            self.mini = MiniBar(self, self.show, self.play_pause)
+        self.mini.show(platform_win.work_area())
+        self._update_display()
+        self.mini._place()
 
     def on_close(self):
         if self.tray_available:
@@ -601,4 +635,6 @@ class Player(tk.Tk):
         self._quitting = True
         self.tracker.stop()
         self.tray.stop()
+        if self.mini is not None:
+            self.mini.destroy()
         self.destroy()

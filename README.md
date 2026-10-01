@@ -9,9 +9,9 @@ Desni klik → **Skin**:
 | Skin | Izgled |
 |---|---|
 | Matrix (digitalni) | klasični Winamp: zelene LCD cifre na crnom, 3D dugmad |
-| Pastel (roze-plavi) | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava |
-| Drvo (analogni) | miran i najjednostavniji: drveni okvir, tamnozeleni panel, analogni sat sa kazaljkama umesto cifara |
-| Sajber (sivi) | oštar: odsečeni uglovi, iskošene cifre, siva sa cijan linijama |
+| Pastel (roze-plavi) | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava; kad otvoriš PL, kroz listu prođu providni mehurići |
+| Orah (analogni) | miran i najjednostavniji: okvir od orahovog drveta, tamnozeleni panel, analogni sat sa kazaljkama; pokazatelj produktivnosti je grana koja procveta |
+| Silver samuraj | oštar: srebrni oklop, odsečeni uglovi, iskošene neonsko plave cifre; pokazatelj produktivnosti je mač čije sečivo svetli neonsko plavo |
 | Mačkasti | krem bela i tamno siva: mačje uši na vrhu, dugmići su mačije šapice, PL lista je pegava |
 | Setsuna Orange | #DB4C01, #E94C53, bela i crna: narandže kod tajmera, okrugla dugmad, zeleni listovi narandže u PL listi |
 
@@ -35,7 +35,7 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 
 **Podsetnik za neaktivnost:** ako tajmer radi, a ti 5 minuta ne dirneš tastaturu ni miš, odmah iskoči prozor (uvek na vrhu, sa zvukom) koji broji koliko te nema. Kad se vratiš, prozor zamrzne to vreme i pita: **Odbaci** (tajmer nastavlja bez tog vremena), **Odbaci i stani** ili **Zadrži**. Isto važi i posle zatvaranja laptopa. Granica (5, 10, 15, 30 min ili isključeno) se menja u meniju.
 
-**Tray:** zatvaranje prozora sklanja aplikaciju pored sata; tajmer radi dalje. Izlaz je u meniju.
+**Tray i mini traka:** zatvaranje prozora sklanja aplikaciju pored sata; tajmer radi dalje. Umanjenje (dugme _) je pretvara u poluprovidnu mini traku dole desno iznad taskbara, sa vremenom, zadatkom i ▶/❚❚; prelazak mišem je čini potpuno vidljivom, klik vraća pun prozor (isključuje se u meniju). Izlaz je u meniju.
 
 **Produktivnost:** dok si aktivan za laptopom (sa ili bez tajmera), aplikacija gleda koji je program ili sajt u prvom planu i svrstava ga u produktivno, ometanje ili ostalo. Ispod PL liste stoji jedan red: *Produktivno 67% · ometanje 16%* sa trakom; klik na njega otvara pregled po programima i sajtovima za taj dan.
 
@@ -62,6 +62,8 @@ Objava na tu adresu ide automatski (GitHub Actions, "Mobile web app") posle svak
 ## Na e-ink telefonu (Mudita Kompakt)
 
 Android aplikacija `TimeTracker-Kompakt.apk` nosi istu web verziju u sebi, ali u **E-ink** skinu: crno na belom, krupna slova, bez animacija i treptanja, a tajmer pokazuje sate i minute, pa se ekran osvežava jednom u minuti umesto svake sekunde (manje "duhova" i manja potrošnja baterije). Zvuci su podrazumevano isključeni. Ne treba joj internet.
+
+Na Kompakt-u postoji samo E-ink skin (izbor skinova je sakriven).
 
 Instalacija:
 1. Preuzmi `TimeTracker-Kompakt.apk` sa stranice **Releases** (ili iz **Actions → Test and build → Artifacts → TimeTracker-android**).

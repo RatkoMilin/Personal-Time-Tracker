@@ -185,8 +185,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v2')")
-    cached = page.evaluate("caches.open('ptt-v2').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v3')")
+    cached = page.evaluate("caches.open('ptt-v3').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 
@@ -220,6 +220,14 @@ def test_eink_device_starts_quiet_black_and_white_and_stays_still(browser, serve
     shots = os.environ.get("PTT_WEB_SHOTS")
     if shots:
         pg.screenshot(path=str(Path(shots) / "web_eink_kompakt.png"), full_page=True)
+    # The Kompakt gets only the e-ink skin: no skin choices in the menu, even if another one was saved.
+    pg.click("#menuBtn")
+    assert pg.locator("#skins").is_hidden() and pg.locator("#skinsLabel").is_hidden()
+    pg.click("#menuClose")
+    pg.evaluate("window.PTT.db.settings.skin = 'matrix'; localStorage.setItem(window.PTT.KEY, JSON.stringify(window.PTT.db))")
+    pg.reload()
+    pg.wait_for_selector("#clock polygon")
+    assert pg.get_attribute("body", "data-skin") == "eink"
     assert errors == []
     ctx.close()
 

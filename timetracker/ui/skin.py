@@ -64,6 +64,8 @@ class Theme:
     pl_pattern: str = ""
     clock_deco: str = ""
     leaf: str = "#3f8f2f"
+    # Productivity meter look: "" (bar), "sword" (blade lights up neon), "flowers" (branch blossoms).
+    meter: str = ""
 
     def font(self, kind: str = "sans", size: int = 10, weight: str = "normal") -> tuple:
         families = self.mono if kind == "mono" else self.sans
@@ -94,27 +96,28 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="normal", upper=False,
         shape="round", radius=12, panel_outline="#e6b8cb", title_style="dots", segments="round",
+        pl_pattern="bubbles",
     ),
     Theme(
-        key="wood", name="Drvo (analogni)",
-        body="#4a2f1d", body_light="#6e4a30", body_dark="#2e1c10", text="#efe3c8", accent="#c9a15f",
+        key="wood", name="Orah (analogni)",
+        body="#5b3b27", body_light="#80583a", body_dark="#341f12", text="#f0e2c8", accent="#c9a15f",
         lcd_bg="#16392a", lcd_on="#efe3c8", lcd_off="#1f4634", lcd_dim="#8fae98", lcd_text="#e6dcc0",
-        btn_face="#d8c7a0", btn_light="#efe3c8", btn_dark="#9c8456", btn_glyph="#2e1c10",
+        btn_face="#d8c7a0", btn_light="#efe3c8", btn_dark="#9c8456", btn_glyph="#341f12",
         sel_bg="#2f6a4c", sel_fg="#ffffff",
         mono=("Courier New", "DejaVu Sans Mono"), sans=("Georgia", "DejaVu Serif"),
         label_size=9, label_weight="italic", upper=False,
         shape="round", radius=5, panel_outline="#c9a15f", title_style="grain",
-        display="analog", marquee=False, blink=False,
+        display="analog", marquee=False, blink=False, meter="flowers",
         dial_face="#efe3c8", dial_hand="#16392a", dial_second="#a63d2a",
     ),
     Theme(
-        key="cyber", name="Sajber (sivi)",
-        body="#23262b", body_light="#3a3f47", body_dark="#0f1114", text="#aeb6c2", accent="#00d9ff",
-        lcd_bg="#0c0e11", lcd_on="#d7e1ec", lcd_off="#181c22", lcd_dim="#5f6b7a", lcd_text="#a9b8ca",
-        btn_face="#2d3239", btn_light="#00d9ff", btn_dark="#0f1114", btn_glyph="#d7e1ec",
-        sel_bg="#00d9ff", sel_fg="#0c0e11",
+        key="cyber", name="Silver samuraj",
+        body="#3b434a", body_light="#a9b3ba", body_dark="#1b2024", text="#d5dde2", accent="#5fd8ff",
+        lcd_bg="#0b1014", lcd_on="#8fe9ff", lcd_off="#132028", lcd_dim="#5b6b75", lcd_text="#c9d4da",
+        btn_face="#8e9aa3", btn_light="#d6dee3", btn_dark="#4b555c", btn_glyph="#0b1014",
+        sel_bg="#5fd8ff", sel_fg="#0b1014",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Bahnschrift", "DejaVu Sans"),
-        shape="chamfer", panel_outline="#00d9ff", title_style="notch", segments="sharp",
+        shape="chamfer", panel_outline="#5fd8ff", title_style="notch", segments="sharp", meter="sword",
     ),
     Theme(
         key="cat", name="Mačkasti",
@@ -287,6 +290,40 @@ class Panel(tk.Frame):
         elif self.pattern == "leaves":
             for x, y in spots[::2]:
                 draw_leaf(c, x, y, rnd.uniform(px(9), px(14)), rnd.uniform(0, 360), T.leaf)
+        elif self.pattern == "bubbles":  # barely visible
+            for x, y in spots[::3]:
+                r = rnd.uniform(px(2), px(4))
+                c.create_oval(x - r, y - r, x + r, y + r, outline=T.body_light, width=1)
+
+    def bubble_burst(self, duration_ms: int = 2600) -> None:
+        """Faint bubbles rising along the edges (pastel skin, when the playlist opens)."""
+        c = self.canvas
+        w, h = c.winfo_width(), c.winfo_height()
+        if w < 40 or h < 40:
+            return
+        rnd = random.Random()
+        m = px(10)
+        bubbles = []
+        for _ in range(14):
+            x = rnd.choice((rnd.uniform(m * 0.2, m * 0.8), w - rnd.uniform(m * 0.2, m * 0.8),
+                            rnd.uniform(m, w - m)))
+            r = rnd.uniform(px(2), px(5))
+            y = h + rnd.uniform(0, h * 0.6)
+            item = c.create_oval(x - r, y - r, x + r, y + r, outline=T.body_light, width=1, tags="burst")
+            bubbles.append((item, rnd.uniform(1.5, 3.5) * S, rnd.uniform(0, 6.28)))
+        steps = max(1, duration_ms // 40)
+
+        def step(i=0):
+            if not c.winfo_exists():
+                return
+            if i >= steps:
+                c.delete("burst")
+                return
+            for item, speed, phase in bubbles:
+                c.move(item, math.sin(i / 5 + phase) * 0.6, -speed)
+            c.after(40, step, i + 1)
+
+        step()
 
 
 def field(master, textvariable: tk.StringVar, width: int) -> tuple[Panel, tk.Entry]:
@@ -545,9 +582,11 @@ class SkinButton(tk.Canvas):
                 round_rect(self, 1, 1, w - 2, h - 2, (h - 3) / 2, fill=fill, outline="", tags="face")
         elif self.kind == "round":
             round_rect(self, 1, 1, w - 2, h - 2, px(T.radius) * 0.8, fill=fill, outline=T.btn_dark, tags="face")
-        elif self.kind == "chamfer":
-            chamfer_rect(self, 0, 0, w - 1, h - 1, px(5), fill=T.btn_light if pressed else T.btn_face,
-                         outline=T.btn_light, tags="face")
+        elif self.kind == "chamfer":  # armor plate: silver with a light top edge, neon when pressed
+            chamfer_rect(self, 0, 0, w - 1, h - 1, px(5), fill=T.accent if pressed else T.btn_face,
+                         outline=T.btn_dark, tags="face")
+            if not pressed:
+                self.create_line(px(5), 1, w - 2, 1, fill=T.btn_light, tags="face")
         else:
             self.create_rectangle(0, 0, w - 1, h - 1, fill=T.btn_face, width=0, tags="face")
             self.create_line(0, h - 1, 0, 0, w - 1, 0, fill=T.btn_dark if pressed else T.btn_light, tags="face")
@@ -602,10 +641,16 @@ class SkinButton(tk.Canvas):
 
 
 class ProductivityMeter(tk.Canvas):
-    """One-line meter: share of productive time, with a three-part bar. Clicking it calls on_click."""
+    """One-line productivity meter. Clicking it calls on_click.
+
+    Default: text and a three-part bar. "sword": a katana whose blade glows neon blue for the
+    productive share and stays plain silver for the rest. "flowers": a branch that blossoms for the
+    productive share and stays bare twigs for the rest.
+    """
 
     def __init__(self, master, on_click):
-        super().__init__(master, height=px(18), bg=master["bg"], highlightthickness=0, cursor="hand2")
+        self.h = px(28) if T.meter else px(18)
+        super().__init__(master, height=self.h, bg=master["bg"], highlightthickness=0, cursor="hand2")
         self.shares: tuple[float, float, float] | None = None
         self.bind("<Configure>", lambda e: self.draw())
         self.bind("<Button-1>", lambda e: on_click())
@@ -618,26 +663,91 @@ class ProductivityMeter(tk.Canvas):
 
     def draw(self) -> None:
         self.delete("all")
-        w, h = self.winfo_width(), px(18)
+        w, h = self.winfo_width(), self.h
         font = T.font("mono", 9, "bold" if T.upper else "normal")
-        if not self.shares:
-            self.create_text(0, h / 2, anchor="w", text=T.tx("Produktivnost: još nema podataka"), fill=T.text,
-                             font=font)
+        prod, neutral, dist = self.shares or (0.0, 0.0, 0.0)
+        label = (T.tx(f"Produktivno {prod:.0%}") if T.meter else T.tx(f"Produktivno {prod:.0%} · ometanje {dist:.0%}")
+                 ) if self.shares else T.tx("Produktivnost: još nema podataka" if not T.meter else "Bez podataka")
+        text = self.create_text(0, h / 2, anchor="w", fill=T.text, font=font, text=label)
+        x0, x1 = self.bbox(text)[2] + px(10), w - px(2)
+        if x1 - x0 < px(40) or (not self.shares and not T.meter):
             return
-        prod, neutral, dist = self.shares
-        text = self.create_text(0, h / 2, anchor="w", fill=T.text, font=font,
-                                text=T.tx(f"Produktivno {prod:.0%} · ometanje {dist:.0%}"))
-        x0 = self.bbox(text)[2] + px(10)
-        x1, y0, y1 = w - 1, h / 2 - px(4), h / 2 + px(4)
-        if x1 - x0 < px(30):
-            return
-        self.create_rectangle(x0, y0, x1, y1, fill=T.lcd_bg, outline=T.body_dark)
-        x = x0
-        for share, color in ((prod, T.lcd_on), (neutral, T.lcd_dim), (dist, T.accent)):
-            seg = (x1 - x0) * share
-            if seg >= 1:
-                self.create_rectangle(x, y0, x + seg, y1, fill=color, width=0)
-            x += seg
+        if T.meter == "sword":
+            self._sword(x0, x1, h / 2, prod)
+        elif T.meter == "flowers":
+            self._branch(x0, x1, h / 2, prod)
+        else:
+            y0, y1 = h / 2 - px(4), h / 2 + px(4)
+            self.create_rectangle(x0, y0, x1, y1, fill=T.lcd_bg, outline=T.body_dark)
+            x = x0
+            for share, color in ((prod, T.lcd_on), (neutral, T.lcd_dim), (dist, T.accent)):
+                seg = (x1 - x0) * share
+                if seg >= 1:
+                    self.create_rectangle(x, y0, x + seg, y1, fill=color, width=0)
+                x += seg
+
+    def _sword(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        length = x1 - x0
+        grip_end = x0 + length * 0.2
+        # Grip (tsuka) with a diamond wrap, pommel and guard (tsuba).
+        self.create_rectangle(x0 + px(3), cy - px(3), grip_end, cy + px(3), fill="#1d2226", outline="#4b555c")
+        x = x0 + px(5)
+        while x + px(5) < grip_end:
+            self.create_polygon(x, cy, x + px(2.5), cy - px(2.5), x + px(5), cy, x + px(2.5), cy + px(2.5),
+                                fill="#8e9aa3", outline="")
+            x += px(6)
+        self.create_rectangle(x0, cy - px(4), x0 + px(3), cy + px(4), fill="#c99a6e", outline="")
+        self.create_oval(grip_end - px(1), cy - px(7), grip_end + px(4), cy + px(7), fill="#c99a6e",
+                         outline="#5a4128")
+        # Blade: slight katana curve rising to the tip.
+        b0, b1 = grip_end + px(4), x1
+        n = 40
+
+        def edge(t: float, top: bool) -> tuple[float, float]:
+            x = b0 + (b1 - b0) * t
+            lift = px(3) * t * t
+            half = px(4.2) * (1 - max(0.0, (t - 0.88) / 0.12))  # taper into the point
+            return x, cy - lift + (-half if top else half * 0.8)
+
+        def polygon(t_end: float) -> list[float]:
+            ts = [t_end * i / n for i in range(n + 1)]
+            pts = [edge(t, True) for t in ts] + [edge(t, False) for t in reversed(ts)]
+            return [v for p in pts for v in p]
+
+        self.create_polygon(polygon(1.0), fill="#b8c2c8", outline="#6f7b83")  # plain silver
+        if prod > 0.005:
+            t = min(1.0, prod)
+            self.create_polygon(polygon(t), fill="#1aa9e0", outline="#5fd8ff", width=2)  # glow
+            self.create_polygon(polygon(t), fill="#5fd8ff", outline="")
+            core = [edge(i * t / n, True) for i in range(n + 1)]
+            self.create_line([(x, y + px(2)) for x, y in core], fill="#e9fbff", width=max(1, px(1.2)))
+        else:
+            self.create_line([edge(i / n, True) for i in range(n + 1)], fill="#e6ecef", width=1)
+
+    def _branch(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        bark, twig = "#2e1c10", "#3d2616"
+        pts = []
+        for i in range(31):
+            x = x0 + (x1 - x0) * i / 30
+            pts.append((x, cy + px(2) + math.sin(i / 3.2) * px(1.5)))
+        self.create_line(pts, fill=bark, width=max(2, px(3)), smooth=True, capstyle="round")
+        bloom_until = x0 + (x1 - x0) * prod
+        x, up = x0 + px(8), True
+        while x < x1 - px(4):
+            base_y = cy + px(2) + math.sin((x - x0) / (x1 - x0) * 30 / 3.2) * px(1.5)
+            tip = (x + px(5), base_y - px(8) if up else base_y + px(7))
+            self.create_line(x, base_y, *tip, fill=twig, width=max(1, px(1.5)), capstyle="round")
+            if x <= bloom_until:  # a blossom on productive twigs, bare twig otherwise
+                r = px(2.6)
+                for k in range(5):
+                    a = k * 2 * math.pi / 5 + 0.3
+                    px_, py_ = tip[0] + math.cos(a) * r, tip[1] + math.sin(a) * r
+                    self.create_oval(px_ - r * 0.75, py_ - r * 0.75, px_ + r * 0.75, py_ + r * 0.75,
+                                     fill="#f7d3df", outline="#d99ab0")
+                self.create_oval(tip[0] - r * 0.5, tip[1] - r * 0.5, tip[0] + r * 0.5, tip[1] + r * 0.5,
+                                 fill="#e8b923", outline="")
+            x += px(11)
+            up = not up
 
 
 class TitleBar(tk.Canvas):

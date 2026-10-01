@@ -16,6 +16,8 @@ DEFAULTS: dict = {
     "skin": "matrix",
     "sounds": True,
     "show_playlist": True,
+    # Minimizing shows a small see-through bar at the bottom of the screen instead of hiding the app.
+    "mini_bar": True,
     "window_pos": "",
     # Productivity meter: extra words that mark a window as productive / distracting, on top of the
     # built-in rules (Google Docs, Word, ... vs. YouTube, Facebook, Instagram, shopping sites).

@@ -220,3 +220,84 @@ class ProductivityDialog(_Window):
         self.bind("<Return>", lambda e: self.destroy())
         _place(self, parent)
         self.deiconify()
+
+
+class MiniBar(tk.Toplevel):
+    """Winamp-style "windowshade": a slim, half see-through strip above the taskbar while minimized.
+
+    Shows the state, time and task with play/pause; hovering makes it opaque, clicking it restores the
+    main window.
+    """
+
+    def __init__(self, parent, on_restore, on_play_pause):
+        T = skin.T
+        super().__init__(parent, bg=T.body_dark)
+        self.withdraw()
+        self.overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.on_restore = on_restore
+        panel = tk.Frame(self, bg=T.lcd_bg, padx=skin.px(8), pady=skin.px(3))
+        panel.pack(padx=1, pady=1)
+        self.icon = tk.Canvas(panel, width=skin.px(10), height=skin.px(10), bg=T.lcd_bg, highlightthickness=0)
+        self.icon.pack(side="left", padx=(0, skin.px(6)))
+        self.time = tk.Label(panel, text="--:--:--", bg=T.lcd_bg, fg=T.lcd_on, font=T.font("mono", 12, "bold"))
+        self.time.pack(side="left")
+        self.task = tk.Label(panel, text="", bg=T.lcd_bg, fg=T.lcd_text, font=T.font("sans", 9), width=18,
+                             anchor="w")
+        self.task.pack(side="left", padx=(skin.px(8), skin.px(6)))
+        self.play = skin.SkinButton(panel, on_play_pause, glyph="play", width=20, height=16, tooltip="Start / pauza")
+        self.play.configure(bg=T.lcd_bg)
+        self.play.pack(side="left")
+        restore = tk.Label(panel, text="▴", bg=T.lcd_bg, fg=T.lcd_text, font=T.font("sans", 11, "bold"),
+                           cursor="hand2", padx=skin.px(6))
+        restore.pack(side="left")
+        for w in (self, panel, self.time, self.task, self.icon, restore):
+            w.bind("<Button-1>", lambda e: self.on_restore())
+        self._corner: tuple[int, int] | None = None
+        self.bind("<Enter>", lambda e: self._alpha(1.0))
+        self.bind("<Leave>", lambda e: self._alpha(0.72))
+        self._alpha(0.72)
+
+    def _alpha(self, value: float) -> None:
+        try:
+            self.attributes("-alpha", value)
+        except tk.TclError:  # window managers without transparency
+            pass
+
+    def show(self, work_area=None) -> None:
+        if work_area:
+            _left, _top, right, bottom = work_area
+        else:
+            right, bottom = self.winfo_screenwidth(), self.winfo_screenheight() - skin.px(48)
+        self._corner = (right - skin.px(12), bottom - skin.px(8))
+        self._place()
+        self.deiconify()
+        self.lift()
+
+    def _place(self) -> None:
+        """Keep the bottom-right corner fixed, whatever the current size."""
+        if self._corner is None:
+            return
+        self.update_idletasks()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry(f"+{self._corner[0] - w}+{self._corner[1] - h}")
+
+    def update_view(self, state: str, clock: str, task: str) -> None:
+        T = skin.T
+        width = self.winfo_reqwidth()
+        if self.time.cget("text") != clock:
+            self.time.configure(text=clock, fg=T.lcd_on if state == "playing" else T.lcd_dim)
+        if self.task.cget("text") != task:
+            self.task.configure(text=task)
+        self.update_idletasks()
+        if self.winfo_reqwidth() != width:
+            self._place()
+        c, s = self.icon, skin.px(10)
+        c.delete("all")
+        if state == "playing":
+            c.create_polygon(1, 1, 1, s - 1, s - 1, s / 2, fill=T.lcd_on)
+        elif state == "paused":
+            c.create_rectangle(1, 1, s * 0.4, s - 1, fill=T.lcd_on, width=0)
+            c.create_rectangle(s * 0.6, 1, s - 1, s - 1, fill=T.lcd_on, width=0)
+        else:
+            c.create_rectangle(1, 1, s - 1, s - 1, fill=T.lcd_dim, width=0)
