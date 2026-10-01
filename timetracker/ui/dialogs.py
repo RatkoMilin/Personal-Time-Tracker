@@ -213,9 +213,6 @@ class ProductivityDialog(_Window):
             text = "\n".join(f"  {label:<18} {timeutil.fmt_hours(s):>7}" for label, s in top) or "  -"
             tk.Label(panel.inner, text=text, bg=T.lcd_bg, fg=T.lcd_text, font=T.font("mono", 9), anchor="w",
                      justify="left").pack(fill="x")
-        skin.label(b, "Vreme za računarom dok si aktivan. Čuva se samo kategorija i naziv\n"
-                      "programa ili sajta, ne i naslovi prozora. Dodatne reči: settings.json.",
-                   fg=T.text, justify="left", font=T.font("sans", 8)).pack(anchor="w", pady=(6, 0))
         bar = tk.Frame(b, bg=b["bg"])
         bar.pack(fill="x", pady=(8, 0))
         skin.SkinButton(bar, self.destroy, text="Zatvori").pack(side="right")
