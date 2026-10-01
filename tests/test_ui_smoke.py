@@ -38,6 +38,9 @@ class FakePlatform:
     def idle_seconds(self):
         return 0.0
 
+    def active_window(self):
+        return None
+
 
 @pytest.fixture(scope="module")
 def player(tmp_path_factory):
@@ -179,3 +182,28 @@ def test_new_entry_just_after_midnight_defaults_to_today(app, monkeypatch):
     assert dlg.date.get() == timeutil.fmt_date(timeutil.day_start(d))
     assert (dlg.start.get(), dlg.end.get()) == ("00:00", "00:05")
     dlg.cancel()
+
+
+def test_productivity_meter_and_dashboard(app):
+    from datetime import timedelta
+
+    from timetracker.ui import dialogs
+
+    # Yesterday is entirely in the past, so nothing is clipped at "now" whatever the clock says.
+    yesterday = timeutil.day_start(date.today() - timedelta(days=1))
+    app.db.add_activity("productive", "Google Docs", yesterday + 3600, yesterday + 2 * 3600)
+    app.db.add_activity("distracting", "YouTube", yesterday + 3 * 3600, yesterday + 3 * 3600 + 1200)
+    app.shift_day(1)
+    app.update()
+    assert app.meter.shares == pytest.approx((0.75, 0.0, 0.25))
+    app.show_productivity()
+    dlg = [w for w in app.winfo_children() if isinstance(w, dialogs.ProductivityDialog)][-1]
+    dlg.update()
+    labels = [w.cget("text") for w in dlg.body.winfo_children()[1].inner.winfo_children()]
+    assert labels[0].lower().startswith("produktivno  1h 00m  (75%)")
+    assert "YouTube" in labels[3]
+    dlg.destroy()
+    app.shift_day(-1)
+    app.db._exec("DELETE FROM activity")
+    app.refresh()
+    assert app.meter.shares is None

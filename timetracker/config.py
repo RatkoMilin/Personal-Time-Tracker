@@ -17,6 +17,10 @@ DEFAULTS: dict = {
     "sounds": True,
     "show_playlist": True,
     "window_pos": "",
+    # Productivity meter: extra words that mark a window as productive / distracting, on top of the
+    # built-in rules (Google Docs, Word, ... vs. YouTube, Facebook, Instagram, shopping sites).
+    "extra_productive": [],
+    "extra_distracting": [],
 }
 
 

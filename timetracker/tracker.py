@@ -1,9 +1,13 @@
-"""Background idle watcher.
+"""Background watcher: idle reminder and productivity meter.
 
 Every few seconds it checks how long there has been no keyboard/mouse input and
 whether the laptop was asleep. While the timer runs it posts IdleStart as soon
 as the idle limit is reached (so a reminder can pop up right away) and IdleEnd
 when the user is back. The UI thread drains the queue.
+
+While the user is at the computer it also classifies the foreground window as
+productive / neutral / distracting and records that (category and a short label
+only, never the window title) for the productivity meter.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from dataclasses import dataclass
 from . import platform_win
 from .config import Settings
 from .db import Database
+from .productivity import Classifier
 
 
 @dataclass
@@ -47,6 +52,9 @@ class Tracker(threading.Thread):
         self._last_tick: float | None = None
         self._idle_since: float | None = None
         self._idle_entry_id: int | None = None
+        self.classifier = Classifier(settings["extra_productive"], settings["extra_distracting"])
+        self._span_id: int | None = None
+        self._span_key: tuple[str, str] | None = None
 
     def run(self) -> None:
         while not self._stop.wait(self.interval):
@@ -61,13 +69,34 @@ class Tracker(threading.Thread):
     def tick(self, now: float | None = None) -> None:
         now = self.clock() if now is None else now
         prev, self._last_tick = self._last_tick, now
+        idle = self.platform.idle_seconds()
+        self._track_activity(now, prev, idle)
+        self._watch_idle(now, prev, idle)
+
+    def _track_activity(self, now: float, prev: float | None, idle: float) -> None:
+        """Productivity meter: what is in the foreground while the user is at the computer."""
+        limit = (int(self.settings["idle_minutes"]) or 5) * 60.0
+        window = self.platform.active_window()  # None: locked, nothing focused, or not Windows
+        if window is None or idle >= limit:
+            if idle >= limit and self._span_id is not None:
+                self.db.trim_activity_after(now - idle)  # the minutes before going idle were not work
+            self._span_id = None
+            return
+        category, label = self.classifier.classify(*window)
+        continuous = prev is not None and now - prev <= self.interval * 3  # False after sleep
+        if (category, label) == self._span_key and self._span_id is not None and continuous:
+            self.db.extend_activity(self._span_id, now)
+        else:
+            self._span_id = self.db.add_activity(category, label, prev if continuous else now, now)
+            self._span_key = (category, label)
+
+    def _watch_idle(self, now: float, prev: float | None, idle: float) -> None:
         minutes = int(self.settings["idle_minutes"])
         running = self.db.running_entry()
         if minutes <= 0 or running is None:
             self._idle_since = None
             return
         threshold = minutes * 60.0
-        idle = self.platform.idle_seconds()
         if self._idle_since is None:
             since = None
             if prev is not None and now - prev >= threshold:

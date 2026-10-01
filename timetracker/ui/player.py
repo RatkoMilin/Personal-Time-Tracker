@@ -9,12 +9,12 @@ from datetime import date, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from .. import APP_ID, APP_NAME, platform_win, reports, sounds, timeutil, tray
+from .. import APP_ID, APP_NAME, platform_win, productivity, reports, sounds, timeutil, tray
 from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
-from .dialogs import EntryDialog, IdleReminder
+from .dialogs import EntryDialog, IdleReminder, ProductivityDialog
 
 PL_WIDTH = 50  # playlist width in characters
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
@@ -180,6 +180,9 @@ class Player(tk.Tk):
         self.listbox.bind("<Delete>", lambda e: self.delete_selected())
         self.listbox.bind("<Return>", lambda e: self.edit_selected())
         self.listbox.bind("<Button-3>", self._row_menu)
+
+        self.meter = skin.ProductivityMeter(self.pl_frame, self._click(self.show_productivity))
+        self.meter.pack(fill="x", pady=(skin.px(3), 0))
 
         foot = tk.Frame(self.pl_frame, bg=T.body)
         foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
@@ -404,6 +407,20 @@ class Player(tk.Tk):
             self.listbox.selection_set(sel[0])
         total = timeutil.fmt_clock(reports.total_between(self.db, a, b, now))
         self.total_label.configure(text=T.tx(f"Ukupno {total}"))
+        self._update_meter()
+
+    def _viewed_day(self) -> date:
+        return date.today() - timedelta(days=self.day_offset)
+
+    def _update_meter(self):
+        s = productivity.summarize(self.db, *timeutil.day_bounds(self._viewed_day()))
+        self.meter.set(s.seconds[productivity.PRODUCTIVE], s.seconds[productivity.NEUTRAL],
+                       s.seconds[productivity.DISTRACTING], s.total)
+
+    def show_productivity(self):
+        day = self._viewed_day()
+        ProductivityDialog(self, productivity.summarize(self.db, *timeutil.day_bounds(day)),
+                           skin.T.tx(timeutil.fmt_day_header(day)))
 
     def _update_display(self):
         T = skin.T
@@ -474,6 +491,9 @@ class Player(tk.Tk):
         running = self.db.running_entry()
         if running and self.day_offset == 0 and running.id in self._pl_ids and self._blink:
             self._fill_playlist()
+        self._meter_ticks = getattr(self, "_meter_ticks", 0) + 1
+        if self._meter_ticks % 30 == 0:  # activity is recorded with or without a timer: refresh every 15 s
+            self._update_meter()
         self.after(500, self._tick)
 
     # ---------------------------------------------------------------- actions

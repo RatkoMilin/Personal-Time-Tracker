@@ -485,6 +485,45 @@ class SkinButton(tk.Canvas):
             self.command()
 
 
+class ProductivityMeter(tk.Canvas):
+    """One-line meter: share of productive time, with a three-part bar. Clicking it calls on_click."""
+
+    def __init__(self, master, on_click):
+        super().__init__(master, height=px(18), bg=master["bg"], highlightthickness=0, cursor="hand2")
+        self.shares: tuple[float, float, float] | None = None
+        self.bind("<Configure>", lambda e: self.draw())
+        self.bind("<Button-1>", lambda e: on_click())
+
+    def set(self, productive: float, neutral: float, distracting: float, total: float) -> None:
+        shares = (productive / total, neutral / total, distracting / total) if total else None
+        if shares != self.shares:
+            self.shares = shares
+            self.draw()
+
+    def draw(self) -> None:
+        self.delete("all")
+        w, h = self.winfo_width(), px(18)
+        font = T.font("mono", 9, "bold" if T.upper else "normal")
+        if not self.shares:
+            self.create_text(0, h / 2, anchor="w", text=T.tx("Produktivnost: još nema podataka"), fill=T.text,
+                             font=font)
+            return
+        prod, neutral, dist = self.shares
+        text = self.create_text(0, h / 2, anchor="w", fill=T.text, font=font,
+                                text=T.tx(f"Produktivno {prod:.0%} · ometanje {dist:.0%}"))
+        x0 = self.bbox(text)[2] + px(10)
+        x1, y0, y1 = w - 1, h / 2 - px(4), h / 2 + px(4)
+        if x1 - x0 < px(30):
+            return
+        self.create_rectangle(x0, y0, x1, y1, fill=T.lcd_bg, outline=T.body_dark)
+        x = x0
+        for share, color in ((prod, T.lcd_on), (neutral, T.lcd_dim), (dist, T.accent)):
+            seg = (x1 - x0) * share
+            if seg >= 1:
+                self.create_rectangle(x, y0, x + seg, y1, fill=color, width=0)
+            x += seg
+
+
 class TitleBar(tk.Canvas):
     """Title strip styled by the theme; with on_menu it gets a small menu button on the left."""
 

@@ -187,3 +187,39 @@ class IdleReminder(_Window):
             self.idle_end = time.time()
         self.destroy()
         self.on_choice(choice, self)
+
+
+class ProductivityDialog(_Window):
+    """Small dashboard behind the productivity meter: time per category and its top items."""
+
+    def __init__(self, parent, summary, day_title: str):
+        super().__init__(parent, "Produktivnost")
+        from ..productivity import DISTRACTING, NEUTRAL, PRODUCTIVE
+
+        T = skin.T
+        b = self.body
+        skin.label(b, day_title, fg=T.accent).pack(anchor="w")
+        panel = skin.Panel(b, pad=8)
+        panel.pack(fill="x", pady=(4, 0))
+        total = summary.total
+        rows = ((PRODUCTIVE, "Produktivno", T.lcd_on), (DISTRACTING, "Ometanje", T.accent),
+                (NEUTRAL, "Ostalo", T.lcd_dim))
+        for category, title, color in rows:
+            secs = summary.seconds[category]
+            share = f"{secs / total:.0%}" if total else "-"
+            tk.Label(panel.inner, text=T.tx(f"{title}  {timeutil.fmt_hours(secs)}  ({share})"), bg=T.lcd_bg,
+                     fg=color, font=T.font("mono", 10, "bold"), anchor="w").pack(fill="x", pady=(6, 0))
+            top = summary.labels.get(category, [])[:5]
+            text = "\n".join(f"  {label:<18} {timeutil.fmt_hours(s):>7}" for label, s in top) or "  -"
+            tk.Label(panel.inner, text=text, bg=T.lcd_bg, fg=T.lcd_text, font=T.font("mono", 9), anchor="w",
+                     justify="left").pack(fill="x")
+        skin.label(b, "Vreme za računarom dok si aktivan. Čuva se samo kategorija i naziv\n"
+                      "programa ili sajta, ne i naslovi prozora. Dodatne reči: settings.json.",
+                   fg=T.text, justify="left", font=T.font("sans", 8)).pack(anchor="w", pady=(6, 0))
+        bar = tk.Frame(b, bg=b["bg"])
+        bar.pack(fill="x", pady=(8, 0))
+        skin.SkinButton(bar, self.destroy, text="Zatvori").pack(side="right")
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.bind("<Return>", lambda e: self.destroy())
+        _place(self, parent)
+        self.deiconify()

@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS entries (
     end_ts      REAL
 );
 CREATE INDEX IF NOT EXISTS idx_entries_start ON entries(start_ts);
+CREATE TABLE IF NOT EXISTS activity (
+    id       INTEGER PRIMARY KEY,
+    start_ts REAL NOT NULL,
+    end_ts   REAL NOT NULL,
+    category TEXT NOT NULL,
+    label    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_activity_start ON activity(start_ts);
 """
 
 
@@ -161,3 +169,23 @@ class Database:
             if continue_after:
                 self._exec("INSERT INTO entries(project_id, description, start_ts) VALUES (?, ?, ?)",
                            (entry.project_id, entry.description, idle_end))
+
+    # ---------------------------------------------------------------- activity
+
+    def add_activity(self, category: str, label: str, start: float, end: float) -> int:
+        return self._exec("INSERT INTO activity(start_ts, end_ts, category, label) VALUES (?, ?, ?, ?)",
+                          (start, end, category, label)).lastrowid
+
+    def extend_activity(self, activity_id: int, end: float) -> None:
+        self._exec("UPDATE activity SET end_ts = ? WHERE id = ?", (end, activity_id))
+
+    def trim_activity_after(self, ts: float) -> None:
+        """Drop activity after ts (samples taken before an idle period was recognised)."""
+        with self._lock:
+            self._exec("DELETE FROM activity WHERE start_ts >= ?", (ts,))
+            self._exec("UPDATE activity SET end_ts = ? WHERE end_ts > ?", (ts, ts))
+
+    def activity_between(self, start: float, end: float) -> list[tuple[float, float, str, str]]:
+        rows = self._query("SELECT start_ts, end_ts, category, label FROM activity "
+                           "WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts", (end, start))
+        return [(r["start_ts"], r["end_ts"], r["category"], r["label"]) for r in rows]

@@ -35,6 +35,13 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 
 **Tray:** zatvaranje prozora sklanja aplikaciju pored sata; tajmer radi dalje. Izlaz je u meniju.
 
+**Produktivnost:** dok si aktivan za laptopom (sa ili bez tajmera), aplikacija gleda koji je program ili sajt u prvom planu i svrstava ga u produktivno, ometanje ili ostalo. Ispod PL liste stoji jedan red: *Produktivno 67% · ometanje 16%* sa trakom; klik na njega otvara pregled po programima i sajtovima za taj dan.
+
+- Produktivno: Google Docs / Sheets / Slides, Word, Excel, PowerPoint, OneNote, LibreOffice, Notion, Obsidian, Overleaf.
+- Ometanje: YouTube, Facebook, Messenger, Instagram, TikTok, Netflix, Reddit, X/Twitter i prodavnice (Amazon, eBay, AliExpress, Temu, Shein, Zalando, Etsy, KupujemProdajem, Ananas, Gigatron, WinWin i stranice sa "shop" ili "korpa" u naslovu).
+- Sve ostalo je "ostalo". Svoje reči dodaješ u `settings.json`: `"extra_productive": ["figma", "blender.exe"]`, `"extra_distracting": ["9gag"]` (važi posle ponovnog pokretanja).
+- Čuva se samo kategorija i kratak naziv (npr. "YouTube", "Word"), **nikad naslov prozora**. Vreme dok si neaktivan ili je ekran zaključan se ne broji.
+
 ## Na telefonu
 
 Postoji i web verzija za telefon (folder `web/`): isti izgled, sva 4 skina i zvuci, lista unosa, CSV izvoz. Radi i bez interneta.
@@ -98,6 +105,7 @@ python -m timetracker
 | `timetracker/tracker.py` | pozadinska provera neaktivnosti i sleep-a (IdleStart / IdleEnd) |
 | `timetracker/platform_win.py` | Windows API preko ctypes (idle vreme, jedna instanca, autostart) |
 | `timetracker/reports.py` | zbirovi i CSV |
+| `timetracker/productivity.py` | pravila produktivno / ometanje i dnevni zbirovi |
 | `timetracker/sounds.py` | sintetizovani zvučni efekti po skinu |
 | `timetracker/ui/skin.py` | teme i iscrtani elementi: paneli, dugmad, LCD cifre, analogni sat |
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
