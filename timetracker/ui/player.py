@@ -139,6 +139,10 @@ class Player(tk.Tk):
             menu.destroy()
         self._build_ui()
 
+    def _sound(self, event: str):
+        """A button's sound, played the moment it is pressed."""
+        return lambda: self.sounds.play(event)
+
     def _click(self, command, event: str = "click"):
         """Wrap a button command so it plays the skin's click sound (or another effect) first."""
         def run():
@@ -200,13 +204,14 @@ class Player(tk.Tk):
 
         buttons = tk.Frame(main, bg=T.body)
         buttons.pack(fill="x", pady=(skin.px(6), skin.px(2)))
-        self.play_btn = skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)")
+        self.play_btn = skin.SkinButton(buttons, self.play, glyph="play", tooltip="Start (Enter)", on_press=True)
         self.play_btn.pack(side="left")
-        skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza").pack(side="left", padx=2)
-        skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop").pack(side="left")
-        skin.SkinButton(buttons, self._click(self._export_menu), glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
+        skin.SkinButton(buttons, self.pause, glyph="pause", tooltip="Pauza", on_press=True).pack(side="left", padx=2)
+        skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop", on_press=True).pack(side="left")
+        skin.SkinButton(buttons, self._export_menu, sound=self._sound("click"), glyph="eject",
+                        tooltip="Izvezi u Excel (CSV)").pack(
             side="left", padx=(skin.px(6), 0))
-        skin.SkinButton(buttons, self._click(self.toggle_playlist, "pl"), text="PL", tooltip="Prikaži/sakrij listu").pack(
+        skin.SkinButton(buttons, self.toggle_playlist, sound=self._sound("pl"), text="PL", tooltip="Prikaži/sakrij listu").pack(
             side="right")
 
     def _build_playlist(self):
@@ -219,11 +224,11 @@ class Player(tk.Tk):
         self.pl_frame.pack(fill="x")
         head = tk.Frame(self.pl_frame, bg=bg)
         head.pack(fill="x", pady=(0, skin.px(3)))
-        skin.SkinButton(head, self._click(lambda: self.shift_day(1)), glyph="prev", width=18, height=16,
+        skin.SkinButton(head, lambda: self.shift_day(1), sound=self._sound("click"), glyph="prev", width=18, height=16,
                         tooltip="Prethodni dan").pack(side="left")
         self.day_label = skin.label(head, "", fg=T.accent)
         self.day_label.pack(side="left", expand=True)
-        skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
+        skin.SkinButton(head, lambda: self.shift_day(-1), sound=self._sound("click"), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
         panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern, bg=T.list_bg or None,
@@ -245,9 +250,9 @@ class Player(tk.Tk):
 
         foot = tk.Frame(self.pl_frame, bg=bg)
         foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
-        skin.SkinButton(foot, self._click(self.add_entry), text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
-        skin.SkinButton(foot, self._click(self.edit_selected), text="Izmeni").pack(side="left", padx=2)
-        skin.SkinButton(foot, self._click(self.delete_selected), text="Obriši").pack(side="left")
+        skin.SkinButton(foot, self.add_entry, sound=self._sound("click"), text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
+        skin.SkinButton(foot, self.edit_selected, sound=self._sound("click"), text="Izmeni").pack(side="left", padx=2)
+        skin.SkinButton(foot, self.delete_selected, sound=self._sound("click"), text="Obriši").pack(side="left")
         self.total_label = tk.Label(foot, text="", bg=bg, fg=T.text, font=T.font("mono", 9, "bold"))
         self.total_label.pack(side="right")
 

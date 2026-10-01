@@ -25,7 +25,7 @@ from . import platform_win
 
 RATE = 22050
 EVENTS = ("start", "pause", "stop", "click", "alert")
-VERSION = 1  # bump when the synthesis changes so cached files are regenerated
+VERSION = 2  # bump when the synthesis changes so cached files are regenerated
 
 
 # ---------------------------------------------------------------- building blocks
@@ -90,7 +90,8 @@ def mix(parts: list[tuple[float, list[float]]]) -> list[float]:
         for i, v in enumerate(samples):
             out[start + i] += v
     peak = max(1e-9, max(abs(v) for v in out))
-    return [v * 0.8 / peak for v in out]
+    first = next(i for i, v in enumerate(out) if abs(v) >= peak * 0.02)  # start right away: no silent lead-in
+    return [v * 0.8 / peak for v in out[first:]]
 
 
 # ------------------------------------------------------------------ the four kits
@@ -175,8 +176,8 @@ def _plop(pitch: float = 1.0, amp: float = 1.0, seed: int = 21) -> list[float]:
 def _wind(dur: float, seed: int = 41, falling: bool = False) -> list[float]:
     """A gust: low, airy noise swelling and fading, wavering like real wind."""
     lp = (0.06, 0.02) if falling else (0.025, 0.07)
-    return noise(dur, amp=1.0, seed=seed, lowpass=lp,
-                 shape=lambda f: math.sin(math.pi * f) ** 1.5 * (0.75 + 0.25 * math.sin(f * 17 + seed)))
+    return noise(dur, amp=1.0, seed=seed, lowpass=lp,  # there at once (it answers a click), then dies away
+                 shape=lambda f: min(1.0, f / 0.06) * (1 - f) ** 1.3 * (0.75 + 0.25 * math.sin(f * 17 + seed)))
 
 
 def _rustle(start: float, dur: float, grains: int, seed: int = 51) -> list[tuple[float, list[float]]]:
@@ -205,7 +206,7 @@ def _gunshot() -> list[float]:
 def _steam(dur: float = 0.75) -> list[float]:
     """Espresso machine steam wand: a sputtering hiss."""
     return noise(dur, amp=1.0, seed=61, lowpass=(0.55, 0.75), highpass=0.3,
-                 shape=lambda f: min(1.0, f / 0.12) * min(1.0, (1 - f) / 0.35) * (0.7 + 0.3 * math.sin(f * 70)))
+                 shape=lambda f: min(1.0, f / 0.04) * min(1.0, (1 - f) / 0.35) * (0.7 + 0.3 * math.sin(f * 70)))
 
 
 def _clink(freq: float, seed: int = 71, amp: float = 1.0) -> list[float]:
@@ -231,7 +232,7 @@ def render(skin: str, event: str) -> list[float]:
 def _kit(skin: str) -> dict:
     if skin == "dandelion":
         kit = {
-            "start": [(0, _wind(0.75))] + _rustle(0.15, 0.5, 14),
+            "start": [(0, _wind(0.75))] + _rustle(0, 0.5, 14),
             "pause": _rustle(0, 0.22, 9, seed=52),
             "stop": [(0, _wind(0.6, seed=42, falling=True))] + _rustle(0.05, 0.3, 6, seed=53),
             "click": _rustle(0, 0.04, 3, seed=54),
@@ -239,7 +240,7 @@ def _kit(skin: str) -> dict:
         }
     elif skin == "coffee":
         kit = {
-            "start": [(0, _tick(2600)), (0.09, _gunshot())],                     # hammer click, bang
+            "start": [(0, _gunshot())],                                          # bang
             "pl": [(0, _steam())],
             "pause": [(0, _ping(2100)), (0.15, _ping(2100))],                     # cing cing
             "stop": [(0, _clink(2600)), (0.07, _clink(3100, 72, 0.7)), (0.12, _clink(2300, 73, 0.8)),
@@ -299,7 +300,7 @@ def _kit(skin: str) -> dict:
         }
     elif skin == "cyber":
         kit = {
-            "start": [(0, _swoosh(0.26, rising=True)), (0.17, _ring())],             # unsheathe: shiiing
+            "start": [(0, _swoosh(0.14, rising=True)), (0.08, _ring())],             # unsheathe: shiiing
             "pause": [(0, _swoosh(0.16, rising=True, seed=8))],                       # quick swish
             "stop": [(0, _swoosh(0.22, rising=False)), (0.2, _tick(1800))],          # sheathe + clack
             "click": [(0, _tick())],

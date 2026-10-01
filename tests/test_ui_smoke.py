@@ -526,3 +526,27 @@ def test_coffee_play_button_gets_shot(app):
     assert not app.play_btn.find_withtag("hole")  # the hole is gone again
     app.stop()
     app.set_skin("matrix")
+
+
+def test_transport_buttons_act_on_press_others_on_release(app):
+    from timetracker.ui import skin
+
+    log = []
+    press = skin.SkinButton(app, lambda: log.append("pressed"), glyph="play", on_press=True,
+                            sound=lambda: log.append("sound"))
+    press.pack()
+    app.update()
+    press._press(None)
+    assert log == ["sound", "pressed"]
+    press._release(type("E", (), {"x": 2, "y": 2})())
+    assert log == ["sound", "pressed"]  # not twice
+    log.clear()
+    normal = skin.SkinButton(app, lambda: log.append("released"), text="OK", sound=lambda: log.append("sound"))
+    normal.pack()
+    app.update()
+    normal._press(None)
+    assert log == ["sound"]
+    normal._release(type("E", (), {"x": 2, "y": 2})())
+    assert log == ["sound", "released"]
+    press.destroy()
+    normal.destroy()
