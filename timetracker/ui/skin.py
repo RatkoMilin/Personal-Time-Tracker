@@ -16,6 +16,16 @@ from tkinter import ttk
 WIN = sys.platform == "win32"
 
 
+OASIS_SAND, OASIS_WATER = "#ecd9ae", "#c3dfe0"  # Peščani sat: the playlist from desert to a soft oasis
+OASIS_SAND_TEXT, OASIS_WATER_TEXT = "#5a3f1e", "#2f4c50"
+
+
+def oasis_colors(productive: float) -> tuple[str, str]:
+    """(background, text) of the Peščani sat playlist: plain sand at 0% productive, oasis blue at 100%."""
+    p = max(0.0, min(1.0, productive))
+    return blend(OASIS_SAND, OASIS_WATER, p), blend(OASIS_SAND_TEXT, OASIS_WATER_TEXT, p)
+
+
 @dataclass(frozen=True)
 class Theme:
     key: str
@@ -222,6 +232,18 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         shape="round", radius=9, panel_outline="#4c3b36", title_style="coffee", segments="ice", meter="coffee",
         layers=("#2f2522", "#211a17", "#130e0d"), glow="#5f7f89", play_fx="bullet",
     ),
+    Theme(
+        key="hourglass", name="Peščani sat",
+        body="#ead3a2", body_light="#f6e7c6", body_dark="#c9a466", text="#5f4422", accent="#c4802f",
+        lcd_bg="#f4e4c0", lcd_on="#8a5524", lcd_off="#ecd9b0", lcd_dim="#b8955f", lcd_text="#5f4422",
+        btn_face="#dcb877", btn_light="#f1dcaa", btn_dark="#a77f43", btn_glyph="#4f361a",
+        sel_bg="#c4802f", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=10, panel_outline="#c9a466", title_style="dunes", segments="round",
+        clock_deco="hourglass", pl_pattern="oasis", meter_fill="#4fa3cf",
+        list_bg=OASIS_SAND, list_fg=OASIS_SAND_TEXT,
+    ),
 )}
 
 MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
@@ -382,7 +404,9 @@ class Panel(tk.Frame):
         self.pattern = pattern
         self.plain = plain  # no box at all: only the content shows
         self.bg = bg or T.lcd_bg
-        pad = (px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + (px(9) if pattern else 0)
+        self.level = 0.0  # oasis: how productive (0..1); the palms around the playlist follow it
+        margin = px(18) if pattern == "oasis" else px(9) if pattern else 0
+        pad = (px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + margin
                + (px(T.border) if T.shape == "block" else 0) + px(2) * len(T.layers))
         if plain:
             pad = px(2)
@@ -422,7 +446,36 @@ class Panel(tk.Frame):
         if self.pattern and w > 40 and h > 40:
             self._draw_pattern(c, w, h)
 
+    def set_oasis(self, productive: float) -> None:
+        """Peščani sat: the list turns blue and palms grow around it as the day gets more productive."""
+        productive = max(0.0, min(1.0, productive))
+        if abs(productive - self.level) < 0.01 and self.bg == oasis_colors(productive)[0]:
+            return
+        self.level = productive
+        self.bg = oasis_colors(productive)[0]
+        self.inner.configure(bg=self.bg)
+        self._redraw()
+
+    def _draw_oasis(self, c: tk.Canvas, w: int, h: int) -> None:
+        from .hourglass import draw_palm
+
+        size = px(14)
+        # Spots in the margin, in the order they appear: the bottom corners first, then along the edges.
+        spots = [(px(9), h - px(2), 1), (w - px(9), h - px(2), -1), (w * 0.5, h - px(1), 1),
+                 (px(8), h * 0.55, 1), (w - px(8), h * 0.55, -1), (w * 0.27, h - px(1), -1),
+                 (w * 0.73, h - px(1), 1), (px(8), h * 0.3, 1), (w - px(8), h * 0.3, -1)]
+        palms = round(self.level * len(spots))
+        if self.level > 0.05:  # a thin rim of grass around the water
+            green = blend(T.body, "#8fb26b", min(1.0, self.level))
+            round_rect(c, px(4), px(4), w - px(4), h - px(4), px(T.radius) + px(4), fill="", outline=green,
+                       width=max(1, px(1 + 1.2 * self.level)))
+        for x, base, lean in spots[:palms]:
+            draw_palm(c, x, base, size, lean)
+
     def _draw_pattern(self, c: tk.Canvas, w: int, h: int) -> None:
+        if self.pattern == "oasis":
+            self._draw_oasis(c, w, h)
+            return
         # Deterministic, so the pattern does not jump around when the window redraws.
         rnd = random.Random(w * 7919 + h)
         m = px(10)  # the decorated margin (the inner frame covers the middle)
@@ -1478,7 +1531,7 @@ class TitleBar(tk.Canvas):
 
     def __init__(self, master, title: str, on_menu=None):
         self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
-                  "coffee": px(26)}.get(T.title_style, px(18))
+                  "coffee": px(26), "dunes": px(22)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
@@ -1554,6 +1607,15 @@ class TitleBar(tk.Canvas):
                 x = x0 - k * step + px(4) if i % 2 == 0 else x1 + k * step - px(4)
                 if r < x < w - r:
                     draw_orange_piece(self, x, h / 2 + px(2), r, kind)
+        elif style == "dunes":  # a dune for every full turn of the hourglass, alternating sides
+            from .hourglass import draw_dune
+
+            step = px(17)
+            for i, _ in enumerate(self.pieces):
+                k = i // 2 + 1
+                x = x0 - k * step + px(5) if i % 2 == 0 else x1 + k * step - px(5)
+                if px(8) < x < w - px(8):
+                    draw_dune(self, x, h - px(3), px(15))
         elif style == "dandelion":  # a seed floating off on each side, subtly
             for x, d in ((x0 - px(14), -1), (x1 + px(14), 1)):
                 y = h / 2

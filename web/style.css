@@ -472,3 +472,32 @@ body[data-skin="coffee"] #playBtn { position: relative; overflow: visible; }
 @keyframes ptt-hole { 0% { transform: rotate(var(--rot)) scale(.3); } 6% { transform: rotate(var(--rot)) scale(1.1); }
   12%, 55% { transform: rotate(var(--rot)) scale(1); opacity: 1; } 100% { transform: rotate(var(--rot)) scale(.9); opacity: 0; } }
 @keyframes ptt-smoke { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(4px, -28px) scale(3.2); opacity: 0; } }
+
+/* ---------------------------------------------------------------- Peščani sat (hourglass) */
+.hourglass { display: none; }
+body[data-skin="hourglass"] {
+  --body: #ead3a2; --body-light: #f6e7c6; --body-dark: #c9a466; --text: #5f4422; --accent: #c4802f;
+  --lcd-bg: #f4e4c0; --lcd-on: #8a5524; --lcd-off: #ecd9b0; --lcd-dim: #b8955f; --lcd-text: #5f4422;
+  --btn-face: #dcb877; --btn-light: #f1dcaa; --btn-dark: #a77f43; --btn-glyph: #4f361a;
+  --sel-bg: #c4802f; --sel-fg: #ffffff; --outline: #c9a466;
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --label-weight: 700; --label-style: normal; --upper: none; --radius: 10px;
+  background: linear-gradient(to bottom, #f0dcb0, #ead3a2 40%, #e2c48c);
+}
+body[data-skin="hourglass"] .hourglass { display: block; width: 26px; height: 38px; align-self: center; transform-origin: 50% 50%; }
+body[data-skin="hourglass"] .hourglass .stream { stroke: #b98a3c; stroke-width: 1.4; stroke-dasharray: 2 2; }
+body[data-skin="hourglass"] .hourglass.running .stream { animation: ptt-sand .35s linear infinite; }
+body[data-skin="hourglass"] .hourglass.flip { animation: ptt-flip .45s ease-in-out; }
+@keyframes ptt-sand { to { stroke-dashoffset: -4; } }
+@keyframes ptt-flip { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
+body[data-skin="hourglass"] .titlebar::before { display: none; }
+body[data-skin="hourglass"] .title { background: none; font-size: 14px; }
+body[data-skin="hourglass"] .pieces { display: inline-flex; gap: 3px; align-items: flex-end; height: 16px; }
+.piece.d { width: 15px; height: 7px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 12'%3E%3Cpath d='M0 12 Q10 1 13 1 Q17 1 30 12 Z' fill='%23e2b866'/%3E%3Cpath d='M13 1 Q17 1 30 12 L16 12 Z' fill='%23cda355'/%3E%3C/svg%3E") center bottom / contain no-repeat; }
+body[data-skin="hourglass"] .panel { border: 1px solid var(--outline); border-radius: var(--radius); }
+body[data-skin="hourglass"] .panel > .inner { border-radius: calc(var(--radius) - 1px); }
+body[data-skin="hourglass"] .list, body[data-skin="hourglass"] .list > .inner { background: #ecd9ae; }
+body[data-skin="hourglass"] .field input { color-scheme: light; }
+body[data-skin="hourglass"] .btn { border: 1px solid var(--btn-dark); border-radius: var(--radius); font-weight: 700; }
+body[data-skin="hourglass"] .btn:active { background: var(--btn-dark); color: var(--btn-light); }
+body[data-skin="hourglass"] .skins .btn.active { outline: 2px solid var(--accent); }

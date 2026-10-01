@@ -1,5 +1,5 @@
 /* Offline support: cache the app shell, serve it cache-first, refresh the cache in the background. */
-const CACHE = "ptt-v6";
+const CACHE = "ptt-v7";
 const FILES = ["./", "index.html", "style.css", "app.js", "sounds.js", "manifest.webmanifest",
                "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 

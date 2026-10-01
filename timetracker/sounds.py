@@ -4,6 +4,7 @@ matrix: digital blips   pastel: bubbles   wood: knocks on wood   cyber: sword sw
 cat: meows and a purr-like "mrrp"   setsuna: bright citrus plucks
 mondrian: plain clean beeps   egg: a "plop", like an egg or a pebble dropped into water
 dandelion: wind and rustling grass   coffee: a revolver shot, espresso steam (PL), ice cubes, cup pings
+hourglass: pouring sand, desert wind, the glass turning over ("flip")
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -224,13 +225,30 @@ def _ping(freq: float = 2100, dur: float = 0.45, tau: float = 0.16) -> list[floa
     return [sum(v) for v in zip(*parts)]
 
 
+def _pour(dur: float = 0.5, seed: int = 81) -> list[float]:
+    """Sand running through the neck of the glass: a soft, grainy hiss."""
+    hiss = noise(dur, amp=0.7, seed=seed, lowpass=(0.35, 0.3), highpass=0.25,
+                 shape=lambda f: min(1.0, f / 0.03) * min(1.0, (1 - f) / 0.3))
+    grains = mix([(0, [0.0])] + _rustle(0, dur * 0.8, int(dur * 40), seed=seed + 1))
+    return [a + 0.6 * b for a, b in zip(hiss, grains + [0.0] * len(hiss))]
+
+
 def render(skin: str, event: str) -> list[float]:
     kit = _kit(skin)
     return mix(kit.get(event) or kit["click"])  # effects a skin lacks (e.g. "pl") fall back to its click
 
 
 def _kit(skin: str) -> dict:
-    if skin == "dandelion":
+    if skin == "hourglass":
+        kit = {
+            "start": [(0, _ping(1500, 0.3, 0.08)), (0.02, _pour(0.55))],           # glass set down, sand runs
+            "pause": [(0, _pour(0.16, seed=82))],
+            "stop": [(0, _wind(0.6, seed=45, falling=True))] + _rustle(0, 0.25, 8, seed=83),
+            "click": _rustle(0, 0.03, 3, seed=84),
+            "flip": [(0, _ping(1300, 0.35, 0.1)), (0.12, _ping(1700, 0.3, 0.08)), (0.15, _pour(0.45, seed=85))],
+            "alert": [(0, _wind(0.5, seed=46)), (0.3, _ping(1500, 0.3, 0.1))] + _rustle(0, 0.6, 12, seed=86),
+        }
+    elif skin == "dandelion":
         kit = {
             "start": [(0, _wind(0.75))] + _rustle(0, 0.5, 14),
             "pause": _rustle(0, 0.22, 9, seed=52),

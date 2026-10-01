@@ -562,3 +562,48 @@ def test_transport_buttons_act_on_press_others_on_release(app):
     assert log == ["sound", "released"]
     press.destroy()
     normal.destroy()
+
+
+def test_hourglass_skin_turns_and_oasis_follows_productivity(app):
+    from datetime import timedelta
+
+    from timetracker.ui import hourglass, skin
+
+    assert hourglass.rounds_done(24 * 60) == 0 and hourglass.rounds_done(51 * 60) == 2
+    assert hourglass.fill(0) == 0 and abs(hourglass.fill(1500 + 750) - 0.5) < 1e-9
+    assert skin.oasis_colors(0) == (skin.OASIS_SAND, skin.OASIS_SAND_TEXT)
+    assert skin.oasis_colors(1) == (skin.OASIS_WATER, skin.OASIS_WATER_TEXT)
+
+    app.set_skin("hourglass")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    flips = []
+    app.hourglass.on_flip = lambda: flips.append(1)
+    app.task_var.set("Pesak")
+    app.play()
+    entry = app.db.running_entry()
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 24 * 60 - 58, None)
+    app._update_display()
+    assert app.titlebar.pieces == [] and not flips
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 25 * 60 - 2, None)
+    app._update_display()  # a full round: the glass turns over and a dune appears
+    assert flips == [1] and app.titlebar.pieces == ["d"]
+    app.stop()
+    app._update_display()
+    assert app.titlebar.pieces == []
+
+    yesterday = timeutil.day_start(date.today() - timedelta(days=1))
+    app.shift_day(1)
+    app.db.add_activity("distracting", "YouTube", yesterday + 3600, yesterday + 7200)
+    app._update_meter()
+    app.update()
+    assert app.listbox.cget("bg") == skin.OASIS_SAND and app.pl_panel.level == 0  # all sand, no palms
+    app.db._exec("DELETE FROM activity")
+    app.db.add_activity("productive", "Word", yesterday + 3600, yesterday + 7200)
+    app._update_meter()
+    app.update()
+    assert app.listbox.cget("bg") == skin.OASIS_WATER and app.pl_panel.level == 1
+    assert len(app.pl_panel.canvas.find_all()) > 20  # the palms and the grass rim are drawn
+    app.shift_day(-1)
+    app.db._exec("DELETE FROM activity")
+    app.set_skin("matrix")

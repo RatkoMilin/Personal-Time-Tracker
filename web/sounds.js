@@ -1,7 +1,8 @@
 /* Sound effects per skin, synthesized like the desktop app (timetracker/sounds.py).
    matrix: digital blips, pastel: bubbles, wood: knocks on wood, cyber: sword swooshes and rings,
    cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop",
-   dandelion: wind and rustling grass, coffee: revolver shot, espresso steam (PL), ice cubes, cup pings. */
+   dandelion: wind and rustling grass, coffee: revolver shot, espresso steam (PL), ice cubes, cup pings,
+   hourglass: pouring sand, desert wind, the glass turning over ("flip"). */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -146,7 +147,22 @@
   const ping = (f = 2100, dur = 0.45, tau = 0.16) => add(...[[1, 1, 1], [2.32, 0.45, 0.6], [4.25, 0.2, 0.35]]
     .map(([r, a, k]) => tone(f * r, f * r, dur, "sine", 0.001, tau * k, a)));
 
+  const pour = (dur = 0.5, seed = 81) => {
+    const hiss = noise(dur, { amp: 0.7, seed, lowpass: [0.35, 0.3], highpass: 0.25,
+      shape: f => Math.min(1, f / 0.03) * Math.min(1, (1 - f) / 0.3) });
+    const grains = mix(rustle(0, dur * 0.8, Math.floor(dur * 40), seed + 1));
+    return add(hiss, grains.map(v => v * 0.6));
+  };
+
   const KITS = {
+    hourglass: {
+      start: () => [[0, ping(1500, 0.3, 0.08)], [0.02, pour(0.55)]],
+      pause: () => [[0, pour(0.16, 82)]],
+      stop: () => [[0, wind(0.6, 45, true)], ...rustle(0, 0.25, 8, 83)],
+      click: () => rustle(0, 0.03, 3, 84),
+      flip: () => [[0, ping(1300, 0.35, 0.1)], [0.12, ping(1700, 0.3, 0.08)], [0.15, pour(0.45, 85)]],
+      alert: () => [[0, wind(0.5, 46)], [0.3, ping(1500, 0.3, 0.1)], ...rustle(0, 0.6, 12, 86)],
+    },
     dandelion: {
       start: () => [[0, wind(0.75)], ...rustle(0, 0.5, 14)],
       pause: () => rustle(0, 0.22, 9, 52),

@@ -17,6 +17,7 @@ from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
+from .hourglass import Hourglass, rounds_done
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -158,7 +159,7 @@ class Player(tk.Tk):
         panel = skin.Panel(main, pad=5)
         panel.pack(fill="x")
         lcd = panel.inner
-        self.clock = self.dial = self.marquee = None
+        self.clock = self.dial = self.marquee = self.hourglass = None
         if T.display == "analog":
             self.dial = skin.AnalogDial(lcd)
             self.dial.pack(side="left")
@@ -177,6 +178,9 @@ class Player(tk.Tk):
                 fruit = tk.Canvas(lcd, width=skin.px(30), height=skin.px(36), bg=T.lcd_bg, highlightthickness=0)
                 skin.draw_orange(fruit, skin.px(15), skin.px(21), skin.px(11))
                 fruit.pack(side="left", padx=(0, skin.px(6)))
+            if T.clock_deco == "hourglass":  # Peščani sat: one turn of the glass per 25 minutes of the task
+                self.hourglass = Hourglass(lcd, on_flip=self._sound("flip"))
+                self.hourglass.pack(side="left", padx=(0, skin.px(8)))
             self.clock = skin.SevenSegment(lcd)
             self.clock.pack(side="left")
             right = tk.Frame(lcd, bg=T.lcd_bg)
@@ -510,6 +514,11 @@ class Player(tk.Tk):
         if walnuts != self.meter.walnuts:
             self.meter.walnuts = walnuts
             self.meter.draw()
+        if skin.T.pl_pattern == "oasis":  # Peščani sat: desert to oasis with the day's productivity
+            share = s.share(productivity.PRODUCTIVE)
+            self.pl_panel.set_oasis(share)
+            bg, fg = skin.oasis_colors(share)
+            self.listbox.configure(bg=bg, fg=fg)
         self.meter.set(s.seconds[productivity.PRODUCTIVE], s.seconds[productivity.NEUTRAL],
                        s.seconds[productivity.DISTRACTING], s.total)
 
@@ -593,6 +602,10 @@ class Player(tk.Tk):
         self._clock_text = text
         if T.title_style == "oranges":
             self.titlebar.set_pieces(skin.orange_pieces(secs) if state != self.STOPPED else [])
+        elif T.title_style == "dunes":
+            self.titlebar.set_pieces(["d"] * min(12, rounds_done(secs)) if state != self.STOPPED else [])
+        if self.hourglass is not None:
+            self.hourglass.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
         task = self.task_var.get().strip() or "(bez naziva)"
         project = self.project_var.get().strip()
         today = reports.total_between(self.db, *timeutil.period_bounds("today"), now)
