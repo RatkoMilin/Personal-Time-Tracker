@@ -54,7 +54,39 @@ def test_install_swaps_files_and_cleanup_removes_leftovers(tmp_path):
     assert not updater.old_path(exe).exists() and exe.exists()
 
 
-def test_restart_launches_after_a_delay(tmp_path):
+def test_restart_starts_the_new_exe_directly_and_it_waits_for_us(tmp_path):
+    import os
+
+    exe = tmp_path / "Program Files" / "PersonalTimeTracker.exe"  # a path with a space
     calls = []
-    updater.restart(tmp_path / "PersonalTimeTracker.exe", popen=lambda *a, **k: calls.append(a[0]))
-    assert calls and "timeout /t 2" in calls[0][2] and "--minimized" in calls[0][2]
+    updater.restart(exe, popen=lambda *a, **k: calls.append(a[0]))
+    assert calls == [[str(exe), "--minimized", "--after-update", str(os.getpid())]]  # no cmd.exe quoting
+
+
+def test_after_update_waits_for_the_old_process(monkeypatch):
+    from timetracker import app, platform_win
+
+    class Stop(Exception):
+        pass
+
+    def stop(*_args):  # the single-instance check comes after the wait: stop there, before any UI
+        raise Stop
+
+    waited = []
+    monkeypatch.setattr(platform_win, "wait_for_exit", lambda pid, timeout: waited.append(pid) or True)
+    monkeypatch.setattr(platform_win, "acquire_single_instance", stop)
+    with pytest.raises(Stop):
+        app.main(["--minimized", "--after-update", "4242"])
+    assert waited == [4242]
+
+
+def test_wait_for_exit_on_a_real_process():
+    import subprocess
+    import sys
+
+    from timetracker import platform_win
+
+    proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(0.5)"])
+    assert platform_win.wait_for_exit(proc.pid, 0.05) is False  # still running
+    proc.wait()
+    assert platform_win.wait_for_exit(proc.pid, 5) is True

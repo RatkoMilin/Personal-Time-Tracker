@@ -6,7 +6,7 @@ source checkouts and artifact builds never update themselves. The flow:
 1. ask the GitHub API for the latest release; newer tag with a PersonalTimeTracker.exe asset?
 2. download it next to the data folder and check its size and SHA-256 digest;
 3. rename the running exe to *.old.exe (Windows allows renaming a running exe), move the new one in,
-   start it with a short delay and let the old process exit. The running timer lives in the database,
+   start it with --after-update <pid> (it waits for the old process to exit) and let the old process exit. The running timer lives in the database,
    so it simply continues in the new version.
 """
 
@@ -122,10 +122,12 @@ def install(new_exe: Path, current_exe: Path) -> None:
 
 
 def restart(exe: Path, popen=subprocess.Popen) -> None:
-    """Start exe again after the current process had time to exit (single-instance check)."""
-    flags = 0x00000008 | 0x08000000 if sys.platform == "win32" else 0  # DETACHED_PROCESS | CREATE_NO_WINDOW
-    popen(["cmd", "/c", f'timeout /t 2 /nobreak >nul & start "" "{exe}" --minimized'], creationflags=flags,
-          close_fds=True)
+    """Start the new exe directly; it waits for this process to exit before its single-instance check.
+
+    (No cmd.exe in between: quoting a path through `cmd /c start` broke it into "\\".)
+    """
+    flags = 0x00000008 if sys.platform == "win32" else 0  # DETACHED_PROCESS
+    popen([str(exe), "--minimized", "--after-update", str(os.getpid())], creationflags=flags, close_fds=True)
 
 
 def cleanup(current_exe: Path, folder: Path) -> None:
