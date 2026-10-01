@@ -129,7 +129,7 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "eink"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -195,6 +195,38 @@ def test_matrix_digits_jumble_and_pastel_bubbles(page):
     assert page.locator(".fx .bubble").count() > 10
 
 
+def test_dandelion_blows_only_after_midnight(browser, server):
+    ctx = browser.new_context(**PHONE)
+    pg = ctx.new_page()
+    errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.clock.install(time="2026-10-01T15:00:00")
+    pg.goto(server)
+    pg.wait_for_selector("#clock polygon")
+    pick_skin(pg, "dandelion")
+    pg.wait_for_selector("#dandelion .man")
+    assert pg.locator("#dandelion .petal").count() == 18 and pg.locator("#dandelion .seed").count() == 6
+    assert pg.evaluate("window.PTT.blowDandelion()") is False
+    pg.click("#dandelion .man", force=True)  # he waves
+    assert pg.locator("#dandelion .man.waving").count() == 1
+    assert pg.evaluate("document.documentElement.scrollWidth") <= 390
+    shots = os.environ.get("PTT_WEB_SHOTS")
+    if shots:
+        pg.screenshot(path=str(Path(shots) / "web_dandelion_15h.png"), full_page=True)
+    pg.clock.set_system_time("2026-10-02T00:20:00")
+    pg.reload()
+    pg.wait_for_selector("#dandelion .head.can-blow")
+    assert pg.locator("#dandelion .seed").count() == 24
+    pg.click("#dandelion .head.can-blow", force=True)
+    assert db(pg)["settings"]["dandelionBlown"] == "2026-10-02"
+    assert pg.locator("#dandelion.blowing").count() == 1
+    pg.clock.run_for(3500)
+    pg.wait_for_function("document.querySelectorAll('#dandelion .seed').length === 0")
+    assert pg.locator("#dandelion .man").count() == 0
+    assert errors == []
+    ctx.close()
+
+
 def test_csv_export_and_backup_restore(page, tmp_path):
     page.fill("#task", "rad; sa tačkom-zarezom")
     page.click("#playBtn")
@@ -220,22 +252,22 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'eink'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 45
+    assert len(result) == 55
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v4')")
-    cached = page.evaluate("caches.open('ptt-v4').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v5')")
+    cached = page.evaluate("caches.open('ptt-v5').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

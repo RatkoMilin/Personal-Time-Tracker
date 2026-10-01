@@ -5,7 +5,7 @@ import pytest
 
 from timetracker import sounds
 
-SKINS = ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg")
+SKINS = ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee")
 
 
 @pytest.mark.parametrize("skin", SKINS)
@@ -37,3 +37,8 @@ def test_player_caches_files_and_respects_toggle(tmp_path):
     assert len(played) == 2
     player.prepare("cyber").join()
     assert len(list(tmp_path.glob("cyber_*.wav"))) == len(sounds.EVENTS)
+
+
+def test_extra_effects_fall_back_to_click():
+    assert sounds.render("coffee", "pl") != sounds.render("coffee", "click")  # espresso steam
+    assert sounds.render("matrix", "pl") == sounds.render("matrix", "click")
