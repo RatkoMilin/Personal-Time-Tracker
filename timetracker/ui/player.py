@@ -20,7 +20,7 @@ from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
-FIELD_TOP = "#d8edc6"  # the meadow's first green (Maslačak skin)
+FIELD_TOP = "#d8edc6"  # the meadow's first green (Maslačko skin)
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
 EXPORTS = [("Ova nedelja", "this_week"), ("Prošla nedelja", "last_week"), ("Ovaj mesec", "this_month"),
            ("Prošli mesec", "last_month"), ("Ova godina", "this_year")]

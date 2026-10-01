@@ -199,7 +199,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         meter="glow", meter_fill="#ffd36b", dark_variant="egg",
     ),
     Theme(
-        key="dandelion", name="Maslačak",
+        key="dandelion", name="Maslačko",
         body="#fdfbf9", body_light="#ffffff", body_dark="#ead7dd", text="#55664a", accent="#e3a3b6",
         lcd_bg="#ffffff", lcd_on="#5f8f44", lcd_off="#f2eeee", lcd_dim="#b5c4a8", lcd_text="#55664a",
         btn_face="#fffaf0", btn_light="#ffffff", btn_dark="#f2d36b", btn_glyph="#5f8f44",

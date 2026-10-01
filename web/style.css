@@ -382,7 +382,7 @@ body[data-skin="egg"] .btn:active { background: var(--btn-dark); }
 body[data-skin="egg"].lit .lcd { box-shadow: 0 0 22px 4px rgba(255, 205, 110, .55); }
 body[data-skin="egg"] .skins .btn.active { outline: 2px solid var(--accent); }
 
-/* ---------------------------------------------------------------- Maslačak (dandelion clock) */
+/* ---------------------------------------------------------------- Maslačko (dandelion clock) */
 .dandelion, .meadow { display: none; }
 body[data-skin="dandelion"] {
   --body: #fdfbf9; --body-light: #ffffff; --body-dark: #ead7dd; --text: #55664a; --accent: #e3a3b6;
