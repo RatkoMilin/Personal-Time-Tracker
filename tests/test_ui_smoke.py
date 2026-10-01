@@ -7,11 +7,13 @@ import gc
 import os
 import sys
 import time
+from datetime import date, datetime
 
 import pytest
 
 tk = pytest.importorskip("tkinter")
 
+from timetracker import timeutil  # noqa: E402
 from timetracker.config import Settings  # noqa: E402
 from timetracker.db import Database  # noqa: E402
 from timetracker.tracker import IdleEnd, IdleStart  # noqa: E402
@@ -89,8 +91,8 @@ def test_play_pause_stop(app):
 
 
 def test_playlist_continue_delete_and_days(app):
-    now = time.time()
-    eid = app.db.add_entry("jutro", app.db.project_id("P"), now - 7200, now - 3600)
+    today = timeutil.day_start(date.today())  # fixed times inside today, whatever the clock says
+    eid = app.db.add_entry("jutro", app.db.project_id("P"), today + 60, today + 120)
     app.refresh()
     assert "jutro [P]" in app.listbox.get(0)
     app.listbox.selection_set(0)
@@ -166,3 +168,14 @@ def test_dialogs(app):
     dlg.ok()
     assert dlg.result["end"] - dlg.result["start"] == 5400
     assert dlg.result["project"] == "Interno"
+
+
+def test_new_entry_just_after_midnight_defaults_to_today(app, monkeypatch):
+    from timetracker.ui import dialogs
+
+    d = date.today()
+    monkeypatch.setattr(dialogs.time, "time", lambda: datetime(d.year, d.month, d.day, 0, 5).timestamp())
+    dlg = dialogs.EntryDialog(app, app.db, day=d)
+    assert dlg.date.get() == timeutil.fmt_date(timeutil.day_start(d))
+    assert (dlg.start.get(), dlg.end.get()) == ("00:00", "00:05")
+    dlg.cancel()

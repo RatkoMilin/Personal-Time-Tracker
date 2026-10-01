@@ -52,7 +52,7 @@ class EntryDialog(_Window):
         else:
             d = day or date.today()
             end = time.time() if d == date.today() else timeutil.to_ts(d, (17, 0))
-            start = end - 3600
+            start = max(end - 3600, timeutil.day_start(d))  # last hour, but not before midnight
         self.desc = tk.StringVar(value=entry.description if entry else "")
         self.project = tk.StringVar(value=projects.get(entry.project_id, "") if entry else "")
         self.date = tk.StringVar(value=timeutil.fmt_date(start))

@@ -398,7 +398,8 @@
     editing = entry;
     const day = addDays(new Date(), -dayOffset);
     const end = entry ? entry.end : (dayOffset === 0 ? Date.now() : new Date(day.getFullYear(), day.getMonth(), day.getDate(), 17).getTime());
-    const start = entry ? entry.start : end - 3600000;
+    // A new entry defaults to the last hour, but never before midnight of the day being viewed.
+    const start = entry ? entry.start : Math.max(end - 3600000, dayStart(day));
     $("entryTitle").textContent = upper(entry ? "Izmeni unos" : "Dodaj unos");
     $("eDesc").value = entry ? entry.description : "";
     $("eProject").value = entry ? projectName(entry.projectId) : "";

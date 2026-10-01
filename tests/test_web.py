@@ -235,3 +235,15 @@ def test_android_bridge_receives_exports(page):
     assert saved[0][0].startswith("vreme_sve_") and saved[1][0].startswith("timetracker-backup-")
     assert page.evaluate("window.PTT.back()") is True  # closes the open menu
     assert page.evaluate("window.PTT.back()") is False
+
+
+def test_new_entry_just_after_midnight_defaults_to_today(browser, server):
+    ctx = browser.new_context(**PHONE)
+    pg = ctx.new_page()
+    pg.clock.install(time="2026-10-01T00:05:00")
+    pg.goto(server)
+    pg.wait_for_selector("#clock polygon")
+    pg.click("#addBtn")
+    assert pg.input_value("#eDate") == "2026-10-01"
+    assert (pg.input_value("#eStart"), pg.input_value("#eEnd")) == ("00:00", "00:05")
+    ctx.close()
