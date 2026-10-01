@@ -64,7 +64,8 @@
     let peak = 1e-9;
     for (const v of out) peak = Math.max(peak, Math.abs(v));
     for (let i = 0; i < out.length; i++) out[i] *= 0.8 / peak;
-    return out;
+    const first = out.findIndex(v => Math.abs(v) >= 0.8 * 0.02);  // start right away: no silent lead-in
+    return out.subarray(Math.max(0, first));
   }
 
   const blip = (f, d = 0.045) => tone(f, f, d, "square", 0.002, null, 0.5);
@@ -114,7 +115,7 @@
   };
 
   const wind = (dur, seed = 41, falling = false) => noise(dur, { seed, lowpass: falling ? [0.06, 0.02] : [0.025, 0.07],
-    shape: f => Math.pow(Math.sin(Math.PI * f), 1.5) * (0.75 + 0.25 * Math.sin(f * 17 + seed)) });
+    shape: f => Math.min(1, f / 0.06) * Math.pow(1 - f, 1.3) * (0.75 + 0.25 * Math.sin(f * 17 + seed)) });
   const rustle = (start, dur, grains, seed = 51) => {
     const rnd = mulberry32(seed), out = [];
     for (let k = 0; k < grains; k++) {
@@ -138,7 +139,7 @@
     return out.map(v => Math.tanh(1.8 * v));
   };
   const steam = (dur = 0.75) => noise(dur, { seed: 61, lowpass: [0.55, 0.75], highpass: 0.3,
-    shape: f => Math.min(1, f / 0.12) * Math.min(1, (1 - f) / 0.35) * (0.7 + 0.3 * Math.sin(f * 70)) });
+    shape: f => Math.min(1, f / 0.04) * Math.min(1, (1 - f) / 0.35) * (0.7 + 0.3 * Math.sin(f * 70)) });
   const clink = (f, seed = 71, amp = 1) => add(...[[1, 1, 0.05], [1.47, 0.6, 0.035], [2.09, 0.45, 0.025], [2.56, 0.3, 0.02]]
     .map(([r, a, t]) => tone(f * r, f * r, 0.18, "sine", 0.001, t, a)), noise(0.18, { tau: 0.003, amp: 0.4, seed, highpass: 0.5 }))
     .map(v => v * amp);
@@ -147,14 +148,14 @@
 
   const KITS = {
     dandelion: {
-      start: () => [[0, wind(0.75)], ...rustle(0.15, 0.5, 14)],
+      start: () => [[0, wind(0.75)], ...rustle(0, 0.5, 14)],
       pause: () => rustle(0, 0.22, 9, 52),
       stop: () => [[0, wind(0.6, 42, true)], ...rustle(0.05, 0.3, 6, 53)],
       click: () => rustle(0, 0.04, 3, 54),
       alert: () => [[0, wind(0.45, 43)], [0.4, wind(0.5, 44)], ...rustle(0.1, 0.7, 16, 55)],
     },
     coffee: {
-      start: () => [[0, tick(2600)], [0.09, gunshot()]],
+      start: () => [[0, gunshot()]],
       pl: () => [[0, steam()]],
       pause: () => [[0, ping(2100)], [0.15, ping(2100)]],
       stop: () => [[0, clink(2600)], [0.07, clink(3100, 72, 0.7)], [0.12, clink(2300, 73, 0.8)], [0.21, clink(2900, 74, 0.5)]],
@@ -212,7 +213,7 @@
       alert: () => [[0, knock(1)], [0.2, knock(1, 1, 5)], [0.4, knock(1, 1, 6)]],
     },
     cyber: {
-      start: () => [[0, swoosh(0.26, true)], [0.17, ring()]],
+      start: () => [[0, swoosh(0.14, true)], [0.08, ring()]],
       pause: () => [[0, swoosh(0.16, true, 8)]],
       stop: () => [[0, swoosh(0.22, false)], [0.2, tick(1800)]],
       click: () => [[0, tick()]],

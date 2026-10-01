@@ -192,8 +192,8 @@ class IdleReminder(_Window):
 class ProductivityDialog(_Window):
     """Small dashboard behind the productivity meter: time per category and its top items."""
 
-    def __init__(self, parent, summary, day_title: str):
-        super().__init__(parent, "Produktivnost")
+    def __init__(self, parent, summary, day_title: str, title: str = "Produktivnost"):
+        super().__init__(parent, title)
         from ..productivity import DISTRACTING, NEUTRAL, PRODUCTIVE
 
         T = skin.T
@@ -245,7 +245,8 @@ class MiniBar(tk.Toplevel):
         self.task = tk.Label(panel, text="", bg=T.lcd_bg, fg=T.lcd_text, font=T.font("sans", 9), width=18,
                              anchor="w")
         self.task.pack(side="left", padx=(skin.px(8), skin.px(6)))
-        self.play = skin.SkinButton(panel, on_play_pause, glyph="play", width=20, height=16, tooltip="Start / pauza")
+        self.play = skin.SkinButton(panel, on_play_pause, glyph="play", width=20, height=16, tooltip="Start / pauza",
+                                    on_press=True)
         self.play.configure(bg=T.lcd_bg)
         self.play.pack(side="left")
         restore = tk.Label(panel, text="▴", bg=T.lcd_bg, fg=T.lcd_text, font=T.font("sans", 11, "bold"),

@@ -842,10 +842,16 @@ class Marquee(tk.Canvas):
 # ------------------------------------------------------------------ buttons
 
 class SkinButton(tk.Canvas):
-    """Button drawn in the theme's shape, with a glyph (play/pause/stop/eject/prev/next) or a text label."""
+    """Button drawn in the theme's shape, with a glyph (play/pause/stop/eject/prev/next) or a text label.
+
+    The command runs when the mouse button is released over it; with on_press it runs at once when pressed
+    (play / pause / stop, so the sound and the clock answer without waiting for the release). sound, if
+    given, plays on press either way.
+    """
 
     def __init__(self, master, command, glyph: str | None = None, text: str | None = None,
-                 width: float = 26, height: float = 20, tooltip: str | None = None):
+                 width: float = 26, height: float = 20, tooltip: str | None = None, on_press: bool = False,
+                 sound=None):
         font = T.font("sans", 8 if T.upper else 9, "bold" if T.upper else "normal")
         text = T.tx(text) if text else None
         w, h = px(width), px(height)
@@ -879,6 +885,7 @@ class SkinButton(tk.Canvas):
         self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else (T.btn_face, T.btn_glyph))
         super().__init__(master, width=w, height=h, bg=master["bg"], highlightthickness=0, cursor="hand2")
         self.command = command
+        self.on_press, self.sound = on_press, sound
         self.w, self.h = w, h
         self._draw_face(pressed=False)
         self.glyph_items = self._glyph(glyph) if glyph else [
@@ -1034,13 +1041,19 @@ class SkinButton(tk.Canvas):
             self._set_glyph_color("#ffffff")
         for item in self.glyph_items:
             self.move(item, 1, 1)
+        if self.sound:
+            self.sound()
+        if self.on_press:
+            self.command()  # last: it may rebuild the window and destroy this button
 
     def _release(self, event):
+        if not self.winfo_exists():
+            return
         self._draw_face(pressed=False)
         self._set_glyph_color(self.glyph_color)
         for item in self.glyph_items:
             self.move(item, -1, -1)
-        if 0 <= event.x < self.w and 0 <= event.y < self.h:
+        if not self.on_press and 0 <= event.x < self.w and 0 <= event.y < self.h:
             self.command()
 
 

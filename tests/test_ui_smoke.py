@@ -483,6 +483,18 @@ def test_coffee_skin_meter_words_at_80_percent(app):
     assert skin.ProductivityMeter.COFFEE_TEXT not in texts()
     meter.set(85, 10, 5, 100)
     assert skin.ProductivityMeter.COFFEE_TEXT in texts()
+    yesterday = timeutil.day_start(date.today()) - 86400
+    app.db.add_activity("productive", "Word", yesterday + 3600, yesterday + 3 * 3600)  # 100% that day
+    app.shift_day(1)
+    dlg = app.show_productivity()
+    assert dlg.title() == "Impossible!"  # the answer to "How is possible?"
+    dlg.destroy()
+    app.db.add_activity("distracting", "YouTube", yesterday + 4 * 3600, yesterday + 6 * 3600)  # now 50%
+    dlg = app.show_productivity()
+    assert dlg.title() == "Produktivnost"
+    dlg.destroy()
+    app.shift_day(-1)
+    app.db._exec("DELETE FROM activity")
     app._tick()
     app.update()
     app.set_skin("matrix")
@@ -526,3 +538,27 @@ def test_coffee_play_button_gets_shot(app):
     assert not app.play_btn.find_withtag("hole")  # the hole is gone again
     app.stop()
     app.set_skin("matrix")
+
+
+def test_transport_buttons_act_on_press_others_on_release(app):
+    from timetracker.ui import skin
+
+    log = []
+    press = skin.SkinButton(app, lambda: log.append("pressed"), glyph="play", on_press=True,
+                            sound=lambda: log.append("sound"))
+    press.pack()
+    app.update()
+    press._press(None)
+    assert log == ["sound", "pressed"]
+    press._release(type("E", (), {"x": 2, "y": 2})())
+    assert log == ["sound", "pressed"]  # not twice
+    log.clear()
+    normal = skin.SkinButton(app, lambda: log.append("released"), text="OK", sound=lambda: log.append("sound"))
+    normal.pack()
+    app.update()
+    normal._press(None)
+    assert log == ["sound"]
+    normal._release(type("E", (), {"x": 2, "y": 2})())
+    assert log == ["sound", "released"]
+    press.destroy()
+    normal.destroy()

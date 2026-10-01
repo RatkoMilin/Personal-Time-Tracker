@@ -42,3 +42,13 @@ def test_player_caches_files_and_respects_toggle(tmp_path):
 def test_extra_effects_fall_back_to_click():
     assert sounds.render("coffee", "pl") != sounds.render("coffee", "click")  # espresso steam
     assert sounds.render("matrix", "pl") == sounds.render("matrix", "click")
+
+
+@pytest.mark.parametrize("skin", SKINS)
+def test_button_sounds_start_right_away(skin):
+    """A button's sound must answer the press: loud within a few tens of milliseconds, no silent lead-in."""
+    for event in ("start", "pause", "stop", "click", "pl"):
+        samples = sounds.render(skin, event)
+        peak = max(abs(v) for v in samples)
+        onset = next(i for i, v in enumerate(samples) if abs(v) >= 0.3 * peak) / sounds.RATE
+        assert onset < 0.07, (skin, event, onset)
