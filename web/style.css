@@ -381,3 +381,74 @@ body[data-skin="egg"] .btn.small.glyph { width: 34px; min-width: 34px; height: 3
 body[data-skin="egg"] .btn:active { background: var(--btn-dark); }
 body[data-skin="egg"].lit .lcd { box-shadow: 0 0 22px 4px rgba(255, 205, 110, .55); }
 body[data-skin="egg"] .skins .btn.active { outline: 2px solid var(--accent); }
+
+/* ---------------------------------------------------------------- Maslačak (dandelion clock) */
+.dandelion, .meadow { display: none; }
+body[data-skin="dandelion"] {
+  --body: #fdfbf9; --body-light: #ffffff; --body-dark: #ead7dd; --text: #55664a; --accent: #e3a3b6;
+  --lcd-bg: #ffffff; --lcd-on: #5f8f44; --lcd-off: #f2eeee; --lcd-dim: #b5c4a8; --lcd-text: #55664a;
+  --btn-face: #fffaf0; --btn-light: #ffffff; --btn-dark: #f2d36b; --btn-glyph: #5f8f44;
+  --sel-bg: #f6cfda; --sel-fg: #3e4a36; --outline: #efd5dd; --flower: #d2d2d2;
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --label-weight: 400; --label-style: normal; --upper: none; --radius: 14px;
+  background: linear-gradient(to bottom, #fdfbf9 0, #fdfbf9 34%, #f9e7ed 50%, #f9e7ed 82%, #d8edc6 100%) fixed;
+}
+body[data-skin="dandelion"].meadow-yellow { --flower: #f4c430; }
+body[data-skin="dandelion"] .app { position: relative; padding-right: 74px; padding-bottom: 56px; min-height: 100vh; }
+body[data-skin="dandelion"] .dandelion { display: block; position: absolute; top: 0; right: 0; bottom: 40px; width: 82px;
+  height: calc(100% - 40px); pointer-events: none; overflow: visible; z-index: 2; }
+body[data-skin="dandelion"] .dandelion .head.can-blow { pointer-events: auto; cursor: pointer; }
+body[data-skin="dandelion"] .dandelion .seed, body[data-skin="dandelion"] .dandelion .man {
+  transition: transform 2.4s ease-out, opacity 2.4s ease-in; }
+body[data-skin="dandelion"] .dandelion.blowing .seed { transform: translate(var(--dx), var(--dy)) rotate(-25deg); opacity: 0; }
+body[data-skin="dandelion"] .dandelion.blowing .man { transform: translateY(var(--down)); transition-timing-function: ease-in; }
+body[data-skin="dandelion"] .meadow { display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 46px; z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 1.6px at 5px 7px, var(--flower) 92%, transparent 100%) 0 2px / 13px 11px,
+    radial-gradient(circle 2.4px at 9px 9px, var(--flower) 92%, transparent 100%) 3px 17px / 19px 14px,
+    radial-gradient(circle 3.2px at 12px 10px, var(--flower) 92%, transparent 100%) 7px 29px / 26px 17px,
+    linear-gradient(to bottom, #d8edc6, #a9d38c); }
+body[data-skin="dandelion"] .titlebar::before { display: none; }
+body[data-skin="dandelion"] .title { background: none; font-weight: 400; font-size: 14px; }
+body[data-skin="dandelion"] .panel { border: 1px solid var(--outline); border-radius: var(--radius); }
+body[data-skin="dandelion"] .panel > .inner { border-radius: calc(var(--radius) - 1px); }
+body[data-skin="dandelion"] .field input { color-scheme: light; }
+body[data-skin="dandelion"] .list, body[data-skin="dandelion"] .list > .inner { border: 0; background: transparent; }
+body[data-skin="dandelion"] .list li { color: #4f5b45; }
+body[data-skin="dandelion"] .btn { border: 1px solid var(--btn-dark); border-radius: 999px; background: var(--btn-face);
+  color: var(--btn-glyph); font-weight: 400; }
+body[data-skin="dandelion"] .btn.glyph { width: 48px; min-width: 48px; height: 48px; padding: 0; border: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23f7e3a0'%3E%3Cpolygon points='82.3,53.9 99.0,50.0 82.3,46.1'/%3E%3Cpolygon points='80.2,62.2 97.3,62.7 82.3,54.6'/%3E%3Cpolygon points='76.0,69.6 92.4,74.5 80.0,62.8'/%3E%3Cpolygon points='70.1,75.6 84.6,84.6 75.6,70.1'/%3E%3Cpolygon points='62.8,80.0 74.5,92.4 69.6,76.0'/%3E%3Cpolygon points='54.6,82.3 62.7,97.3 62.2,80.2'/%3E%3Cpolygon points='46.1,82.3 50.0,99.0 53.9,82.3'/%3E%3Cpolygon points='37.8,80.2 37.3,97.3 45.4,82.3'/%3E%3Cpolygon points='30.4,76.0 25.5,92.4 37.2,80.0'/%3E%3Cpolygon points='24.4,70.1 15.4,84.6 29.9,75.6'/%3E%3Cpolygon points='20.0,62.8 7.6,74.5 24.0,69.6'/%3E%3Cpolygon points='17.7,54.6 2.7,62.7 19.8,62.2'/%3E%3Cpolygon points='17.7,46.1 1.0,50.0 17.7,53.9'/%3E%3Cpolygon points='19.8,37.8 2.7,37.3 17.7,45.4'/%3E%3Cpolygon points='24.0,30.4 7.6,25.5 20.0,37.2'/%3E%3Cpolygon points='29.9,24.4 15.4,15.4 24.4,29.9'/%3E%3Cpolygon points='37.2,20.0 25.5,7.6 30.4,24.0'/%3E%3Cpolygon points='45.4,17.7 37.3,2.7 37.8,19.8'/%3E%3Cpolygon points='53.9,17.7 50.0,1.0 46.1,17.7'/%3E%3Cpolygon points='62.2,19.8 62.7,2.7 54.6,17.7'/%3E%3Cpolygon points='69.6,24.0 74.5,7.6 62.8,20.0'/%3E%3Cpolygon points='75.6,29.9 84.6,15.4 70.1,24.4'/%3E%3Cpolygon points='80.0,37.2 92.4,25.5 76.0,30.4'/%3E%3Cpolygon points='82.3,45.4 97.3,37.3 80.2,37.8'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='36' fill='%23fffaf0' stroke='%23f2d36b' stroke-width='1.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+body[data-skin="dandelion"] .btn.small.glyph { width: 38px; min-width: 38px; height: 38px; }
+body[data-skin="dandelion"] .btn:active { background-color: var(--btn-dark); }
+body[data-skin="dandelion"] .btn.glyph:active { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23f7e3a0'%3E%3Cpolygon points='82.3,53.9 99.0,50.0 82.3,46.1'/%3E%3Cpolygon points='80.2,62.2 97.3,62.7 82.3,54.6'/%3E%3Cpolygon points='76.0,69.6 92.4,74.5 80.0,62.8'/%3E%3Cpolygon points='70.1,75.6 84.6,84.6 75.6,70.1'/%3E%3Cpolygon points='62.8,80.0 74.5,92.4 69.6,76.0'/%3E%3Cpolygon points='54.6,82.3 62.7,97.3 62.2,80.2'/%3E%3Cpolygon points='46.1,82.3 50.0,99.0 53.9,82.3'/%3E%3Cpolygon points='37.8,80.2 37.3,97.3 45.4,82.3'/%3E%3Cpolygon points='30.4,76.0 25.5,92.4 37.2,80.0'/%3E%3Cpolygon points='24.4,70.1 15.4,84.6 29.9,75.6'/%3E%3Cpolygon points='20.0,62.8 7.6,74.5 24.0,69.6'/%3E%3Cpolygon points='17.7,54.6 2.7,62.7 19.8,62.2'/%3E%3Cpolygon points='17.7,46.1 1.0,50.0 17.7,53.9'/%3E%3Cpolygon points='19.8,37.8 2.7,37.3 17.7,45.4'/%3E%3Cpolygon points='24.0,30.4 7.6,25.5 20.0,37.2'/%3E%3Cpolygon points='29.9,24.4 15.4,15.4 24.4,29.9'/%3E%3Cpolygon points='37.2,20.0 25.5,7.6 30.4,24.0'/%3E%3Cpolygon points='45.4,17.7 37.3,2.7 37.8,19.8'/%3E%3Cpolygon points='53.9,17.7 50.0,1.0 46.1,17.7'/%3E%3Cpolygon points='62.2,19.8 62.7,2.7 54.6,17.7'/%3E%3Cpolygon points='69.6,24.0 74.5,7.6 62.8,20.0'/%3E%3Cpolygon points='75.6,29.9 84.6,15.4 70.1,24.4'/%3E%3Cpolygon points='80.0,37.2 92.4,25.5 76.0,30.4'/%3E%3Cpolygon points='82.3,45.4 97.3,37.3 80.2,37.8'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='36' fill='%23f2d36b' stroke='%23f2d36b' stroke-width='1.5'/%3E%3C/svg%3E"); }
+body[data-skin="dandelion"] .skins .btn.active { outline: 2px solid var(--accent); }
+
+/* ---------------------------------------------------------------- My Passion (iced americano) */
+body[data-skin="coffee"] {
+  --body: #3d302c; --body-light: #5a4740; --body-dark: #211a17; --text: #e9dcd6; --accent: #c3b1ab;
+  --lcd-bg: #211a17; --lcd-on: #e3f2f7; --lcd-off: #2f2522; --lcd-dim: #8a6c62; --lcd-text: #d4e7ee;
+  --btn-face: #634e47; --btn-light: #80645b; --btn-dark: #342925; --btn-glyph: #e3f2f7;
+  --sel-bg: #80645b; --sel-fg: #ffffff; --ice: rgba(235, 248, 252, .86); --ice-glow: 0 0 6px rgba(190, 230, 242, .55);
+  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --label-weight: 700; --label-style: normal; --upper: none; --radius: 10px;
+  background: linear-gradient(to bottom, #3d302c, #342925 60%, #2f2522);
+}
+body[data-skin="coffee"] .titlebar::before { display: none; }
+body[data-skin="coffee"] .title { background: none; font-size: 14px; display: inline-flex; align-items: center; gap: 10px; }
+body[data-skin="coffee"] .title::before, body[data-skin="coffee"] .title::after { content: ""; width: 15px; height: 20px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cline x1='14' y1='0' x2='12.5' y2='22' stroke='%23e9dcd6' stroke-width='1.6'/%3E%3Cpolygon points='3,9 21,9 18.5,31 5.5,31' fill='%232a1d18'/%3E%3Crect x='6' y='11' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='12.5' y='14' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Crect x='8.5' y='19' width='5' height='5' fill='%23a9c9d3' stroke='%239fc6d4' stroke-width='.6'/%3E%3Cpolygon points='2,4 22,4 19,31 5,31' fill='none' stroke='%23d4e7ee' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat; }
+body[data-skin="coffee"] .title, body[data-skin="coffee"] .field-label, body[data-skin="coffee"] .day-label,
+body[data-skin="coffee"] .total, body[data-skin="coffee"] .marquee {
+  color: var(--ice); text-shadow: var(--ice-glow); font-weight: 700; }
+body[data-skin="coffee"] .panel { padding: 3px; border: 1px solid #80645b; border-radius: var(--radius);
+  background: linear-gradient(to bottom, #634e47, #4c3b36); }
+body[data-skin="coffee"] .panel > .inner { border-radius: calc(var(--radius) - 3px); box-shadow: 0 0 0 2px #342925; }
+body[data-skin="coffee"] .clock { filter: drop-shadow(0 0 3px rgba(210, 238, 247, .55)); }
+body[data-skin="coffee"] .btn { border: 1px solid #80645b; border-radius: 9px; background: linear-gradient(#80645b, #634e47);
+  color: var(--btn-glyph); }
+body[data-skin="coffee"] .btn:active { background: #342925; }
+body[data-skin="coffee"] .list li.running { color: var(--ice); text-shadow: var(--ice-glow); }
+body[data-skin="coffee"] dialog.sheet { border-radius: var(--radius); }
+body[data-skin="coffee"] .skins .btn.active { outline: 2px solid var(--accent); }

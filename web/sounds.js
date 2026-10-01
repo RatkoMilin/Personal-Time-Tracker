@@ -1,6 +1,7 @@
 /* Sound effects per skin, synthesized like the desktop app (timetracker/sounds.py).
    matrix: digital blips, pastel: bubbles, wood: knocks on wood, cyber: sword swooshes and rings,
-   cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop". */
+   cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop",
+   dandelion: wind and rustling grass, coffee: revolver shot, espresso steam (PL), ice cubes, cup pings. */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -112,7 +113,43 @@
                noise(0.16, { tau: 0.015, amp: 0.12, seed, lowpass: [0.25, 0.08] })).map(v => v * amp);
   };
 
+  const wind = (dur, seed = 41, falling = false) => noise(dur, { seed, lowpass: falling ? [0.06, 0.02] : [0.025, 0.07],
+    shape: f => Math.pow(Math.sin(Math.PI * f), 1.5) * (0.75 + 0.25 * Math.sin(f * 17 + seed)) });
+  const rustle = (start, dur, grains, seed = 51) => {
+    const rnd = mulberry32(seed), out = [];
+    for (let k = 0; k < grains; k++) {
+      const at = start + rnd() * dur, len = 0.008 + rnd() * 0.017, amp = 0.25 + rnd() * 0.35;
+      out.push([at, noise(len, { tau: 0.006, amp, seed: seed + k, highpass: 0.45 })]);
+    }
+    return out;
+  };
+  const gunshot = () => add(noise(0.6, { tau: 0.01, seed: 31, lowpass: [0.95, 0.4] }),
+                            tone(120, 42, 0.6, "sine", 0.001, 0.07, 0.9),
+                            noise(0.6, { tau: 0.14, amp: 0.22, seed: 32, lowpass: [0.1, 0.03] }));
+  const steam = (dur = 0.75) => noise(dur, { seed: 61, lowpass: [0.55, 0.75], highpass: 0.3,
+    shape: f => Math.min(1, f / 0.12) * Math.min(1, (1 - f) / 0.35) * (0.7 + 0.3 * Math.sin(f * 70)) });
+  const clink = (f, seed = 71, amp = 1) => add(...[[1, 1, 0.05], [1.47, 0.6, 0.035], [2.09, 0.45, 0.025], [2.56, 0.3, 0.02]]
+    .map(([r, a, t]) => tone(f * r, f * r, 0.18, "sine", 0.001, t, a)), noise(0.18, { tau: 0.003, amp: 0.4, seed, highpass: 0.5 }))
+    .map(v => v * amp);
+  const ping = (f = 2100, dur = 0.45, tau = 0.16) => add(...[[1, 1, 1], [2.32, 0.45, 0.6], [4.25, 0.2, 0.35]]
+    .map(([r, a, k]) => tone(f * r, f * r, dur, "sine", 0.001, tau * k, a)));
+
   const KITS = {
+    dandelion: {
+      start: () => [[0, wind(0.75)], ...rustle(0.15, 0.5, 14)],
+      pause: () => rustle(0, 0.22, 9, 52),
+      stop: () => [[0, wind(0.6, 42, true)], ...rustle(0.05, 0.3, 6, 53)],
+      click: () => rustle(0, 0.04, 3, 54),
+      alert: () => [[0, wind(0.45, 43)], [0.4, wind(0.5, 44)], ...rustle(0.1, 0.7, 16, 55)],
+    },
+    coffee: {
+      start: () => [[0, tick(2600)], [0.09, gunshot()]],
+      pl: () => [[0, steam()]],
+      pause: () => [[0, ping(2100)], [0.15, ping(2100)]],
+      stop: () => [[0, clink(2600)], [0.07, clink(3100, 72, 0.7)], [0.12, clink(2300, 73, 0.8)], [0.21, clink(2900, 74, 0.5)]],
+      click: () => [[0, ping(3000, 0.12, 0.03)]],
+      alert: () => [[0, ping(2100)], [0.15, ping(2100)], [0.4, clink(2600)], [0.46, clink(3100, 72)]],
+    },
     egg: {
       start: () => [[0, plop(1)], [0.14, plop(1.9, 0.35, 22)]],
       pause: () => [[0, plop(1.3, 0.8)]],
@@ -184,7 +221,8 @@
   const cache = new Map();
 
   function render(skin, event) {
-    return mix((KITS[skin] || KITS.matrix)[event]());
+    const kit = KITS[skin] || KITS.matrix;
+    return mix((kit[event] || kit.click)());  // effects a skin lacks (e.g. "pl") fall back to its click
   }
 
   function play(skin, event) {

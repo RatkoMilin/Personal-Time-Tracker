@@ -3,6 +3,7 @@
 matrix: digital blips   pastel: bubbles   wood: knocks on wood   cyber: sword swooshes and rings
 cat: meows and a purr-like "mrrp"   setsuna: bright citrus plucks
 mondrian: plain clean beeps   egg: a "plop", like an egg or a pebble dropped into water
+dandelion: wind and rustling grass   coffee: a revolver shot, espresso steam (PL), ice cubes, cup pings
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -171,8 +172,74 @@ def _plop(pitch: float = 1.0, amp: float = 1.0, seed: int = 21) -> list[float]:
     return [amp * (a + b + c) for a, b, c in zip(thump, bloop, splash)]
 
 
+def _wind(dur: float, seed: int = 41, falling: bool = False) -> list[float]:
+    """A gust: low, airy noise swelling and fading, wavering like real wind."""
+    lp = (0.06, 0.02) if falling else (0.025, 0.07)
+    return noise(dur, amp=1.0, seed=seed, lowpass=lp,
+                 shape=lambda f: math.sin(math.pi * f) ** 1.5 * (0.75 + 0.25 * math.sin(f * 17 + seed)))
+
+
+def _rustle(start: float, dur: float, grains: int, seed: int = 51) -> list[tuple[float, list[float]]]:
+    """Leaves and grass brushing: many tiny bright noise grains at random moments."""
+    rnd = random.Random(seed)
+    return [(start + rnd.uniform(0, dur), noise(rnd.uniform(0.008, 0.025), tau=0.006, amp=rnd.uniform(0.25, 0.6),
+                                                  seed=seed + k, highpass=0.45)) for k in range(grains)]
+
+
+def _gunshot() -> list[float]:
+    """Revolver: the crack, a low boom and the room ringing out."""
+    crack = noise(0.6, tau=0.010, amp=1.0, seed=31, lowpass=(0.95, 0.4))
+    boom = tone(120, 42, 0.6, attack=0.001, tau=0.07, amp=0.9)
+    room = noise(0.6, tau=0.14, amp=0.22, seed=32, lowpass=(0.1, 0.03))
+    return [a + b + c for a, b, c in zip(crack, boom, room)]
+
+
+def _steam(dur: float = 0.75) -> list[float]:
+    """Espresso machine steam wand: a sputtering hiss."""
+    return noise(dur, amp=1.0, seed=61, lowpass=(0.55, 0.75), highpass=0.3,
+                 shape=lambda f: min(1.0, f / 0.12) * min(1.0, (1 - f) / 0.35) * (0.7 + 0.3 * math.sin(f * 70)))
+
+
+def _clink(freq: float, seed: int = 71, amp: float = 1.0) -> list[float]:
+    """Ice against glass: a few inharmonic partials that die away fast."""
+    parts = [tone(freq * r, freq * r, 0.18, attack=0.001, tau=t, amp=a)
+             for r, a, t in ((1.0, 1.0, 0.05), (1.47, 0.6, 0.035), (2.09, 0.45, 0.025), (2.56, 0.3, 0.02))]
+    tap = noise(0.18, tau=0.003, amp=0.4, seed=seed, highpass=0.5)
+    return [amp * (sum(v) + n) for *v, n in zip(*parts, tap)]
+
+
+def _ping(freq: float = 2100, dur: float = 0.45, tau: float = 0.16) -> list[float]:
+    """A spoon flicked against a ceramic cup: cing."""
+    parts = [tone(freq * r, freq * r, dur, attack=0.001, tau=tau * k, amp=a)
+             for r, a, k in ((1.0, 1.0, 1.0), (2.32, 0.45, 0.6), (4.25, 0.2, 0.35))]
+    return [sum(v) for v in zip(*parts)]
+
+
 def render(skin: str, event: str) -> list[float]:
-    if skin.startswith("egg"):
+    kit = _kit(skin)
+    return mix(kit.get(event) or kit["click"])  # effects a skin lacks (e.g. "pl") fall back to its click
+
+
+def _kit(skin: str) -> dict:
+    if skin == "dandelion":
+        kit = {
+            "start": [(0, _wind(0.75))] + _rustle(0.15, 0.5, 14),
+            "pause": _rustle(0, 0.22, 9, seed=52),
+            "stop": [(0, _wind(0.6, seed=42, falling=True))] + _rustle(0.05, 0.3, 6, seed=53),
+            "click": _rustle(0, 0.04, 3, seed=54),
+            "alert": [(0, _wind(0.45, seed=43)), (0.4, _wind(0.5, seed=44))] + _rustle(0.1, 0.7, 16, seed=55),
+        }
+    elif skin == "coffee":
+        kit = {
+            "start": [(0, _tick(2600)), (0.09, _gunshot())],                     # hammer click, bang
+            "pl": [(0, _steam())],
+            "pause": [(0, _ping(2100)), (0.15, _ping(2100))],                     # cing cing
+            "stop": [(0, _clink(2600)), (0.07, _clink(3100, 72, 0.7)), (0.12, _clink(2300, 73, 0.8)),
+                     (0.21, _clink(2900, 74, 0.5))],
+            "click": [(0, _ping(3000, 0.12, 0.03))],
+            "alert": [(0, _ping(2100)), (0.15, _ping(2100)), (0.4, _clink(2600)), (0.46, _clink(3100, 72))],
+        }
+    elif skin.startswith("egg"):
         kit = {
             "start": [(0, _plop(1.0)), (0.14, _plop(1.9, 0.35, seed=22))],  # the egg, then a little drop
             "pause": [(0, _plop(1.3, 0.8))],
@@ -239,7 +306,7 @@ def render(skin: str, event: str) -> list[float]:
             "click": [(0, _blip(2000, 0.018))],
             "alert": [(i * 0.1, _blip(2000, 0.05)) for i in range(4)] + [(0.5, _blip(2000, 0.05))],
         }
-    return mix(kit[event])
+    return kit
 
 
 def wav_bytes(samples: list[float]) -> bytes:

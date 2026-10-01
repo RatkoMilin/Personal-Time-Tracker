@@ -399,3 +399,77 @@ def test_productive_sites_dialog(app):
     assert summary.seconds[productivity.NEUTRAL] == 0 and summary.seconds[productivity.PRODUCTIVE] > 0
     app.db._exec("DELETE FROM activity")
     app.settings.update({"extra_productive": [], "extra_distracting": []})
+
+
+def test_dandelion_clock_states():
+    from timetracker.ui import dandelion
+
+    def at(h, m=0):
+        return datetime(2026, 10, 1, h, m)
+
+    petals, man, can_blow = dandelion.state(at(12, 5), "")
+    assert petals == ["y"] * 24 and man and not can_blow
+    petals, man, _ = dandelion.state(at(17, 59), "")
+    assert petals[:10] == ["s"] * 10 and petals[10:] == ["y"] * 14 and man
+    petals, man, can_blow = dandelion.state(at(23, 30), "")
+    assert petals.count("s") == 22
+    petals, man, can_blow = dandelion.state(at(0, 30), "")
+    assert petals == ["s"] * 24 and man and can_blow
+    petals, man, can_blow = dandelion.state(at(0, 40), "2026-10-01")  # already blown tonight
+    assert petals == [""] * 24 and not man and not can_blow
+    petals, man, _ = dandelion.state(at(1, 10), "")  # nobody blew it: the wind took the seeds
+    assert petals[:2] == ["y", "y"] and petals[2:] == [""] * 22 and not man
+    petals, man, _ = dandelion.state(at(11, 59), "2026-10-01")
+    assert petals.count("y") == 22 and not man
+    assert not dandelion.field_yellow(at(11, 59)) and dandelion.field_yellow(at(12))
+
+
+def test_dandelion_skin_blow_after_midnight(app):
+    from timetracker.ui import skin
+
+    app.set_skin("dandelion")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    app.update()
+    side = app.side
+    assert side is not None and app.listbox.cget("bg") == skin.T.pl_body
+    side.clock = lambda: datetime(2026, 10, 1, 15, 0)
+    side.draw()
+    assert not side.blow()  # only between 00:00 and 01:00
+    assert side.find_withtag("man") and len(side.find_withtag("petal")) == 18
+    side.clock = lambda: datetime(2026, 10, 1, 0, 20)
+    side.draw()
+    cx, cy, r = side.head()
+    side._clicked(type("E", (), {"x": cx, "y": cy})())
+    assert app.settings["dandelion_blown"] == "2026-10-01" and side.animating
+    deadline = time.time() + 5
+    while side.animating and time.time() < deadline:
+        app.update()
+        time.sleep(0.02)
+    assert not side.animating and not side.find_withtag("seed") and not side.find_withtag("man")
+    bands = app._dandelion_bands()
+    assert [c for _, c in bands][:3] == [skin.T.body, skin.T.body, skin.T.pl_body]
+    app.toggle_playlist()
+    app.update()
+    assert skin.T.pl_body not in [c for _, c in app._dandelion_bands()]
+    app.toggle_playlist()
+    app.settings.update({"dandelion_blown": ""})
+    app.set_skin("matrix")
+
+
+def test_coffee_skin_meter_words_at_80_percent(app):
+    from timetracker.ui import skin
+
+    app.set_skin("coffee")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    app.update()
+    meter = app.meter
+    texts = lambda: [meter.itemcget(i, "text") for i in meter.find_all() if meter.type(i) == "text"]  # noqa: E731
+    meter.set(70, 20, 10, 100)
+    assert skin.ProductivityMeter.COFFEE_TEXT not in texts()
+    meter.set(85, 10, 5, 100)
+    assert skin.ProductivityMeter.COFFEE_TEXT in texts()
+    app._tick()
+    app.update()
+    app.set_skin("matrix")

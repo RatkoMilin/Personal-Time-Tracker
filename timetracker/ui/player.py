@@ -16,9 +16,11 @@ from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
+from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
+FIELD_TOP = "#d8edc6"  # the meadow's first green (Maslačak skin)
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
 EXPORTS = [("Ova nedelja", "this_week"), ("Prošla nedelja", "last_week"), ("Ovaj mesec", "this_month"),
            ("Prošli mesec", "last_month"), ("Ova godina", "this_year")]
@@ -94,13 +96,30 @@ class Player(tk.Tk):
         self.sounds.prepare(T.dark_variant or T.key)
         self.ui = tk.Frame(self, bg=T.body)
         self.ui.pack(fill="both", expand=True)
+        self.content = self.ui
+        self.side = self.field = self.field_fade = None
+        if T.side == "dandelion":  # the flower's strip on the right, the far meadow along the bottom
+            self.content = tk.Frame(self.ui, bg=T.body)
+            self.content.pack(side="left", fill="both", expand=True)
+            self.side = DandelionColumn(self.ui, self._dandelion_bands, lambda: self.settings["dandelion_blown"],
+                                        self._dandelion_blown)
+            self.side.pack(side="right", fill="y")
+            bottom = tk.Frame(self.content, bg=T.body)
+            bottom.pack(side="bottom", fill="x")
+            self.field_fade = GradientStrip(bottom, T.body, FIELD_TOP)
+            self.field_fade.pack(fill="x")
+            self.field = FieldStrip(bottom)
+            self.field.pack(fill="x")
         self._build_menu()
-        self.titlebar = skin.TitleBar(self.ui, APP_NAME, self._popup_menu)
+        self.titlebar = skin.TitleBar(self.content, APP_NAME, self._popup_menu)
         self.titlebar.pack(fill="x")
         self._build_main()
         self._build_playlist()
         if self.settings["show_playlist"]:
-            self.pl_frame.pack(fill="x")
+            self.pl_outer.pack(fill="x")
+        self._fade_to_field()
+        if self.side is not None:  # follow the sections' layout (e.g. the playlist opening)
+            self.content.bind("<Configure>", lambda e: self.after_idle(self.side.refresh))
         self.refresh()
 
     def set_skin(self, key: str):
@@ -120,16 +139,16 @@ class Player(tk.Tk):
             menu.destroy()
         self._build_ui()
 
-    def _click(self, command):
-        """Wrap a button command so it plays the skin's click sound first."""
+    def _click(self, command, event: str = "click"):
+        """Wrap a button command so it plays the skin's click sound (or another effect) first."""
         def run():
-            self.sounds.play("click")
+            self.sounds.play(event)
             command()
         return run
 
     def _build_main(self):
         T = skin.T
-        main = tk.Frame(self.ui, bg=T.body, padx=skin.px(6), pady=skin.px(4))
+        main = tk.Frame(self.content, bg=T.body, padx=skin.px(6), pady=skin.px(4))
         main.pack(fill="x")
 
         panel = skin.Panel(main, pad=5)
@@ -186,13 +205,18 @@ class Player(tk.Tk):
         skin.SkinButton(buttons, self.stop, glyph="stop", tooltip="Stop").pack(side="left")
         skin.SkinButton(buttons, self._click(self._export_menu), glyph="eject", tooltip="Izvezi u Excel (CSV)").pack(
             side="left", padx=(skin.px(6), 0))
-        skin.SkinButton(buttons, self._click(self.toggle_playlist), text="PL", tooltip="Prikaži/sakrij listu").pack(
+        skin.SkinButton(buttons, self._click(self.toggle_playlist, "pl"), text="PL", tooltip="Prikaži/sakrij listu").pack(
             side="right")
 
     def _build_playlist(self):
         T = skin.T
-        self.pl_frame = tk.Frame(self.ui, bg=T.body, padx=skin.px(6), pady=skin.px(2))
-        head = tk.Frame(self.pl_frame, bg=T.body)
+        bg = T.pl_body or T.body
+        self.pl_outer = tk.Frame(self.content, bg=bg)
+        if T.pl_body:  # the playlist section has its own color: blend into it
+            GradientStrip(self.pl_outer, T.body, T.pl_body).pack(fill="x")
+        self.pl_frame = tk.Frame(self.pl_outer, bg=bg, padx=skin.px(6), pady=skin.px(2))
+        self.pl_frame.pack(fill="x")
+        head = tk.Frame(self.pl_frame, bg=bg)
         head.pack(fill="x", pady=(0, skin.px(3)))
         skin.SkinButton(head, self._click(lambda: self.shift_day(1)), glyph="prev", width=18, height=16,
                         tooltip="Prethodni dan").pack(side="left")
@@ -201,7 +225,8 @@ class Player(tk.Tk):
         skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern, bg=T.list_bg or None)
+        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern, bg=T.list_bg or None,
+                                           plain=T.pl_plain)
         panel.pack(fill="x")
         self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.list_bg or T.lcd_bg,
                                   fg=T.list_fg or T.lcd_text,
@@ -217,12 +242,12 @@ class Player(tk.Tk):
                                             walnuts=self._walnuts_today(), on_walnut=self._save_walnuts)
         self.meter.pack(fill="x", pady=(skin.px(3), 0))
 
-        foot = tk.Frame(self.pl_frame, bg=T.body)
+        foot = tk.Frame(self.pl_frame, bg=bg)
         foot.pack(fill="x", pady=(skin.px(3), skin.px(4)))
         skin.SkinButton(foot, self._click(self.add_entry), text="+ Dodaj", tooltip="Ručno dodaj vreme").pack(side="left")
         skin.SkinButton(foot, self._click(self.edit_selected), text="Izmeni").pack(side="left", padx=2)
         skin.SkinButton(foot, self._click(self.delete_selected), text="Obriši").pack(side="left")
-        self.total_label = tk.Label(foot, text="", bg=T.body, fg=T.text, font=T.font("mono", 9, "bold"))
+        self.total_label = tk.Label(foot, text="", bg=bg, fg=T.text, font=T.font("mono", 9, "bold"))
         self.total_label.pack(side="right")
 
         self.row_menu = tk.Menu(self, tearoff=False)
@@ -412,14 +437,15 @@ class Player(tk.Tk):
     def toggle_playlist(self):
         show = not self.settings["show_playlist"]  # not winfo_ismapped: false until the first redraw
         if show:
-            self.pl_frame.pack(fill="x")
+            self.pl_outer.pack(fill="x")
             if skin.T.pl_pattern == "bubbles":
                 self.update_idletasks()
                 if skin.bubbles(self.pl_frame) is None:  # no see-through windows: bubbles along the edges
                     self.pl_panel.bubble_burst()
         else:
-            self.pl_frame.pack_forget()
+            self.pl_outer.pack_forget()
         self.settings.update({"show_playlist": show})
+        self._fade_to_field()
 
     # ---------------------------------------------------------------- refresh
 
@@ -454,7 +480,7 @@ class Player(tk.Tk):
                 left = left[: room - 1] + "~"
             self.listbox.insert("end", left.ljust(room) + " " + right)
             if e.running:
-                self.listbox.itemconfigure("end", fg=T.sel_bg if T.list_bg else T.lcd_on)
+                self.listbox.itemconfigure("end", fg=T.list_run or T.lcd_on)
             self._pl_ids.append(e.id)
         if not self._pl_ids:
             self.listbox.insert("end", "  nema unosa za ovaj dan")
@@ -478,6 +504,33 @@ class Player(tk.Tk):
             self.meter.draw()
         self.meter.set(s.seconds[productivity.PRODUCTIVE], s.seconds[productivity.NEUTRAL],
                        s.seconds[productivity.DISTRACTING], s.total)
+
+    # ------------------------------------------------------------- dandelion
+
+    def _fade_to_field(self):
+        """The strip above the meadow starts from whichever section is last (main or playlist)."""
+        if self.field_fade is not None:
+            T = skin.T
+            self.field_fade.top = T.pl_body if self.settings["show_playlist"] and T.pl_body else T.body
+            self.field_fade.draw()
+
+    def _dandelion_bands(self) -> list[tuple[float, str]]:
+        """Background stops for the dandelion strip, lined up with the sections on its left."""
+        T = skin.T
+        stops = [(0, T.body)]
+        last = T.body
+        if self.settings["show_playlist"] and T.pl_body and self.pl_outer.winfo_ismapped():
+            y = self.pl_outer.winfo_y()
+            stops += [(y, T.body), (y + skin.px(10), T.pl_body)]
+            last = T.pl_body
+        if self.field_fade is not None:
+            y = self.field_fade.master.winfo_y()
+            stops += [(y, last), (y + skin.px(10), FIELD_TOP)]
+        return stops
+
+    def _dandelion_blown(self, day: str):
+        self.sounds.play("start")  # a gust of wind
+        self.settings.update({"dandelion_blown": day})
 
     def _walnuts_today(self) -> list[int]:
         """Flowers turned into walnuts today (they stay walnuts until the next day)."""
@@ -611,6 +664,9 @@ class Player(tk.Tk):
         running = self.db.running_entry()
         if running and self.day_offset == 0 and running.id in self._pl_ids and self._blink:
             self._fill_playlist()
+        if self.side is not None:
+            self.side.refresh()
+            self.field.refresh()
         self._meter_ticks = getattr(self, "_meter_ticks", 0) + 1
         if self._meter_ticks % 30 == 0:  # activity is recorded with or without a timer: refresh every 15 s
             self._update_meter()

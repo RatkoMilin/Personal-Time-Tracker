@@ -71,6 +71,7 @@ class Theme:
     # Per-panel colors (default: the LCD colors) and a thick black frame width ("block" shape).
     list_bg: str = ""
     list_fg: str = ""
+    list_run: str = ""  # the running entry in the list (default: lcd_on)
     task_bg: str = ""
     task_fg: str = ""
     border: int = 0
@@ -80,6 +81,14 @@ class Theme:
     lit_variant: str = ""
     dark_variant: str = ""
     hidden: bool = False  # not offered in the skin menu (e.g. the lit half of a lamp theme)
+    # Layout extras: a decorated strip down the right side ("dandelion"), the playlist section's own
+    # background, a list without a box (only its text), nested panel outlines for a layered look, and a
+    # glow color around canvas-drawn text.
+    side: str = ""
+    pl_body: str = ""
+    pl_plain: bool = False
+    layers: tuple = ()
+    glow: str = ""
 
     def font(self, kind: str = "sans", size: int = 10, weight: str = "normal") -> tuple:
         families = self.mono if kind == "mono" else self.sans
@@ -164,7 +173,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Arial", "DejaVu Sans"),
         label_size=8, label_weight="bold", upper=True,
         shape="block", border=4, title_style="mondrian", button="block", meter="mondrian", meter_fill="#fac901",
-        list_bg="#dd0100", list_fg="#ffffff", task_bg="#225095", task_fg="#ffffff",
+        list_bg="#dd0100", list_fg="#ffffff", list_run="#fac901", task_bg="#225095", task_fg="#ffffff",
     ),
     Theme(
         key="egg", name="Jaje",
@@ -188,9 +197,33 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         shape="round", radius=20, panel_outline="#e6d9bb", title_style="egg", segments="round", button="circle",
         meter="glow", meter_fill="#ffd36b", dark_variant="egg",
     ),
+    Theme(
+        key="dandelion", name="Maslačak",
+        body="#fdfbf9", body_light="#ffffff", body_dark="#ead7dd", text="#55664a", accent="#e3a3b6",
+        lcd_bg="#ffffff", lcd_on="#5f8f44", lcd_off="#f2eeee", lcd_dim="#b5c4a8", lcd_text="#55664a",
+        btn_face="#fffaf0", btn_light="#ffffff", btn_dark="#f2d36b", btn_glyph="#5f8f44",
+        sel_bg="#f6cfda", sel_fg="#3e4a36",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=14, panel_outline="#efd5dd", title_style="dandelion", segments="round",
+        button="dandelion", meter="bw", side="dandelion", pl_body="#f9e7ed", pl_plain=True,
+        list_bg="#f9e7ed", list_fg="#4f5b45",
+    ),
+    Theme(
+        key="coffee", name="My Passion",
+        body="#3d302c", body_light="#5a4740", body_dark="#211a17", text="#e9dcd6", accent="#c3b1ab",
+        lcd_bg="#211a17", lcd_on="#e3f2f7", lcd_off="#2f2522", lcd_dim="#8a6c62", lcd_text="#d4e7ee",
+        btn_face="#634e47", btn_light="#80645b", btn_dark="#342925", btn_glyph="#e3f2f7",
+        sel_bg="#80645b", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=9, panel_outline="#80645b", title_style="coffee", segments="ice", meter="coffee",
+        layers=("#634e47", "#4c3b36", "#342925"), glow="#6f8f99",
+    ),
 )}
 
 MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
+ICE_EDGE = "#9fc6d4"  # the bluish rim of an ice cube
 
 
 def block_colors(role: str | None) -> tuple[str, str]:
@@ -287,6 +320,23 @@ def draw_egg(c: tk.Canvas, cx: float, cy: float, h: float, lit: bool) -> None:
         c.create_oval(cx - w * 0.25, cy - h * 0.32, cx - w * 0.05, cy - h * 0.12, fill="#6a6a6a", outline="")
 
 
+def draw_iced_americano(c: tk.Canvas, cx: float, cy: float, h: float) -> None:
+    """A tall glass of iced americano: dark coffee, a few ice cubes and a straw."""
+    top_w, bot_w = h * 0.62, h * 0.46
+    y0, y1 = cy - h / 2, cy + h / 2
+    c.create_line(cx + top_w * 0.15, y0 - h * 0.12, cx + top_w * 0.05, y1 - h * 0.25, fill="#e9dcd6", width=2)
+    c.create_polygon(cx - top_w / 2 + 1, y0 + h * 0.2, cx + top_w / 2 - 1, y0 + h * 0.2, cx + bot_w / 2 - 1, y1 - 1,
+                     cx - bot_w / 2 + 1, y1 - 1, fill="#2a1d18", outline="")
+    for dx, dy in ((-0.14, 0.32), (0.12, 0.42), (-0.05, 0.58)):
+        s = h * 0.17
+        x, y = cx + dx * h, y0 + dy * h
+        c.create_rectangle(x - s / 2, y - s / 2, x + s / 2, y + s / 2, fill="#a9c9d3", outline=ICE_EDGE)
+        c.create_line(x - s / 2 + 1, y - s / 2 + 1, x + s / 4, y - s / 2 + 1, fill="#eef8fb")
+    c.create_polygon(cx - top_w / 2, y0, cx + top_w / 2, y0, cx + bot_w / 2, y1, cx - bot_w / 2, y1,
+                     fill="", outline="#d4e7ee")
+    c.create_line(cx - top_w / 2 + 2, y0 + 2, cx - bot_w / 2 + 2, y1 - 3, fill="#f4fbfd")
+
+
 def draw_leaf(c: tk.Canvas, x: float, y: float, size: float, angle: float, color: str = "#3f8f2f") -> None:
     """A pointed leaf centered at (x, y), rotated by angle degrees, with a lighter middle vein."""
     a = math.radians(angle)
@@ -325,12 +375,15 @@ class Panel(tk.Frame):
     ("spots" or "leaves") a wider margin around the content is decorated.
     """
 
-    def __init__(self, master, pad: float = 4, pattern: str = "", bg: str | None = None):
+    def __init__(self, master, pad: float = 4, pattern: str = "", bg: str | None = None, plain: bool = False):
         super().__init__(master, bg=master["bg"])
         self.pattern = pattern
+        self.plain = plain  # no box at all: only the content shows
         self.bg = bg or T.lcd_bg
         pad = (px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + (px(9) if pattern else 0)
-               + (px(T.border) if T.shape == "block" else 0))
+               + (px(T.border) if T.shape == "block" else 0) + px(2) * len(T.layers))
+        if plain:
+            pad = px(2)
         self.canvas = tk.Canvas(self, bg=master["bg"], highlightthickness=0, bd=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self.inner = tk.Frame(self, bg=self.bg)  # created after the canvas, so it stacks above it
@@ -341,7 +394,19 @@ class Panel(tk.Frame):
         c = self.canvas
         w, h = c.winfo_width(), c.winfo_height()
         c.delete("all")
-        if T.shape == "round":
+        if self.plain:
+            c.configure(bg=self.bg)
+            return
+        if T.layers:  # nested outlines, each a shade darker, for a layered (iced coffee) look
+            g = px(2)
+            round_rect(c, 0, 0, w - 1, h - 1, px(T.radius), fill=T.layers[0], outline=T.panel_outline)
+            for k, color in enumerate(T.layers[1:], start=1):
+                round_rect(c, g * k, g * k, w - 1 - g * k, h - 1 - g * k, px(T.radius) - g * k / 2, fill=color,
+                           outline="")
+            k = len(T.layers)
+            round_rect(c, g * k, g * k, w - 1 - g * k, h - 1 - g * k, px(T.radius) - g * k / 2, fill=self.bg,
+                       outline="")
+        elif T.shape == "round":
             round_rect(c, 0, 0, w - 1, h - 1, px(T.radius), fill=self.bg, outline=T.panel_outline)
         elif T.shape == "chamfer":
             chamfer_rect(c, 0, 0, w - 1, h - 1, px(7), fill=self.bg, outline=T.panel_outline)
@@ -599,6 +664,8 @@ class SevenSegment(tk.Canvas):
         self.style = T.segments
         if self.style == "sharp":
             thick = 3.5
+        elif self.style == "ice":  # chunky cubes of ice
+            thick = 5.5
         self.dw, self.dh, self.t = px(digit_w), px(digit_h), max(2.0, thick * S)
         self.skew = 0.2 if self.style == "sharp" else 0.0
         self.gap = px(5)
@@ -658,6 +725,10 @@ class SevenSegment(tk.Canvas):
                 items[seg] = self.create_line(x1, y1, x2, y2, width=t, capstyle="round", fill=T.lcd_off)
             else:
                 poly = self._hseg(x1, y1, x2 - x1) if y1 == y2 else self._vseg(x1, y1, y2 - y1)
+                if self.style == "ice":  # square-ended blocks, so lit segments look like ice cubes
+                    t2 = t / 2 - 0.5
+                    poly = ([x1 + 1, y1 - t2, x2 - 1, y1 - t2, x2 - 1, y1 + t2, x1 + 1, y1 + t2] if y1 == y2 else
+                            [x1 - t2, y1 + 1, x1 + t2, y1 + 1, x1 + t2, y2 - 1, x1 - t2, y2 - 1])
                 items[seg] = self.create_polygon(self._sk(poly), fill=T.lcd_off, outline="")
         return items
 
@@ -683,7 +754,11 @@ class SevenSegment(tk.Canvas):
             else:
                 lit = DIGITS.get(ch, "")
                 for seg, item in cell.items():
-                    self.itemconfigure(item, fill=on if seg in lit else T.lcd_off)
+                    if self.style == "ice":
+                        self.itemconfigure(item, fill=on if seg in lit else T.lcd_off,
+                                           outline=ICE_EDGE if seg in lit else "")
+                    else:
+                        self.itemconfigure(item, fill=on if seg in lit else T.lcd_off)
 
 
 class AnalogDial(tk.Canvas):
@@ -731,6 +806,9 @@ class Marquee(tk.Canvas):
         width = probe.winfo_reqwidth()
         probe.destroy()
         super().__init__(master, width=width, height=px(18), bg=T.lcd_bg, highlightthickness=0)
+        self.glows = [self.create_text(dx, px(9) + dy, anchor="w", text="", fill=blend(T.lcd_bg, T.glow, 0.7),
+                                       font=self.font) for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
+                      ] if T.glow else []
         self.item = self.create_text(0, px(9), anchor="w", text="", fill=T.lcd_on, font=self.font)
         self.text = ""
         self.offset = 0
@@ -748,7 +826,8 @@ class Marquee(tk.Canvas):
         else:
             loop = self.text + "  ***  "
             shown = (loop * 2)[self.offset % len(loop):][: self.chars]
-        self.itemconfigure(self.item, text=shown)
+        for item in (*self.glows, self.item):
+            self.itemconfigure(item, text=shown)
 
     def _step(self) -> None:
         if not self.winfo_exists():  # destroyed by a skin switch
@@ -779,6 +858,12 @@ class SkinButton(tk.Canvas):
             w, h = max(w + px(8), int(h * 1.6)), int(h * 1.6)
         elif self.kind == "paw":
             self.kind = "circle"  # too small for toes: a round bean
+        if self.kind == "dandelion":  # a round flower: room for the ring of petals
+            if text:
+                h = h + px(4)
+                w = max(w + px(6), h)
+            else:
+                w = h = max(w, h) + px(10)
         if self.kind == "circle":
             if text:
                 h = h + px(4)
@@ -810,6 +895,23 @@ class SkinButton(tk.Canvas):
                                   outline="#111111", width=b, tags="face")
         elif self.kind == "paw":
             draw_paw(self, 1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
+        elif self.kind == "dandelion":  # subtle: a pale face inside a ring of tiny yellow petals
+            if w == h:
+                cx, cy, r = w / 2, h / 2, w / 2 - 1
+                petal = blend(T.btn_face, T.btn_dark, 0.75)
+                for k in range(24):
+                    a = k * 2 * math.pi / 24
+                    ca, sa = math.cos(a), math.sin(a)
+                    self.create_polygon(cx + ca * r * 0.66 - sa * r * 0.08, cy + sa * r * 0.66 + ca * r * 0.08,
+                                        cx + ca * r, cy + sa * r,
+                                        cx + ca * r * 0.66 + sa * r * 0.08, cy + sa * r * 0.66 - ca * r * 0.08,
+                                        fill=petal, outline="", tags="face")
+                rr = r * 0.74
+                self.create_oval(cx - rr, cy - rr, cx + rr, cy + rr, fill=T.btn_dark if pressed else T.btn_face,
+                                 outline=T.btn_dark, tags="face")
+            else:
+                round_rect(self, 1, 1, w - 2, h - 2, (h - 3) / 2, fill=T.btn_dark if pressed else T.btn_face,
+                           outline=T.btn_dark, tags="face")
         elif self.kind == "circle":
             if w == h:
                 self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
@@ -966,6 +1068,10 @@ class ProductivityMeter(tk.Canvas):
             self._mondrian(x0, x1, h / 2, prod, dist)
         elif style == "glow":
             self._glow(x0, x1, h / 2, prod)
+        elif style == "bw":
+            self._bw(x0, x1, h / 2, prod)
+        elif style == "coffee":
+            self._coffee(x0, x1, h / 2, prod)
         else:
             cy = text_y
             self._bar(x0, x1, cy, prod, neutral, dist)
@@ -1152,6 +1258,42 @@ class ProductivityMeter(tk.Canvas):
                 round_rect(self, x0 + px(2), cy - r * 0.35, xp - px(2), cy + r * 0.2, r * 0.3, fill="#fffbe8",
                            outline="")
 
+    def _bw(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Plain black and white, rounded."""
+        r = px(5)
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill="#ffffff", outline="#111111")
+        xp = x0 + (x1 - x0) * prod
+        if xp - x0 > r:
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill="#111111", outline="")
+
+    COFFEE_TEXT = "How is possible?"
+
+    def _coffee(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """A glass of coffee lying down; at 80%+ the words show through the ice."""
+        r = px(8)
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill="#211a17", outline="#80645b")
+        xp = x0 + (x1 - x0) * prod
+        if xp - x0 > r:
+            steps = 6  # layered espresso: darker at the bottom, crema on top
+            for k in range(steps):
+                y0 = cy - r + 2 * r * k / steps
+                color = blend("#a48980", "#3d302c", k / (steps - 1))
+                self.create_rectangle(x0 + r * 0.6, y0, xp - r * 0.6, y0 + 2 * r / steps + 1, fill=color,
+                                      outline="")
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill="", outline="#80645b")
+            for k, fx in enumerate((0.2, 0.45, 0.7) if prod < self.CAT_AT else ()):  # ice cubes floating in it
+                x = x0 + (xp - x0) * fx
+                if x + px(5) < xp - r * 0.6:
+                    s = px(6)
+                    self.create_rectangle(x, cy - s / 2 - px(1) * (k % 2), x + s, cy + s / 2 - px(1) * (k % 2),
+                                          fill="", outline=ICE_EDGE)
+        if prod >= self.CAT_AT:
+            font = T.font("sans", 9, "bold")
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                self.create_text((x0 + x1) / 2 + dx, cy + dy, text=self.COFFEE_TEXT, font=font,
+                                 fill=blend("#3d302c", T.glow or "#ffffff", 0.9))
+            self.create_text((x0 + x1) / 2, cy, text=self.COFFEE_TEXT, font=font, fill="#f2fafc")
+
     # ------------------------------------------------------------ the cat
 
     def _cat(self, cx: float, base: float) -> None:
@@ -1257,7 +1399,8 @@ class TitleBar(tk.Canvas):
     """Title strip styled by the theme; with on_menu it gets a small menu button on the left."""
 
     def __init__(self, master, title: str, on_menu=None):
-        self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22)}.get(T.title_style, px(18))
+        self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
+                  "coffee": px(26)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
@@ -1300,7 +1443,12 @@ class TitleBar(tk.Canvas):
                 for x in range(0, w + 20, 20):
                     pts += [x, px(y) + math.sin((x + i * 37) / 23) * px(1.2)]
                 self.create_line(pts, fill=T.body_light, smooth=True)
-        font = T.font("sans", 8 if T.upper else 9, "bold" if T.upper else "normal")
+        font = T.font("sans", 8 if T.upper else 9, "bold" if T.upper or style == "coffee" else "normal")
+        if T.glow:  # iced text: a soft light halo around it
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                self.create_text(w / 2 + dx, text_y + dy, text=T.tx(self.title), fill=blend(T.body, T.glow, 0.8),
+                                 font=font)
+            text_color = blend(T.body, "#eef8fb", 0.88)  # a little see-through, like ice
         text = self.create_text(w / 2, text_y, text=T.tx(self.title), fill=text_color, font=font)
         x0, y0, x1, y1 = self.bbox(text)
         left = px(22) if self.on_menu else px(6)
@@ -1328,6 +1476,17 @@ class TitleBar(tk.Canvas):
                 x = x0 - k * step + px(4) if i % 2 == 0 else x1 + k * step - px(4)
                 if r < x < w - r:
                     draw_orange_piece(self, x, h / 2 + px(2), r, kind)
+        elif style == "dandelion":  # a seed floating off on each side, subtly
+            for x, d in ((x0 - px(14), -1), (x1 + px(14), 1)):
+                y = h / 2
+                self.create_line(x, y + px(5), x + d * px(2), y - px(2), fill="#b9b9b9")
+                for k in range(-3, 4):
+                    a = -math.pi / 2 + d * 0.25 + k * 0.33
+                    self.create_line(x + d * px(2), y - px(2), x + d * px(2) + math.cos(a) * px(5),
+                                     y - px(2) + math.sin(a) * px(5), fill="#cfcfcf")
+        elif style == "coffee":
+            for x in (x0 - px(16), x1 + px(16)):
+                draw_iced_americano(self, x, h / 2 + px(1), px(18))
         elif style == "egg":
             lit = T.key.endswith("_lit")
             for x in (x0 - px(16), x1 + px(16)):

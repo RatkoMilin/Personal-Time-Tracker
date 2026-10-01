@@ -28,6 +28,8 @@ DEFAULTS: dict = {
     # Walnut skin: flowers on the meter clicked into walnuts, kept for that day only.
     "walnut_day": "",
     "walnuts": [],
+    # Dandelion skin: the date of the night its seeds were blown (00:00-01:00).
+    "dandelion_blown": "",
 }
 
 

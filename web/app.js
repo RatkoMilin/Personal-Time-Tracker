@@ -4,9 +4,11 @@
 
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
-                 ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["eink", "E-ink"]];
+                 ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačak"],
+                 ["coffee", "My Passion"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
-                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", eink: "#ffffff" };
+                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#3d302c",
+                        eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
   const EXPORTS = [["Ova nedelja", "this_week"], ["Prošla nedelja", "last_week"], ["Ovaj mesec", "this_month"],
@@ -303,6 +305,101 @@
     }, 3800);
   }
 
+  // Maslačak: a 24-petal dandelion clock down the right side (as on the laptop). At noon all petals are
+  // yellow, every hour two turn into grey seeds; between 00:00 and 01:00 a tap blows the seeds away and the
+  // little gentleman slides down into the meadow. Two yellow petals come back every hour; he returns at noon.
+  const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  function dandelionState(now) {
+    const h = now.getHours(), list = f => Array.from({ length: 24 }, (_, i) => f(i));
+    if (h >= 12) return { petals: list(i => i < 2 * (h - 12) ? "s" : "y"), man: true, canBlow: false };
+    if (h === 0 && db.settings.dandelionBlown !== isoDay(now)) return { petals: list(() => "s"), man: true, canBlow: true };
+    return { petals: list(i => i < 2 * h ? "y" : ""), man: false, canBlow: false };
+  }
+  const f1 = v => v.toFixed(1);
+  function petalPoints(cx, cy, a, r0, r1, w) {
+    const ca = Math.cos(a), sa = Math.sin(a), at = (r, side) => `${f1(cx + ca * r - sa * side)},${f1(cy + sa * r + ca * side)}`;
+    return [at(r0, 0), at(r0 + (r1 - r0) * 0.3, -w / 2), at(r1 - 1.5, -w / 2), at(r1, -w / 4), at(r1 - 1, 0), at(r1, w / 4),
+            at(r1 - 1.5, w / 2), at(r0 + (r1 - r0) * 0.3, w / 2)].join(" ");
+  }
+  function seedSvg(cx, cy, a, r, i) {
+    const ca = Math.cos(a), sa = Math.sin(a), ex = cx + ca * r, ey = cy + sa * r, rnd = mulberry(i + 1);
+    let fan = "";
+    for (let k = -3; k <= 3; k++) {
+      const b = a + k * 0.32;
+      fan += `<line x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(ex + Math.cos(b) * 6)}" y2="${f1(ey + Math.sin(b) * 6)}" stroke="#d2d2d2"/>`;
+    }
+    const dx = -(40 + rnd() * 160), dy = -(20 + rnd() * 120);
+    return `<g class="seed" style="--dx:${f1(dx)}px;--dy:${f1(dy)}px;transition-delay:${f1(rnd() * 0.4)}s">` +
+      `<line x1="${f1(cx + ca * 4)}" y1="${f1(cy + sa * 4)}" x2="${f1(ex)}" y2="${f1(ey)}" stroke="#b9b9b9"/>${fan}` +
+      `<circle cx="${f1(ex)}" cy="${f1(ey)}" r="1" fill="#9a9a9a"/></g>`;
+  }
+  function mulberry(seed) {
+    return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  }
+  function gentlemanSvg(sx, sy, down) {
+    const bx = sx - 11, t = sy - 22, hy = t + 8, hr = 4.5, ink = "#2b2b2b";
+    const line = (pts, color, w) => `<polyline points="${pts.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" ")}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const tache = d => `<path d="M${bx},${hy + 2} Q${bx + d * 4},${hy + 3.2} ${bx + d * 6},${hy + 2} Q${bx + d * 7.4},${hy + 0.6} ${bx + d * 6.2},${hy - 0.6} Q${bx + d * 5},${hy - 0.4} ${bx + d * 5.2},${hy + 0.4}" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>`;
+    return `<g class="man" style="--down:${f1(down)}px">` +
+      line([[bx + 2, t + 27], [bx + 7, t + 33], [sx - 1, t + 31]], "#3a3540", 2.4) +
+      line([[bx - 2, t + 27], [bx - 3, t + 35], [bx - 5, t + 41]], "#3a3540", 2.4) +
+      `<ellipse cx="${sx - 1}" cy="${t + 31}" rx="2" ry="2" fill="${ink}"/><ellipse cx="${bx - 5.5}" cy="${t + 41.5}" rx="2.5" ry="1.5" fill="${ink}"/>` +
+      line([[bx + 3, t + 15], [bx + 7, t + 10], [sx - 1, t + 7]], "#f7f4ee", 2.2) +
+      line([[bx - 3, t + 15], [bx - 8, t + 18], [bx - 11, t + 13]], "#f7f4ee", 2.2) +
+      `<circle cx="${sx - 1}" cy="${t + 7}" r="1.6" fill="#f1cfb0"/><circle cx="${bx - 11}" cy="${t + 13}" r="1.6" fill="#f1cfb0"/>` +
+      `<rect x="${bx - 3.5}" y="${t + 21}" width="7" height="7" fill="#3a3540"/>` +
+      `<rect x="${bx - 4}" y="${t + 13}" width="8" height="9" fill="#f7f4ee" stroke="${ink}" stroke-width=".6"/>` +
+      `<polygon points="${[[-4, 14], [-1, 14], [0, 20], [1, 14], [4, 14], [4, 21], [0, 22.5], [-4, 21]].map(([x, y]) => `${bx + x},${t + y}`).join(" ")}" fill="#d4a017" stroke="#8a6510" stroke-width=".6"/>` +
+      [[-2.6, 16.5], [2.6, 16.5], [-2.6, 19], [2.6, 19]].map(([x, y]) => `<circle cx="${bx + x}" cy="${t + y}" r=".8" fill="#fff3c4"/>`).join("") +
+      `<circle cx="${bx}" cy="${hy}" r="${hr}" fill="#f1cfb0" stroke="#c9a184" stroke-width=".6"/>` +
+      `<circle cx="${bx - 1.7}" cy="${hy - 0.5}" r=".55" fill="${ink}"/><circle cx="${bx + 1.7}" cy="${hy - 0.5}" r=".55" fill="${ink}"/>` +
+      tache(-1) + tache(1) +
+      `<rect x="${bx - 7}" y="${hy - hr - 0.5}" width="14" height="1.5" fill="${ink}"/>` +
+      `<rect x="${bx - 4}" y="${hy - hr - 9}" width="8" height="9" fill="${ink}"/>` +
+      `<rect x="${bx - 4}" y="${hy - hr - 2.5}" width="8" height="1.3" fill="#5a5560"/></g>`;
+  }
+  let dandelionKey = "", blowing = false;
+  function renderDandelion(force = false) {
+    const svg = $("dandelion"), now = new Date();
+    if (blowing || !svg.clientWidth) return;
+    const st = dandelionState(now), w = 92, H = Math.round(svg.clientHeight * w / svg.clientWidth);
+    const yellowField = now.getHours() >= 12;
+    document.body.classList.toggle("meadow-yellow", yellowField);
+    const key = [st.petals.join(""), st.man, st.canBlow, H].join("|");
+    if (key === dandelionKey && !force) return;
+    dandelionKey = key;
+    const cx = 48, cy = 40, r = 34, bottom = H, sx = y => cx + Math.sin(y / 40) * 3, manY = Math.max(cy + 70, H * 0.45);
+    let stem = `M${cx},${cy}`;
+    for (let y = cy + 12; y <= bottom; y += 12) stem += ` L${f1(sx(y))},${y}`;
+    let head = st.petals.includes("s") ? `<circle cx="${cx}" cy="${cy}" r="${r * 0.8}" fill="#f3f1f1"/>` : "";
+    st.petals.forEach((p, i) => {
+      const a = -Math.PI / 2 + i * Math.PI / 12;
+      if (p === "y") head += `<polygon class="petal" points="${petalPoints(cx, cy, a, 6, r, 6)}" fill="#f6c71c" stroke="#d9a400" stroke-width=".7"/>`;
+      else if (p === "s") head += seedSvg(cx, cy, a, r - 6, i);
+    });
+    const anyYellow = st.petals.includes("y");
+    head += `<circle cx="${cx}" cy="${cy}" r="7" fill="${anyYellow ? "#e8ac0c" : "#9c8a4a"}" stroke="${anyYellow ? "#b07c00" : "#6e6030"}"/>`;
+    const bracts = [-0.9, -0.4, 0.4, 0.9].map(a => `<path d="M${f1(cx + Math.sin(a) * 6)},${cy + 6} Q${f1(cx + Math.sin(a) * 11)},${cy + 13} ${f1(cx + Math.sin(a) * 13)},${cy + 11}" fill="none" stroke="#5f8f44" stroke-width="1.6"/>`).join("");
+    svg.setAttribute("viewBox", `0 0 ${w} ${H}`);
+    svg.classList.remove("blowing");
+    svg.innerHTML = `<path d="${stem}" fill="none" stroke="#5f8f44" stroke-width="4" stroke-linecap="round"/>${bracts}` +
+      (st.man ? gentlemanSvg(sx(manY), manY, H - manY + 60) : "") +
+      `<g class="head${st.canBlow ? " can-blow" : ""}"><circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="transparent"/>${head}</g>`;
+  }
+  function blowDandelion() {
+    const now = new Date();
+    if (blowing || !dandelionState(now).canBlow) return false;
+    db.settings.dandelionBlown = isoDay(now);
+    save();
+    sound("start");  // a gust of wind
+    blowing = true;
+    const svg = $("dandelion");
+    void svg.getBoundingClientRect();
+    svg.classList.add("blowing");
+    setTimeout(() => { blowing = false; renderDandelion(true); }, 2900);
+    return true;
+  }
+
   // Matrix: on play/pause the digits jumble like a broken clock, then settle one by one.
   let scrambleUntil = 0;
   function scramble() {
@@ -325,7 +422,8 @@
     piecesKey = "-";
     renderPieces([]);
     applyLamp();
-    const style = ["pastel", "cat", "setsuna", "egg"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    const style = ["pastel", "cat", "setsuna", "egg", "dandelion"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    dandelionKey = "";
     buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
@@ -428,6 +526,7 @@
       setText($("info"), upper(`Danas   ${dur(today)}\nNedelja ${dur(week)}`));
     }
     if (skin() === "setsuna") renderPieces(st === "stopped" ? [] : orangePieces(ms));
+    if (skin() === "dandelion") renderDandelion();
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
@@ -646,7 +745,7 @@
 
   // ------------------------------------------------------------------ wiring
 
-  function withClick(fn) { return () => { sound("click"); fn(); }; }
+  function withClick(fn, event = "click") { return () => { sound(event); fn(); }; }
 
   function init() {
     $("task").value = db.ui.task;
@@ -662,7 +761,8 @@
       db.settings.showPlaylist = !db.settings.showPlaylist;
       commit();
       if (db.settings.showPlaylist && skin() === "pastel") bubbles();  // bubbles rising over the list
-    }));
+    }, "pl"));
+    $("dandelion").addEventListener("click", e => { if (e.target.closest(".head")) blowDandelion(); });
     $("prevDay").addEventListener("click", withClick(() => { dayOffset++; render(); }));
     $("nextDay").addEventListener("click", withClick(() => { dayOffset = Math.max(0, dayOffset - 1); render(); }));
     $("addBtn").addEventListener("click", withClick(() => openEntry(null)));
@@ -703,6 +803,7 @@
     return false;
   }
 
-  window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY };
+  window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY, dandelionState,
+                 blowDandelion };
   init();
 })();
