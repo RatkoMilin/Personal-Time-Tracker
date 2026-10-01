@@ -90,6 +90,8 @@ Svoj exe praviš sa `build.bat` (rezultat: `dist\PersonalTimeTracker.exe`).
 
 Novo izdanje: **Releases → Draft a new release**, upiši oznaku (npr. `v1.1.0`) i objavi; GitHub Actions napravi exe i okači ga na izdanje.
 
+**Samoažuriranje:** exe sa stranice Releases na pokretanju (posle 30 s) i na svakih 6 sati proveri ima li novije izdanje. Ako ima, preuzme ga, proveri SHA-256 otisak, zameni sebe i ponovo se pokrene (umanjen); tajmer nastavlja jer je zapisan u bazi. Ako je otvoren neki dijalog, sačeka. Isključuje se u meniju (**Automatsko ažuriranje**), a **Proveri ažuriranje** proverava odmah. Exe iz Actions artifakta i pokretanje iz koda se ne ažuriraju sami. Web verzija na telefonu se osvežava sama (novi fajlovi stižu pri sledećem otvaranju); APK za Kompakt Android ne dozvoljava da se tiho zameni, novu verziju instaliraš preko Mudita Center-a.
+
 ## Podaci
 
 `%APPDATA%\PersonalTimeTracker\timetracker.db` (SQLite) i `settings.json`. Putanju menja promenljiva `PTT_DATA_DIR`.
@@ -111,6 +113,7 @@ python -m timetracker
 | `timetracker/reports.py` | zbirovi i CSV |
 | `timetracker/productivity.py` | pravila produktivno / ometanje i dnevni zbirovi |
 | `timetracker/sounds.py` | sintetizovani zvučni efekti po skinu |
+| `timetracker/updater.py` | samoažuriranje exe-a sa GitHub Releases |
 | `timetracker/ui/skin.py` | teme i iscrtani elementi: paneli, dugmad, LCD cifre, analogni sat |
 | `timetracker/ui/player.py` | glavni prozor i plejlista |
 | `timetracker/ui/dialogs.py` | izmena unosa i podsetnik za neaktivnost |

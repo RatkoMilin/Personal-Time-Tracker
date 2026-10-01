@@ -77,10 +77,25 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Tests (including real Windows API calls)
         run: python -m pytest -q
+      - name: Stamp the release version (enables self-update)
+        if: github.event_name == 'release'
+        shell: bash
+        run: echo "VERSION = \"${GITHUB_REF_NAME#v}\"" > timetracker/_build.py
       - name: Build exe
         run: >
           python -m PyInstaller --noconfirm --onefile --windowed --name PersonalTimeTracker
           --icon assets/icon.ico --add-data "assets;assets" --hidden-import pystray._win32 main.pyw
+      - name: Self-update smoke test (a running exe can be renamed)
+        shell: pwsh
+        run: |
+          $env:PTT_DATA_DIR = "$env:RUNNER_TEMP\ptt-smoke"
+          Start-Process -FilePath dist\PersonalTimeTracker.exe
+          Start-Sleep -Seconds 10
+          if (-not (Get-Process PersonalTimeTracker -ErrorAction SilentlyContinue)) { throw "exe did not start" }
+          Rename-Item dist\PersonalTimeTracker.exe PersonalTimeTracker.old.exe
+          Rename-Item dist\PersonalTimeTracker.old.exe PersonalTimeTracker.exe
+          Get-Process PersonalTimeTracker | Stop-Process -Force
+          Start-Sleep -Seconds 2
       - uses: actions/upload-artifact@v4
         with:
           name: PersonalTimeTracker-windows

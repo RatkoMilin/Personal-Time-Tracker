@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import queue
+import threading
 import time
 import tkinter as tk
 from datetime import date, timedelta
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from .. import APP_ID, APP_NAME, platform_win, productivity, reports, sounds, timeutil, tray
+from .. import APP_ID, APP_NAME, __version__, platform_win, productivity, reports, sounds, timeutil, tray, updater
 from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
@@ -65,6 +66,10 @@ class Player(tk.Tk):
         if start_tracker:
             self.tracker.start()
             self.tray_available = self.tray.start()
+            exe = updater.running_exe()
+            if exe:
+                updater.cleanup(exe, self.data_dir / "update")
+            self.after(30_000, self._schedule_update_check)
         if start_minimized and self.tray_available:
             self.withdraw()
         self.after(500, self._poll_events)
@@ -225,6 +230,12 @@ class Player(tk.Tk):
         self.menu.add_cascade(label="Podsetnik za neaktivnost posle", menu=idle)
         self.top_var = tk.BooleanVar(value=self.settings["always_on_top"])
         self.menu.add_checkbutton(label="Uvek na vrhu", variable=self.top_var, command=self._toggle_top)
+        self.update_var = tk.BooleanVar(value=self.settings["auto_update"])
+        self.menu.add_checkbutton(label="Automatsko ažuriranje", variable=self.update_var,
+                                  command=lambda: self.settings.update({"auto_update": self.update_var.get()}))
+        version = updater.build_version()
+        self.menu.add_command(label=f"Proveri ažuriranje (verzija {version or __version__ + ' dev'})",
+                              command=lambda: self.check_for_update(manual=True))
         self.mini_var = tk.BooleanVar(value=self.settings["mini_bar"])
         self.menu.add_checkbutton(label="Umanjeno: mini traka dole", variable=self.mini_var,
                                   command=lambda: self.settings.update({"mini_bar": self.mini_var.get()}))
@@ -573,6 +584,54 @@ class Player(tk.Tk):
             if choice == IdleReminder.DISCARD_STOP:
                 self.paused = True
         self.refresh()
+
+    # ---------------------------------------------------------------- updates
+
+    def _schedule_update_check(self):
+        if self._quitting:
+            return
+        if self.settings["auto_update"]:
+            self.check_for_update()
+        self.after(6 * 3600 * 1000, self._schedule_update_check)
+
+    def check_for_update(self, manual: bool = False):
+        """Look for a newer release in the background; download it and install it when found."""
+        def work():
+            try:
+                found = updater.check(updater.build_version())
+                if found is None:
+                    if manual:
+                        self.events.put(lambda: messagebox.showinfo(
+                            "Ažuriranje", "Imaš najnoviju verziju." if updater.build_version()
+                            else "Samoažuriranje radi samo u exe verziji sa stranice Releases.", parent=self))
+                    return
+                path = updater.download(found, self.data_dir / "update")
+                self.events.put(lambda: self._apply_update(path, found.version))
+            except Exception as exc:  # offline, GitHub down, bad download: try again later
+                if manual:
+                    msg = f"Provera nije uspela:\n{exc}"
+                    self.events.put(lambda: messagebox.showwarning("Ažuriranje", msg, parent=self))
+
+        threading.Thread(target=work, name="updater", daemon=True).start()
+
+    def _apply_update(self, new_exe, version: str):
+        exe = updater.running_exe()
+        if exe is None or self._quitting:
+            return
+        if self.reminder is not None or self.grab_current() is not None:  # an open dialog: try again later
+            self.after(5 * 60 * 1000, lambda: self._apply_update(new_exe, version))
+            return
+        try:
+            updater.install(new_exe, exe)
+        except OSError:
+            return
+        if self.winfo_viewable():
+            self.settings.update({"window_pos": f"{self.winfo_x()},{self.winfo_y()}"})
+        self._quitting = True
+        self.tracker.stop()
+        self.tray.stop()
+        updater.restart(exe)
+        self.destroy()
 
     # -------------------------------------------------------------- lifecycle
 
