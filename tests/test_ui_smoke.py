@@ -512,3 +512,17 @@ def test_pause_play_and_continue_keep_counting(app):
     app._update_display()
     assert app.task_var.get() == "Nastavak" and app._clock_text >= "00:10:00"
     app.stop()
+
+
+def test_coffee_play_button_gets_shot(app):
+    app.set_skin("coffee")
+    app.task_var.set("Espresso")
+    app.play()
+    assert app.play_btn.find_withtag("hole")
+    deadline = time.time() + 4
+    while app.play_btn.find_withtag("hole") and time.time() < deadline:
+        app.update()
+        time.sleep(0.02)
+    assert not app.play_btn.find_withtag("hole")  # the hole is gone again
+    app.stop()
+    app.set_skin("matrix")

@@ -104,6 +104,14 @@ def test_pause_play_continues_the_clock(page):
     page.wait_for_function("document.title.startsWith('00:10')")
 
 
+def test_coffee_play_button_gets_shot(page):
+    pick_skin(page, "coffee")
+    page.fill("#task", "Espresso")
+    page.click("#playBtn")
+    assert page.locator("#playBtn .hole").count() == 1
+    page.wait_for_function("!document.querySelector('#playBtn .hole')", timeout=4000)
+
+
 def test_running_timer_survives_reload(page):
     page.fill("#task", "Dugačak zadatak")
     page.press("#task", "Enter")
@@ -280,8 +288,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v5')")
-    cached = page.evaluate("caches.open('ptt-v5').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v6')")
+    cached = page.evaluate("caches.open('ptt-v6').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

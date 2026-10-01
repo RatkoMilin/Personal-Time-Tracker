@@ -89,6 +89,7 @@ class Theme:
     pl_plain: bool = False
     layers: tuple = ()
     glow: str = ""
+    play_fx: str = ""  # "bullet": the play button takes a shot when pressed (the hole fades away)
 
     def font(self, kind: str = "sans", size: int = 10, weight: str = "normal") -> tuple:
         families = self.mono if kind == "mono" else self.sans
@@ -219,7 +220,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
         shape="round", radius=9, panel_outline="#4c3b36", title_style="coffee", segments="ice", meter="coffee",
-        layers=("#2f2522", "#211a17", "#130e0d"), glow="#5f7f89",
+        layers=("#2f2522", "#211a17", "#130e0d"), glow="#5f7f89", play_fx="bullet",
     ),
 )}
 
@@ -955,6 +956,69 @@ class SkinButton(tk.Canvas):
             return [self.create_polygon(cx - s * 0.6, cy - s * 0.8, cx - s * 0.6, cy + s * 0.8, cx + s * 0.6, cy,
                                         fill=fill)]
         raise ValueError(glyph)
+
+    def bullet_hole(self, duration_ms: int = 1800) -> None:
+        """A bullet hole punched into the button: dark hole, torn rim, cracks and a puff of smoke.
+
+        After a moment it fades back into the button face and is gone.
+        """
+        self.delete("hole")
+        rnd = random.Random()
+        cx = self.w / 2 + rnd.uniform(-0.15, 0.15) * self.w
+        cy = self.glyph_cy + rnd.uniform(-0.15, 0.15) * self.h
+        r = max(2.5, min(self.w, self.h) * 0.13)
+        face, bg = self.fill if self.kind == "block" else T.btn_face, self["bg"]
+        parts: list[tuple[int, str, str]] = []  # (item, color, option) to fade
+
+        def jagged(radius: float, n: int = 11) -> list[float]:
+            pts = []
+            for k in range(n):
+                a = k * 2 * math.pi / n
+                rr = radius * rnd.uniform(0.8, 1.15)
+                pts += [cx + math.cos(a) * rr, cy + math.sin(a) * rr]
+            return pts
+
+        soot = blend(face, "#000000", 0.45)
+        parts.append((self.create_oval(cx - r * 2, cy - r * 2, cx + r * 2, cy + r * 2, fill=soot, outline="",
+                                       tags="hole"), soot, "fill"))
+        for _ in range(7):  # cracks running out from the hole
+            a, length = rnd.uniform(0, 2 * math.pi), r * rnd.uniform(2.2, 3.4)
+            bend = rnd.uniform(-0.35, 0.35)
+            pts = [cx + math.cos(a) * r, cy + math.sin(a) * r,
+                   cx + math.cos(a + bend) * length * 0.6, cy + math.sin(a + bend) * length * 0.6,
+                   cx + math.cos(a) * length, cy + math.sin(a) * length]
+            parts.append((self.create_line(*pts, fill="#a08f88", width=1, tags="hole"), "#a08f88", "fill"))
+        parts.append((self.create_polygon(jagged(r * 1.3), fill="#6d564e", outline="", tags="hole"), "#6d564e",
+                      "fill"))
+        parts.append((self.create_polygon(jagged(r * 0.85, 9), fill="#050403", outline="", tags="hole"), "#050403",
+                      "fill"))
+        parts.append((self.create_line(cx - r * 1.1, cy - r * 0.4, cx - r * 0.5, cy - r * 1.1, fill="#d9cbc5",
+                                       tags="hole"), "#d9cbc5", "fill"))
+        smoke = [(self.create_oval(cx - 2, cy - 2, cx + 2, cy + 2, fill="#c8bdb8", outline="", tags="hole"),
+                  rnd.uniform(-0.4, 0.4)) for _ in range(3)]
+        frames = max(1, duration_ms // 40)
+
+        def step(i=0):
+            if not self.winfo_exists():
+                return
+            if i >= frames:
+                self.delete("hole")
+                return
+            t = i / frames
+            for k, (item, drift) in enumerate(smoke):  # the puff drifts up, grows and thins out
+                if t < 0.45:
+                    x0, y0, x1, y1 = self.coords(item)
+                    g = 0.35 + k * 0.1
+                    self.coords(item, x0 - g + drift, y0 - g - 0.9, x1 + g + drift, y1 + g - 0.9)
+                    self.itemconfigure(item, fill=blend("#c8bdb8", bg, t / 0.45))
+                else:
+                    self.itemconfigure(item, state="hidden")
+            if t > 0.5:  # the hole closes up: its colors melt into the button face
+                for item, color, option in parts:
+                    self.itemconfigure(item, **{option: blend(color, face, (t - 0.5) / 0.5)})
+            self.after(40, step, i + 1)
+
+        step()
 
     def _set_glyph_color(self, color: str) -> None:
         for item in self.glyph_items:

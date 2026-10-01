@@ -425,6 +425,20 @@
     return true;
   }
 
+  // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
+  function bulletHole() {
+    const btn = $("playBtn");
+    btn.querySelectorAll(".hole").forEach(h => h.remove());
+    const hole = document.createElement("span");
+    hole.className = "hole";
+    Object.assign(hole.style, { left: rand(35, 65) + "%", top: rand(35, 65) + "%" });
+    hole.style.setProperty("--rot", rand(0, 360) + "deg");
+    hole.innerHTML = '<i class="smoke"></i>';
+    btn.appendChild(hole);
+    setTimeout(() => hole.remove(), 2400);
+    return hole;
+  }
+
   // Matrix: on play/pause the digits jumble like a broken clock, then settle one by one.
   let scrambleUntil = 0;
   function scramble() {
@@ -479,6 +493,7 @@
     commit();
     scramble();
     if (skin() === "setsuna") confetti();
+    if (skin() === "coffee") bulletHole();
   }
 
   function pause() {
