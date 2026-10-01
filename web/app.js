@@ -4,8 +4,10 @@
 
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Drvo (analogni)"],
-                 ["cyber", "Sajber (sivi)"], ["eink", "E-ink (crno-belo)"]];
-  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", eink: "#ffffff" };
+                 ["cyber", "Sajber (sivi)"], ["cat", "Mačkasti"],
+                 ["setsuna", "Setsuna Orange"], ["eink", "E-ink (crno-belo)"]];
+  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
+                        eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
   const EXPORTS = [["Ova nedelja", "this_week"], ["Prošla nedelja", "last_week"], ["Ovaj mesec", "this_month"],
@@ -239,7 +241,8 @@
   function applySkin() {
     document.body.dataset.skin = skin();
     document.querySelector('meta[name="theme-color"]').setAttribute("content", THEME_COLOR[skin()]);
-    buildClock(skin() === "pastel" ? "round" : skin() === "cyber" ? "sharp" : "hex", eink() ? "88:88" : "88:88:88");
+    const style = ["pastel", "cat", "setsuna"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
     renderSkinButtons();

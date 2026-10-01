@@ -123,6 +123,10 @@ class Player(tk.Tk):
             self.state_icon = tk.Canvas(lcd, width=skin.px(12), height=skin.px(12), bg=T.lcd_bg,
                                         highlightthickness=0)
             self.state_icon.pack(side="left", anchor="n", padx=(0, skin.px(6)), pady=(skin.px(2), 0))
+            if T.clock_deco == "oranges":
+                fruit = tk.Canvas(lcd, width=skin.px(30), height=skin.px(36), bg=T.lcd_bg, highlightthickness=0)
+                skin.draw_orange(fruit, skin.px(15), skin.px(21), skin.px(11))
+                fruit.pack(side="left", padx=(0, skin.px(6)))
             self.clock = skin.SevenSegment(lcd)
             self.clock.pack(side="left")
             right = tk.Frame(lcd, bg=T.lcd_bg)
@@ -170,7 +174,7 @@ class Player(tk.Tk):
         skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        panel = skin.Panel(self.pl_frame, pad=2)
+        panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern)
         panel.pack(fill="x")
         self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.lcd_bg, fg=T.lcd_text,
                                   selectbackground=T.sel_bg, selectforeground=T.sel_fg, font=T.font("mono", 9),

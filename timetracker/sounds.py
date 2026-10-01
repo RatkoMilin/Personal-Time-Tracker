@@ -1,6 +1,7 @@
 """Sound effects per skin, synthesized in code (no audio files, no dependencies).
 
 matrix: digital blips   pastel: bubbles   wood: knocks on wood   cyber: sword swooshes and rings
+cat: meows and a purr-like "mrrp"   setsuna: bright citrus plucks
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -124,6 +125,39 @@ def _tick(freq: float = 3000) -> list[float]:
     return [a + b for a, b in zip(tone(freq, freq, 0.06, tau=0.01), noise(0.06, tau=0.003, amp=0.5, seed=11))]
 
 
+def glide(points: list[tuple[float, float]], dur: float, amp: float = 1.0, tremolo: float = 0.0) -> list[float]:
+    """Voice-like tone following a pitch contour [(0..1, Hz), ...] with a few harmonics (used for meows)."""
+    n = int(dur * RATE)
+    out, phase = [], 0.0
+    weights = (1.0, 0.55, 0.35, 0.22, 0.12)
+    for i in range(n):
+        frac = i / max(1, n - 1)
+        for (f0, a0), (f1, a1) in zip(points, points[1:]):
+            if f0 <= frac <= f1:
+                f = a0 + (a1 - a0) * (frac - f0) / max(1e-9, f1 - f0)
+                break
+        else:
+            f = points[-1][1]
+        f *= 1 + 0.01 * math.sin(2 * math.pi * 6 * i / RATE)  # slight vibrato
+        phase += 2 * math.pi * f / RATE
+        v = sum(w * math.sin(k * phase) for k, w in enumerate(weights, start=1)) / 2.2
+        env = min(1.0, frac / 0.08) * min(1.0, (1 - frac) / 0.35)
+        if tremolo:
+            env *= 0.65 + 0.35 * math.sin(2 * math.pi * tremolo * i / RATE)
+        out.append(amp * v * env)
+    return out
+
+
+def _meow(high: float = 1.0, dur: float = 0.38, falling: bool = False) -> list[float]:
+    pts = [(0, 520 * high), (0.3, 880 * high), (1, 470 * high)] if falling else \
+          [(0, 560 * high), (0.35, 900 * high), (1, 640 * high)]
+    return glide(pts, dur)
+
+
+def _pluck(freq: float, dur: float = 0.25) -> list[float]:
+    return [a + b for a, b in zip(tone(freq, freq, dur, tau=0.07), tone(freq * 2, freq * 2, dur, tau=0.03, amp=0.35))]
+
+
 def render(skin: str, event: str) -> list[float]:
     if skin == "pastel":
         kit = {
@@ -141,6 +175,23 @@ def render(skin: str, event: str) -> list[float]:
             "stop": [(0, _knock(0.8))],
             "click": [(0, _knock(1.6, 0.45))],
             "alert": [(0, _knock(1.0)), (0.2, _knock(1.0, seed=5)), (0.4, _knock(1.0, seed=6))],
+        }
+    elif skin == "cat":
+        kit = {
+            "start": [(0, glide([(0, 380), (1, 720)], 0.16, tremolo=28)), (0.15, _meow(1.1, 0.24))],  # mrrp-meow
+            "pause": [(0, _meow(1.3, 0.2))],                                                          # mew
+            "stop": [(0, _meow(1.0, 0.45, falling=True))],
+            "click": [(0, _knock(2.2, 0.35, seed=12))],                                               # soft paw tap
+            "alert": [(0, _meow(1.0, 0.36)), (0.42, _meow(1.15, 0.36))],
+        }
+    elif skin == "setsuna":
+        kit = {
+            "start": [(0, _pluck(784)), (0.08, _pluck(988)), (0.16, _pluck(1175))],
+            "pause": [(0, _pluck(988))],
+            "stop": [(0, _pluck(1175)), (0.08, _pluck(988)), (0.16, _pluck(784))],
+            "click": [(0, _pluck(1568, 0.12))],
+            "alert": [(t, _pluck(f)) for t, f in ((0, 784), (0.09, 1175), (0.18, 1568), (0.36, 784), (0.45, 1175),
+                                                  (0.54, 1568))],
         }
     elif skin == "cyber":
         kit = {

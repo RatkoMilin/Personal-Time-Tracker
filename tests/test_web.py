@@ -129,7 +129,7 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber", "eink"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -171,14 +171,14 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'eink'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 25
+    assert len(result) == 35
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 

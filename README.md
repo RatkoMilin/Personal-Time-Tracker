@@ -12,8 +12,10 @@ Desni klik → **Skin**:
 | Pastel (roze-plavi) | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava |
 | Drvo (analogni) | miran i najjednostavniji: drveni okvir, tamnozeleni panel, analogni sat sa kazaljkama umesto cifara |
 | Sajber (sivi) | oštar: odsečeni uglovi, iskošene cifre, siva sa cijan linijama |
+| Mačkasti | krem bela i tamno siva: mačje uši na vrhu, dugmići su mačije šapice, PL lista je pegava |
+| Setsuna Orange | #DB4C01, #E94C53, bela i crna: narandže kod tajmera, okrugla dugmad, zeleni listovi narandže u PL listi |
 
-Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Matrix digitalne pištaljke, Pastel mehuriće, Drvo kucanje u drvo, Sajber zvuk mača (izvlačenje, zamah, zvek). Zvuci se prave u kodu (`timetracker/sounds.py`), nema audio fajlova. Isključuju se u meniju: **Zvučni efekti**. Podsetnik za neaktivnost i tada pusti sistemski zvuk.
+Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Matrix digitalne pištaljke, Pastel mehuriće, Drvo kucanje u drvo, Sajber zvuk mača (izvlačenje, zamah, zvek), Mačkasti mjaukanje, Setsuna sočne "citrus" tonove. Zvuci se prave u kodu (`timetracker/sounds.py`), nema audio fajlova. Isključuju se u meniju: **Zvučni efekti**. Podsetnik za neaktivnost i tada pusti sistemski zvuk.
 
 ## Kako se koristi
 
