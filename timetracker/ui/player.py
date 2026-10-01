@@ -18,6 +18,7 @@ from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .hourglass import Hourglass, rounds_done
+from .vinyl import Turntable
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -159,7 +160,7 @@ class Player(tk.Tk):
         panel = skin.Panel(main, pad=5)
         panel.pack(fill="x")
         lcd = panel.inner
-        self.clock = self.dial = self.marquee = self.hourglass = None
+        self.clock = self.dial = self.marquee = self.hourglass = self.turntable = None
         if T.display == "analog":
             self.dial = skin.AnalogDial(lcd)
             self.dial.pack(side="left")
@@ -181,6 +182,9 @@ class Player(tk.Tk):
             if T.clock_deco == "hourglass":  # Peščani sat: one turn of the glass per 25 minutes of the task
                 self.hourglass = Hourglass(lcd, on_flip=self._sound("flip"))
                 self.hourglass.pack(side="left", padx=(0, skin.px(8)))
+            if T.clock_deco == "vinyl":  # Lofi: a record player, one side per 45 minutes of the task
+                self.turntable = Turntable(lcd, on_flip=self._sound("flip"))
+                self.turntable.pack(side="left", padx=(0, skin.px(8)))
             self.clock = skin.SevenSegment(lcd)
             self.clock.pack(side="left")
             right = tk.Frame(lcd, bg=T.lcd_bg)
@@ -606,6 +610,10 @@ class Player(tk.Tk):
             self.titlebar.set_pieces(["d"] * min(12, rounds_done(secs)) if state != self.STOPPED else [])
         if self.hourglass is not None:
             self.hourglass.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
+        if self.turntable is not None:
+            self.turntable.set(secs if state != self.STOPPED else 0, state)
+        if T.pl_pattern == "rain":
+            self.pl_panel.set_rain(state == self.PLAYING)
         task = self.task_var.get().strip() or "(bez naziva)"
         project = self.project_var.get().strip()
         today = reports.total_between(self.db, *timeutil.period_bounds("today"), now)

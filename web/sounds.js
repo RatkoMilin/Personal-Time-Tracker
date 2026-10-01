@@ -2,7 +2,8 @@
    matrix: digital blips, pastel: bubbles, wood: knocks on wood, cyber: sword swooshes and rings,
    cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop",
    dandelion: wind and rustling grass, coffee: revolver shot, espresso steam (PL), ice cubes, cup pings,
-   hourglass: pouring sand, desert wind, the glass turning over ("flip"). */
+   hourglass: pouring sand, desert wind, a bell "ding" when the glass turns over ("flip"),
+   lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop. */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -156,7 +157,26 @@
     return add(hiss, grains.map(v => v * 0.6));
   };
 
+  const crackle = (dur, pops, seed = 91) => {
+    const rnd = mulberry32(seed), out = [[0, noise(dur, { amp: 0.12, seed, lowpass: [0.5, 0.5], highpass: 0.2 })]];
+    for (let k = 0; k < pops; k++) out.push([rnd() * dur * 0.9, noise(0.006, { tau: 0.002, amp: 0.3 + rnd() * 0.4, seed: seed + k })]);
+    return out;
+  };
+  const keys = (freqs, dur = 0.8) => add(...freqs.map(f => add(tone(f, f, dur, "sine", 0.004, 0.35, 0.5),
+                                                              tone(f * 2, f * 2, dur, "sine", 0.002, 0.12, 0.18))));
+  const tapeStop = (dur = 0.35) => add(tone(420, 70, dur, "sine", 0.002, dur / 2, 0.6),
+                                       noise(dur, { tau: dur / 2, amp: 0.15, seed: 95, lowpass: [0.3, 0.05] }));
+  const drop = seed => noise(0.03, { tau: 0.008, amp: 0.8, seed, lowpass: [0.4, 0.4] });
+
   const KITS = {
+    lofi: {
+      start: () => [[0, drop(92)], [0.03, keys([261.6, 329.6, 392.0, 493.9])], ...crackle(0.8, 6)],
+      pause: () => [[0, tapeStop(0.3)]],
+      stop: () => [[0, tapeStop(0.5)], ...crackle(0.4, 3, 93)],
+      click: () => [[0, noise(0.012, { tau: 0.003, amp: 0.7, seed: 94, lowpass: [0.6, 0.6] })]],
+      flip: () => [[0, drop(96)], [0.03, keys([220.0, 277.2, 329.6, 415.3])], ...crackle(0.8, 6, 97)],
+      alert: () => [[0, keys([392.0, 493.9], 0.45)], [0.4, keys([329.6, 415.3], 0.5)]],
+    },
     hourglass: {
       start: () => [[0, ping(1500, 0.3, 0.08)], [0.02, pour(0.55)]],
       pause: () => [[0, pour(0.16, 82)]],

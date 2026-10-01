@@ -4,7 +4,8 @@ matrix: digital blips   pastel: bubbles   wood: knocks on wood   cyber: sword sw
 cat: meows and a purr-like "mrrp"   setsuna: bright citrus plucks
 mondrian: plain clean beeps   egg: a "plop", like an egg or a pebble dropped into water
 dandelion: wind and rustling grass   coffee: a revolver shot, espresso steam (PL), ice cubes, cup pings
-hourglass: pouring sand, desert wind, the glass turning over ("flip")
+hourglass: pouring sand, desert wind, a bell "ding" when the glass turns over ("flip")
+lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -232,6 +233,32 @@ def _bell(freq: float = 1760, dur: float = 0.9, tau: float = 0.35) -> list[float
     return [sum(v) for v in zip(*parts)]
 
 
+def _crackle(dur: float, pops: int, seed: int = 91) -> list[tuple[float, list[float]]]:
+    """Vinyl surface noise: a quiet hiss and a few soft pops."""
+    import random as _random
+
+    rnd = _random.Random(seed)
+    parts = [(0, noise(dur, amp=0.12, seed=seed, lowpass=(0.5, 0.5), highpass=0.2))]
+    parts += [(rnd.uniform(0, dur * 0.9), noise(0.006, tau=0.002, amp=rnd.uniform(0.3, 0.7), seed=seed + k))
+              for k in range(pops)]
+    return parts
+
+
+def _keys(freqs: tuple[float, ...], dur: float = 0.8) -> list[float]:
+    """A soft electric-piano chord: sine tones with a bell-like second partial and a slow fade."""
+    notes = []
+    for f in freqs:
+        notes.append([a + b for a, b in zip(tone(f, f, dur, attack=0.004, tau=0.35, amp=0.5),
+                                            tone(f * 2, f * 2, dur, attack=0.002, tau=0.12, amp=0.18))])
+    return [sum(v) for v in zip(*notes)]
+
+
+def _tape_stop(dur: float = 0.35) -> list[float]:
+    """The record slowing to a halt: a falling tone with a little noise."""
+    return [a + b for a, b in zip(tone(420, 70, dur, attack=0.002, tau=dur / 2, amp=0.6, wave_form="triangle"),
+                                  noise(dur, tau=dur / 2, amp=0.15, seed=95, lowpass=(0.3, 0.05)))]
+
+
 def _pour(dur: float = 0.5, seed: int = 81) -> list[float]:
     """Sand running through the neck of the glass: a soft, grainy hiss."""
     hiss = noise(dur, amp=0.7, seed=seed, lowpass=(0.35, 0.3), highpass=0.25,
@@ -246,7 +273,18 @@ def render(skin: str, event: str) -> list[float]:
 
 
 def _kit(skin: str) -> dict:
-    if skin == "hourglass":
+    if skin == "lofi":
+        kit = {
+            "start": [(0, noise(0.03, tau=0.008, amp=0.8, seed=92, lowpass=(0.4, 0.4))),   # needle drop
+                      (0.03, _keys((261.6, 329.6, 392.0, 493.9)))] + _crackle(0.8, 6),
+            "pause": [(0, _tape_stop(0.3))],
+            "stop": [(0, _tape_stop(0.5))] + _crackle(0.4, 3, seed=93),
+            "click": [(0, noise(0.012, tau=0.003, amp=0.7, seed=94, lowpass=(0.6, 0.6)))],
+            "flip": [(0, noise(0.03, tau=0.008, amp=0.8, seed=96, lowpass=(0.4, 0.4))),
+                     (0.03, _keys((220.0, 277.2, 329.6, 415.3)))] + _crackle(0.8, 6, seed=97),
+            "alert": [(0, _keys((392.0, 493.9), 0.45)), (0.4, _keys((329.6, 415.3), 0.5))],
+        }
+    elif skin == "hourglass":
         kit = {
             "start": [(0, _ping(1500, 0.3, 0.08)), (0.02, _pour(0.55))],           # glass set down, sand runs
             "pause": [(0, _pour(0.16, seed=82))],

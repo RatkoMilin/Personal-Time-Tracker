@@ -607,3 +607,28 @@ def test_hourglass_skin_turns_and_oasis_follows_productivity(app):
     app.shift_day(-1)
     app.db._exec("DELETE FROM activity")
     app.set_skin("matrix")
+
+
+def test_lofi_turntable_and_rain(app):
+    from timetracker.ui import vinyl
+
+    assert vinyl.side(44 * 60) == 0 and vinyl.side(46 * 60) == 1
+    assert vinyl.progress(0) == 0 and abs(vinyl.progress(45 * 60 + 1350) - 0.5) < 1e-9
+    app.set_skin("lofi")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    flips = []
+    app.turntable.on_flip = lambda: flips.append(1)
+    app.task_var.set("Lofi")
+    app.play()
+    app._update_display()
+    assert app.pl_panel.raining and app.turntable.state == "playing"
+    entry = app.db.running_entry()
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 45 * 60 - 2, None)
+    app._update_display()  # a side is done: the record is turned over
+    assert flips == [1]
+    app.pause()
+    app._update_display()
+    assert not app.pl_panel.raining and app.turntable.state == "paused"
+    app.stop()
+    app.set_skin("matrix")

@@ -5,9 +5,9 @@
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
-                 ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["eink", "E-ink"]];
+                 ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
-                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2",
+                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
@@ -465,6 +465,40 @@
     svg.innerHTML = body;
   }
 
+  // Lofi: a record player; the record spins while the timer runs, the tonearm crosses one 45-minute side of
+  // the task's time and the record is turned over (A, B, A...); on pause the needle lifts (as on the laptop).
+  const SIDE = 45 * 60000;
+  let ttKey = "", ttSides = null;
+  function renderTurntable(ms, st) {
+    const svg = $("turntable"), sides = Math.floor(ms / SIDE), prog = (ms % SIDE) / SIDE;
+    if (ttSides !== null && st === "playing" && sides > ttSides) sound("flip");
+    ttSides = sides;
+    const raining = st === "playing";
+    if (document.body.classList.contains("raining") !== raining) document.body.classList.toggle("raining", raining);
+    if (svg.classList.contains("running") !== raining) svg.classList.toggle("running", raining);
+    const key = `${Math.round(prog * 200)}|${st}|${sides % 2}`;
+    if (key === ttKey) return;
+    ttKey = key;
+    const cx = 20.8, cy = 22, r = 18.5, px = 45, py = 7;
+    let nx = 45, ny = 36;
+    if (st !== "stopped") {
+      const a = 20 * Math.PI / 180, rr = r * (0.95 - 0.55 * prog);
+      nx = cx + Math.cos(a) * rr; ny = cy + Math.sin(a) * rr;
+    }
+    const lift = st === "paused" ? 2 : 0;
+    svg.innerHTML = `<rect x="1" y="1" width="50" height="42" rx="4" fill="#9a6a48" stroke="#6e4a33"/>` +
+      `<circle cx="${cx}" cy="${cy}" r="${r + 1}" fill="#3a3346"/>` +
+      `<g class="platter" style="transform-origin:${cx}px ${cy}px"><circle cx="${cx}" cy="${cy}" r="${r}" fill="#15121c"/>` +
+      [0.86, 0.72, 0.58].map(k => `<circle cx="${cx}" cy="${cy}" r="${f1(r * k)}" fill="none" stroke="#2a2436"/>`).join("") +
+      `<circle cx="${cx}" cy="${cy}" r="${f1(r * 0.34)}" fill="${sides % 2 ? "#e8899a" : "#f2a65a"}"/>` +
+      `<circle cx="${f1(cx + r * 0.21)}" cy="${cy}" r="1.4" fill="#3a2a1a"/></g>` +
+      `<circle cx="${cx}" cy="${cy}" r="1" fill="#e8e0d0"/>` +
+      `<circle cx="${px}" cy="${py}" r="3" fill="#c9c2b6" stroke="#6e6a64"/>` +
+      (lift ? `<line x1="${px}" y1="${py}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#2a2436" stroke-width="1.5"/>` : "") +
+      `<line x1="${px}" y1="${py}" x2="${f1(nx - lift)}" y2="${f1(ny - lift)}" stroke="#d8d2c6" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<rect x="${f1(nx - lift - 1.6)}" y="${f1(ny - lift - 1.6)}" width="3.2" height="3.2" fill="#e8e0d0"/>`;
+  }
+
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
   function bulletHole() {
     const btn = $("playBtn");
@@ -501,10 +535,13 @@
     piecesKey = "-";
     renderPieces([]);
     applyLamp();
-    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
     dandelionKey = "";
     hgKey = "";
     hgRounds = null;
+    ttKey = "";
+    ttSides = null;
+    document.body.classList.remove("raining");
     buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
@@ -614,6 +651,7 @@
       renderPieces(st === "stopped" ? [] : Array(Math.min(12, Math.floor(ms / HG_ROUND))).fill("d"));
       renderHourglass(st === "stopped" ? 0 : ms, st === "playing");
     }
+    if (skin() === "lofi") renderTurntable(st === "stopped" ? 0 : ms, st);
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
