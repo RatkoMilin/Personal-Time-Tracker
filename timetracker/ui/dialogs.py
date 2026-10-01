@@ -301,3 +301,96 @@ class MiniBar(tk.Toplevel):
             c.create_rectangle(s * 0.6, 1, s - 1, s - 1, fill=T.lcd_on, width=0)
         else:
             c.create_rectangle(1, 1, s - 1, s - 1, fill=T.lcd_dim, width=0)
+
+
+def parse_words(text: str) -> list[str]:
+    """One word, site or program per line (commas work too); blank lines and repeats dropped."""
+    out: list[str] = []
+    for line in text.replace(",", "\n").splitlines():
+        word = line.strip()
+        if word and word.lower() not in (w.lower() for w in out):
+            out.append(word)
+    return out
+
+
+class SitesDialog(_Window):
+    """Menu → Produktivni sajtovi i programi: the user's own words on top of the built-in rules.
+
+    Today's "other" programs are listed so one click moves a program into a list.
+    """
+
+    def __init__(self, parent, productive: list[str], distracting: list[str], others: list[str], on_save):
+        super().__init__(parent, "Produktivni sajtovi i programi")
+        T = skin.T
+        self.on_save = on_save
+        b = self.body
+        self.texts: dict[str, tk.Text] = {}
+        for col, (key, title, words, builtin) in enumerate((
+                ("productive", "Produktivno", productive, "ugrađeno: Google Docs, Word, Excel, Notion..."),
+                ("distracting", "Ometanje", distracting, "ugrađeno: YouTube, Facebook, Instagram, prodavnice..."))):
+            skin.label(b, title, fg=T.accent).grid(row=0, column=col, sticky="w", padx=(0 if col == 0 else 8, 0))
+            panel = skin.Panel(b, pad=2)
+            panel.grid(row=1, column=col, sticky="nsew", padx=(0 if col == 0 else 8, 0), pady=(2, 0))
+            text = tk.Text(panel.inner, width=22, height=8, bg=T.lcd_bg, fg=T.lcd_text, insertbackground=T.lcd_text,
+                           selectbackground=T.sel_bg, selectforeground=T.sel_fg, relief="flat", bd=0,
+                           highlightthickness=0, font=T.font("mono", 10), wrap="none", undo=True)
+            text.insert("1.0", "\n".join(words))
+            text.pack(fill="both", padx=2, pady=2)
+            self.texts[key] = text
+            tk.Label(b, text=builtin, bg=b["bg"], fg=T.text, font=T.font("sans", 8), anchor="w").grid(
+                row=2, column=col, sticky="w", padx=(0 if col == 0 else 8, 0))
+        tk.Label(b, text="Po jedna reč u redu: deo naslova ili sajt (figma, canva.com) ili program (blender.exe).",
+                 bg=b["bg"], fg=T.text, font=T.font("sans", 8), anchor="w").grid(row=3, column=0, columnspan=2,
+                                                                                  sticky="w", pady=(6, 0))
+        self.others = [o for o in others if o]
+        if self.others:
+            skin.label(b, "Danas u ostalo", fg=T.accent).grid(row=4, column=0, columnspan=2, sticky="w",
+                                                              pady=(8, 0))
+            row = tk.Frame(b, bg=b["bg"])
+            row.grid(row=5, column=0, columnspan=2, sticky="we", pady=(2, 0))
+            panel = skin.Panel(row, pad=2)
+            panel.pack(side="left", fill="x", expand=True)
+            self.other_list = tk.Listbox(panel.inner, height=min(5, len(self.others)), bg=T.lcd_bg, fg=T.lcd_text,
+                                         selectbackground=T.sel_bg, selectforeground=T.sel_fg,
+                                         font=T.font("mono", 9), relief="flat", highlightthickness=0, bd=0,
+                                         activestyle="none", exportselection=False)
+            for name in self.others[:20]:
+                self.other_list.insert("end", name)
+            self.other_list.pack(fill="both")
+            moves = tk.Frame(row, bg=b["bg"])
+            moves.pack(side="left", padx=(8, 0))
+            skin.SkinButton(moves, lambda: self.move("productive"), text="→ Produktivno").pack(fill="x")
+            skin.SkinButton(moves, lambda: self.move("distracting"), text="→ Ometanje").pack(fill="x", pady=(4, 0))
+        bar = tk.Frame(b, bg=b["bg"])
+        bar.grid(row=6, column=0, columnspan=2, sticky="e", pady=(10, 0))
+        skin.SkinButton(bar, self.save, text="Sačuvaj", width=50).pack(side="left", padx=(0, 4))
+        skin.SkinButton(bar, self.destroy, text="Otkaži", width=50).pack(side="left")
+        self.bind("<Escape>", lambda e: self.destroy())
+        _place(self, parent)
+        self.deiconify()
+        self.texts["productive"].focus_set()
+
+    def words(self, key: str) -> list[str]:
+        return parse_words(self.texts[key].get("1.0", "end"))
+
+    def move(self, key: str) -> None:
+        """Put the selected program from today's "other" list into a list (as name.exe)."""
+        sel = self.other_list.curselection()
+        if not sel:
+            return
+        name = self.other_list.get(sel[0])
+        word = name if name.lower().endswith(".exe") else name + ".exe"
+        for k, text in self.texts.items():  # a program belongs to one list only
+            kept = [w for w in parse_words(text.get("1.0", "end")) if w.lower() != word.lower()]
+            if k == key:
+                kept.append(word)
+            text.delete("1.0", "end")
+            text.insert("1.0", "\n".join(kept))
+        self.other_list.delete(sel[0])
+
+    def save(self) -> None:
+        productive = self.words("productive")
+        lowered = {w.lower() for w in productive}
+        distracting = [w for w in self.words("distracting") if w.lower() not in lowered]
+        self.destroy()
+        self.on_save(productive, distracting)

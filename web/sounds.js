@@ -1,5 +1,6 @@
 /* Sound effects per skin, synthesized like the desktop app (timetracker/sounds.py).
-   matrix: digital blips, pastel: bubbles, wood: knocks on wood, cyber: sword swooshes and rings. */
+   matrix: digital blips, pastel: bubbles, wood: knocks on wood, cyber: sword swooshes and rings,
+   cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop". */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -103,7 +104,29 @@
     ? [[0, 520 * high], [0.3, 880 * high], [1, 470 * high]] : [[0, 560 * high], [0.35, 900 * high], [1, 640 * high]], dur);
   const pluck = (f, dur = 0.25) => add(tone(f, f, dur, "sine", 0.004, 0.07), tone(f * 2, f * 2, dur, "sine", 0.004, 0.03, 0.35));
 
+  const beep = (f, d = 0.09) => tone(f, f, d, "sine", 0.004, null, 0.8);
+  const plop = (p = 1, amp = 1, seed = 21) => {
+    const bloop = new Float32Array(Math.floor(0.012 * RATE) + Math.floor(0.148 * RATE));
+    bloop.set(tone(260 * p, 900 * p, 0.148, "sine", 0.006, 0.035), Math.floor(0.012 * RATE));
+    return add(tone(140 * p, 90 * p, 0.16, "sine", 0.003, 0.025, 0.7), bloop,
+               noise(0.16, { tau: 0.015, amp: 0.12, seed, lowpass: [0.25, 0.08] })).map(v => v * amp);
+  };
+
   const KITS = {
+    egg: {
+      start: () => [[0, plop(1)], [0.14, plop(1.9, 0.35, 22)]],
+      pause: () => [[0, plop(1.3, 0.8)]],
+      stop: () => [[0, plop(0.75)]],
+      click: () => [[0, tone(900, 1900, 0.04, "sine", 0.003, 0.012, 0.6)]],
+      alert: () => [[0, plop(1)], [0.22, plop(1.25, 1, 23)], [0.44, plop(1.5, 1, 24)]],
+    },
+    mondrian: {
+      start: () => [[0, beep(1047)], [0.1, beep(1568)]],
+      pause: () => [[0, beep(1319, 0.07)]],
+      stop: () => [[0, beep(1568)], [0.1, beep(1047)]],
+      click: () => [[0, beep(1760, 0.025)]],
+      alert: () => [[0, beep(1568, 0.12)], [0.2, beep(1568, 0.12)], [0.4, beep(1568, 0.12)]],
+    },
     cat: {
       start: () => [[0, glide([[0, 380], [1, 720]], 0.16, 1, 28)], [0.15, meow(1.1, 0.24)]],
       pause: () => [[0, meow(1.3, 0.2)]],

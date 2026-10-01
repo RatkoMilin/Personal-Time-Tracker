@@ -185,6 +185,11 @@ class Database:
             self._exec("DELETE FROM activity WHERE start_ts >= ?", (ts,))
             self._exec("UPDATE activity SET end_ts = ? WHERE end_ts > ?", (ts, ts))
 
+    def recategorize_activity(self, label: str, category: str, since: float) -> None:
+        """Move activity of one program (by its label, any case) since a moment into another category."""
+        self._exec("UPDATE activity SET category = ? WHERE lower(label) = lower(?) AND end_ts > ?",
+                   (category, label, since))
+
     def activity_between(self, start: float, end: float) -> list[tuple[float, float, str, str]]:
         rows = self._query("SELECT start_ts, end_ts, category, label FROM activity "
                            "WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts", (end, start))

@@ -145,9 +145,12 @@ def test_every_skin_builds_and_ticks(app):
 
     app.task_var.set("skin test")
     app.play()
-    for key in skin.THEMES:
+    for key, theme in skin.THEMES.items():
+        if theme.hidden:
+            continue
         app.set_skin(key)
-        assert skin.T.key == key and app.settings["skin"] == key
+        # lamp skins show their lit variant while the timer runs
+        assert skin.T.key == (theme.lit_variant or key) and app.settings["skin"] == key
         for _ in range(2):
             app._tick()
         app.update()
@@ -226,3 +229,173 @@ def test_minimize_to_mini_bar_and_restore(app):
     app.update()
     assert app.winfo_viewable() and not app.mini.winfo_viewable()
     app.stop()
+
+
+def test_skin_menu_hides_lamp_variants(app):
+    from timetracker.ui import skin
+
+    menu = app.menu.nametowidget(app.menu.entrycget("Skin", "menu"))
+    names = [menu.entrycget(i, "label") for i in range(menu.index("end") + 1)]
+    assert names == [t.name for t in skin.THEMES.values() if not t.hidden]
+    assert all("(" not in n for n in names)
+
+
+def test_egg_lamp_is_lit_only_while_working(app):
+    from timetracker.ui import skin
+
+    app.set_skin("egg")
+    assert skin.T.key == "egg"
+    app.task_var.set("Lampa")
+    app.play()
+    assert skin.T.key == "egg_lit" and app.settings["skin"] == "egg"
+    app.pause()
+    assert skin.T.key == "egg"
+    app.pause()  # resume
+    assert skin.T.key == "egg_lit"
+    app.stop()
+    assert skin.T.key == "egg"
+    app.set_skin("matrix")
+
+
+def test_matrix_digits_jumble_on_play_and_pause(app):
+    from timetracker.ui import skin
+
+    app.set_skin("matrix")
+    app.task_var.set("Matrix")
+    app.play()
+    assert app._scramble_left > 0
+    deadline = time.time() + 3
+    while app._scramble_left > 0 and time.time() < deadline:
+        app.update()
+        time.sleep(0.02)
+    assert app._scramble_left == 0
+    app.pause()
+    assert app._scramble_left > 0
+    app.stop()
+    assert skin.T.scramble
+
+
+def test_setsuna_oranges_grow_with_running_time(app):
+    from timetracker.ui import skin
+
+    assert skin.orange_pieces(14 * 60) == []
+    assert skin.orange_pieces(15 * 60) == ["q"]
+    assert skin.orange_pieces(30 * 60) == ["h"]
+    assert skin.orange_pieces(45 * 60) == ["h", "q"]
+    assert skin.orange_pieces(60 * 60) == ["w"]
+    assert skin.orange_pieces(2 * 3600 + 50 * 60) == ["w", "w", "h", "q"]
+    app.set_skin("setsuna")
+    app.task_var.set("Setsuna")
+    app.play()  # confetti: an overlay window on Windows, nothing where windows cannot be see-through
+    entry = app.db.running_entry()
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 75 * 60, None)
+    app._update_display()
+    assert app.titlebar.pieces == ["w", "q"]
+    app.update()
+    app.stop()
+    assert app.titlebar.pieces == []
+    app.set_skin("matrix")
+
+
+def test_effect_painters_draw_frames(app):
+    from timetracker.ui import skin
+
+    c = tk.Canvas(app, width=300, height=200)
+    for painter, frames in ((skin.confetti_painter(("#DB4C01", "#111111"), seed=1), 60),
+                            (skin.bubble_painter(("#8fb8ec",), seed=1, frames=75), 75)):
+        drawn = 0
+        for i in range(frames):
+            c.delete("all")
+            painter(c, i, 300, 200)
+            drawn += len(c.find_all())
+        assert drawn > 0
+    c.destroy()
+    app.set_skin("pastel")
+    app.toggle_playlist()
+    app.toggle_playlist()  # opening the playlist bubbles
+    app.update()
+    app.set_skin("matrix")
+
+
+def test_walnut_flowers_stay_for_the_day(app):
+    from datetime import timedelta
+
+    app.set_skin("wood")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    app.db.add_activity("productive", "Word", time.time() - 600, time.time() - 1)
+    app.refresh()
+    app.update()
+    meter = app.meter
+    flowers = sorted({t for i in meter.find_all() for t in meter.gettags(i) if t.startswith("flower")})
+    assert flowers, "a fully productive branch has flowers"
+    x0, y0, x1, y1 = meter.bbox(flowers[1])
+    meter._clicked(type("E", (), {"x": (x0 + x1) / 2, "y": (y0 + y1) / 2})())
+    index = int(flowers[1][6:])
+    assert app.settings["walnuts"] == [index] and app.settings["walnut_day"] == date.today().isoformat()
+    assert f"flower{index}" not in {t for i in meter.find_all() for t in meter.gettags(i)}
+    app.set_skin("matrix")
+    app.set_skin("wood")
+    assert app.meter.walnuts == {index}
+    app.settings.update({"walnut_day": (date.today() - timedelta(days=1)).isoformat()})
+    app._update_meter()
+    assert app.meter.walnuts == set()
+    app.db._exec("DELETE FROM activity")
+    app.set_skin("matrix")
+
+
+def test_cat_on_the_meter_at_80_percent(app):
+    app.set_skin("cat")
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    app.update()
+    meter = app.meter
+    meter.set(70, 0, 30, 100)
+    assert meter.cat_box is None
+    meter.set(85, 10, 5, 100)
+    assert meter.cat_box is not None
+    kinds = set()
+    for _ in range(3):
+        kinds.add(meter.animate_cat())
+        meter.animating = False
+    assert kinds == {"tail", "blink", "paw"}
+    x0, y0, x1, y1 = meter.cat_box
+    meter.animating = False
+    meter._clicked(type("E", (), {"x": (x0 + x1) / 2, "y": (y0 + y1) / 2})())
+    assert meter.animating
+    app.update()
+    app.set_skin("matrix")
+
+
+def test_mondrian_colors(app):
+    from timetracker.ui import skin
+
+    app.set_skin("mondrian")
+    assert app.listbox.cget("bg") == skin.MONDRIAN_RED
+    assert app.task_entry.cget("bg") == skin.MONDRIAN_BLUE
+    app._tick()
+    app.update()
+    app.set_skin("matrix")
+
+
+def test_productive_sites_dialog(app):
+    from timetracker import productivity
+    from timetracker.ui import dialogs
+
+    assert dialogs.parse_words(" figma \n\ncanva.com, Figma\nblender.exe") == ["figma", "canva.com", "blender.exe"]
+    app.db.add_activity("neutral", "Krita", time.time() - 300, time.time() - 1)
+    app.edit_sites()
+    dlg = [w for w in app.winfo_children() if isinstance(w, dialogs.SitesDialog)][-1]
+    assert "Krita" in dlg.others
+    dlg.other_list.selection_set(dlg.others.index("Krita"))
+    dlg.move("productive")
+    dlg.texts["distracting"].insert("end", "\n9gag")
+    dlg.save()
+    assert app.settings["extra_productive"] == ["Krita.exe"]
+    assert app.settings["extra_distracting"] == ["9gag"]
+    assert app.tracker.classifier.classify("krita.exe", "Untitled")[0] == productivity.PRODUCTIVE
+    assert app.tracker.classifier.classify("chrome.exe", "funny - 9GAG")[0] == productivity.DISTRACTING
+    summary = productivity.summarize(app.db, *timeutil.day_bounds(date.today()))
+    assert summary.seconds[productivity.NEUTRAL] == 0 and summary.seconds[productivity.PRODUCTIVE] > 0
+    app.db._exec("DELETE FROM activity")
+    app.settings.update({"extra_productive": [], "extra_distracting": []})

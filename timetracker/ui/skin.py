@@ -64,8 +64,22 @@ class Theme:
     pl_pattern: str = ""
     clock_deco: str = ""
     leaf: str = "#3f8f2f"
-    # Productivity meter look: "" (bar), "sword" (blade lights up neon), "flowers" (branch blossoms).
+    # Productivity meter look: "" (bar), "sword" (katana glows neon), "flowers" (branch blossoms, flowers can be
+    # turned into walnuts), "lanterns" (lit paper lanterns), "cat" (bar with a cat at 80%+), "mondrian", "glow".
     meter: str = ""
+    meter_fill: str = ""
+    # Per-panel colors (default: the LCD colors) and a thick black frame width ("block" shape).
+    list_bg: str = ""
+    list_fg: str = ""
+    task_bg: str = ""
+    task_fg: str = ""
+    border: int = 0
+    # Effects: digits scramble on play/pause, confetti on play; lamp themes switch palettes while playing.
+    scramble: bool = False
+    confetti: bool = False
+    lit_variant: str = ""
+    dark_variant: str = ""
+    hidden: bool = False  # not offered in the skin menu (e.g. the lit half of a lamp theme)
 
     def font(self, kind: str = "sans", size: int = 10, weight: str = "normal") -> tuple:
         families = self.mono if kind == "mono" else self.sans
@@ -80,15 +94,15 @@ class Theme:
 
 THEMES: dict[str, Theme] = {t.key: t for t in (
     Theme(
-        key="matrix", name="Matrix (digitalni)",
+        key="matrix", name="Matrix",
         body="#2b2b3a", body_light="#55556b", body_dark="#121219", text="#d8d8e4", accent="#c9a94b",
         lcd_bg="#000000", lcd_on="#00e800", lcd_off="#0a260a", lcd_dim="#1c8a1c", lcd_text="#00e800",
         btn_face="#b4b4c2", btn_light="#ececf4", btn_dark="#56566a", btn_glyph="#1c1c26",
         sel_bg="#0000c6", sel_fg="#ffffff",
-        mono=("Consolas", "DejaVu Sans Mono"), sans=("Tahoma", "DejaVu Sans"),
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Tahoma", "DejaVu Sans"), scramble=True,
     ),
     Theme(
-        key="pastel", name="Pastel (roze-plavi)",
+        key="pastel", name="Pastel",
         body="#f7dbe7", body_light="#fff0f6", body_dark="#e6b8cb", text="#6b5b8c", accent="#8fb8ec",
         lcd_bg="#e6f1ff", lcd_on="#e0679b", lcd_off="#d3e3f7", lcd_dim="#9bb3d6", lcd_text="#5e6fa3",
         btn_face="#bfd9f7", btn_light="#e8f2ff", btn_dark="#95b6e0", btn_glyph="#5e6fa3",
@@ -99,7 +113,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         pl_pattern="bubbles",
     ),
     Theme(
-        key="wood", name="Orah (analogni)",
+        key="wood", name="Orah",
         body="#5b3b27", body_light="#80583a", body_dark="#341f12", text="#f0e2c8", accent="#c9a15f",
         lcd_bg="#16392a", lcd_on="#efe3c8", lcd_off="#1f4634", lcd_dim="#8fae98", lcd_text="#e6dcc0",
         btn_face="#d8c7a0", btn_light="#efe3c8", btn_dark="#9c8456", btn_glyph="#341f12",
@@ -111,7 +125,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         dial_face="#efe3c8", dial_hand="#16392a", dial_second="#a63d2a",
     ),
     Theme(
-        key="cyber", name="Silver samuraj",
+        key="cyber", name="Samuraj",
         body="#3b434a", body_light="#a9b3ba", body_dark="#1b2024", text="#d5dde2", accent="#5fd8ff",
         lcd_bg="#0b1014", lcd_on="#8fe9ff", lcd_off="#132028", lcd_dim="#5b6b75", lcd_text="#c9d4da",
         btn_face="#8e9aa3", btn_light="#d6dee3", btn_dark="#4b555c", btn_glyph="#0b1014",
@@ -128,10 +142,10 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
         shape="round", radius=12, panel_outline="#1f1e22", title_style="ears", segments="round",
-        button="paw", pl_pattern="spots",
+        button="paw", pl_pattern="spots", meter="cat", meter_fill="#3b3a3e",
     ),
     Theme(
-        key="setsuna", name="Setsuna Orange",
+        key="setsuna", name="Setsuna",
         body="#ffffff", body_light="#ffffff", body_dark="#e6e6e6", text="#111111", accent="#E94C53",
         lcd_bg="#111111", lcd_on="#DB4C01", lcd_off="#2b1b12", lcd_dim="#8e5a3c", lcd_text="#ffffff",
         btn_face="#DB4C01", btn_light="#f07a3e", btn_dark="#E94C53", btn_glyph="#ffffff",
@@ -139,9 +153,50 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
         shape="round", radius=14, panel_outline="#111111", title_style="oranges", segments="round",
-        button="circle", pl_pattern="leaves", clock_deco="oranges",
+        button="circle", pl_pattern="leaves", clock_deco="oranges", meter="lanterns", confetti=True,
+    ),
+    Theme(
+        key="mondrian", name="Mondrian",
+        body="#ffffff", body_light="#ffffff", body_dark="#111111", text="#111111", accent="#dd0100",
+        lcd_bg="#ffffff", lcd_on="#111111", lcd_off="#ececec", lcd_dim="#9a9a9a", lcd_text="#111111",
+        btn_face="#ffffff", btn_light="#ffffff", btn_dark="#111111", btn_glyph="#111111",
+        sel_bg="#fac901", sel_fg="#111111",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Arial", "DejaVu Sans"),
+        label_size=8, label_weight="bold", upper=True,
+        shape="block", border=4, title_style="mondrian", button="block", meter="mondrian", meter_fill="#fac901",
+        list_bg="#dd0100", list_fg="#ffffff", task_bg="#225095", task_fg="#ffffff",
+    ),
+    Theme(
+        key="egg", name="Jaje",
+        body="#3a3a3a", body_light="#4c4c4c", body_dark="#222222", text="#9a9a9a", accent="#6a6a6a",
+        lcd_bg="#2b2b2b", lcd_on="#8a8a8a", lcd_off="#333333", lcd_dim="#5a5a5a", lcd_text="#9a9a9a",
+        btn_face="#4a4a4a", btn_light="#5a5a5a", btn_dark="#2a2a2a", btn_glyph="#a0a0a0",
+        sel_bg="#555555", sel_fg="#dddddd",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=20, panel_outline="#222222", title_style="egg", segments="round", button="circle",
+        meter="glow", meter_fill="#6a6a6a", lit_variant="egg_lit",
+    ),
+    Theme(
+        key="egg_lit", name="Jaje", hidden=True,
+        body="#fbf6ea", body_light="#ffffff", body_dark="#e6d9bb", text="#6b5a3a", accent="#f3c76b",
+        lcd_bg="#fffaf0", lcd_on="#c98a1a", lcd_off="#f3ead6", lcd_dim="#d6c49a", lcd_text="#6b5a3a",
+        btn_face="#f4ead4", btn_light="#ffffff", btn_dark="#e2cfa4", btn_glyph="#8a6a2a",
+        sel_bg="#f3c76b", sel_fg="#3a2a0a",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=20, panel_outline="#e6d9bb", title_style="egg", segments="round", button="circle",
+        meter="glow", meter_fill="#ffd36b", dark_variant="egg",
     ),
 )}
+
+MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
+
+
+def block_colors(role: str | None) -> tuple[str, str]:
+    """(fill, glyph) of a Mondrian button by its role."""
+    return {"play": (MONDRIAN_BLUE, "#ffffff"), "pause": (MONDRIAN_YELLOW, "#111111"),
+            "stop": (MONDRIAN_RED, "#ffffff")}.get(role or "", ("#ffffff", "#111111"))
 
 T: Theme = THEMES["matrix"]
 
@@ -203,6 +258,35 @@ def draw_orange(c: tk.Canvas, cx: float, cy: float, r: float) -> None:
     draw_leaf(c, cx + r * 0.55, cy - r * 1.1, r * 0.9, -25)
 
 
+def draw_orange_piece(c: tk.Canvas, cx: float, cy: float, r: float, kind: str) -> None:
+    """A whole orange ("w"), a half ("h") or a quarter ("q") showing its juicy cut face."""
+    if kind == "w":
+        draw_orange(c, cx, cy, r)
+        return
+    start, extent = (0, 180) if kind == "h" else (45, 90)
+    top = cy + (r * 0.45 if kind == "h" else r * 0.35)  # sit the cut piece on the same baseline
+    box = (cx - r, top - r, cx + r, top + r)
+    c.create_arc(*box, start=start, extent=extent, style="pieslice", fill="#DB4C01", outline="")
+    inner = (cx - r * 0.82, top - r * 0.82, cx + r * 0.82, top + r * 0.82)
+    c.create_arc(*inner, start=start, extent=extent, style="pieslice", fill="#f7a35c", outline="")
+    for k in range(1, 6 if kind == "h" else 3):
+        a = math.radians(start + extent * k / (6 if kind == "h" else 3))
+        c.create_line(cx, top, cx + math.cos(a) * r * 0.8, top - math.sin(a) * r * 0.8, fill="#fbd3a8", width=1)
+
+
+def draw_egg(c: tk.Canvas, cx: float, cy: float, h: float, lit: bool) -> None:
+    """Egg-shaped lamp; glowing warm when lit."""
+    w = h * 0.78
+    if lit:
+        for k, color in enumerate(("#fff3d6", "#ffe8b0", "#ffd98a")):
+            g = (3 - k) * h * 0.12
+            c.create_oval(cx - w / 2 - g, cy - h / 2 - g, cx + w / 2 + g, cy + h / 2 + g, fill=color, outline="")
+        c.create_oval(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, fill="#fffaf0", outline="#f3c76b")
+    else:
+        c.create_oval(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, fill="#5a5a5a", outline="#2a2a2a")
+        c.create_oval(cx - w * 0.25, cy - h * 0.32, cx - w * 0.05, cy - h * 0.12, fill="#6a6a6a", outline="")
+
+
 def draw_leaf(c: tk.Canvas, x: float, y: float, size: float, angle: float, color: str = "#3f8f2f") -> None:
     """A pointed leaf centered at (x, y), rotated by angle degrees, with a lighter middle vein."""
     a = math.radians(angle)
@@ -241,13 +325,15 @@ class Panel(tk.Frame):
     ("spots" or "leaves") a wider margin around the content is decorated.
     """
 
-    def __init__(self, master, pad: float = 4, pattern: str = ""):
+    def __init__(self, master, pad: float = 4, pattern: str = "", bg: str | None = None):
         super().__init__(master, bg=master["bg"])
         self.pattern = pattern
-        pad = px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + (px(9) if pattern else 0)
+        self.bg = bg or T.lcd_bg
+        pad = (px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + (px(9) if pattern else 0)
+               + (px(T.border) if T.shape == "block" else 0))
         self.canvas = tk.Canvas(self, bg=master["bg"], highlightthickness=0, bd=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self.inner = tk.Frame(self, bg=T.lcd_bg)  # created after the canvas, so it stacks above it
+        self.inner = tk.Frame(self, bg=self.bg)  # created after the canvas, so it stacks above it
         self.inner.pack(fill="both", expand=True, padx=pad, pady=pad)
         self.canvas.bind("<Configure>", self._redraw)
 
@@ -256,11 +342,14 @@ class Panel(tk.Frame):
         w, h = c.winfo_width(), c.winfo_height()
         c.delete("all")
         if T.shape == "round":
-            round_rect(c, 0, 0, w - 1, h - 1, px(T.radius), fill=T.lcd_bg, outline=T.panel_outline)
+            round_rect(c, 0, 0, w - 1, h - 1, px(T.radius), fill=self.bg, outline=T.panel_outline)
         elif T.shape == "chamfer":
-            chamfer_rect(c, 0, 0, w - 1, h - 1, px(7), fill=T.lcd_bg, outline=T.panel_outline)
+            chamfer_rect(c, 0, 0, w - 1, h - 1, px(7), fill=self.bg, outline=T.panel_outline)
+        elif T.shape == "block":  # Mondrian: a flat color field inside a thick black line
+            b = px(T.border)
+            c.create_rectangle(b / 2, b / 2, w - b / 2, h - b / 2, fill=self.bg, outline="#111111", width=b)
         else:
-            c.create_rectangle(0, 0, w - 1, h - 1, fill=T.lcd_bg, width=0)
+            c.create_rectangle(0, 0, w - 1, h - 1, fill=self.bg, width=0)
             c.create_line(0, h - 1, 0, 0, w - 1, 0, fill=T.body_dark)
             c.create_line(1, h - 1, w - 1, h - 1, w - 1, 1, fill=T.body_light)
         if self.pattern and w > 40 and h > 40:
@@ -296,7 +385,7 @@ class Panel(tk.Frame):
                 c.create_oval(x - r, y - r, x + r, y + r, outline=T.body_light, width=1)
 
     def bubble_burst(self, duration_ms: int = 2600) -> None:
-        """Faint bubbles rising along the edges (pastel skin, when the playlist opens)."""
+        """Bubbles rising along the edges (pastel skin, when the playlist opens, where no overlay is possible)."""
         c = self.canvas
         w, h = c.winfo_width(), c.winfo_height()
         if w < 40 or h < 40:
@@ -304,13 +393,16 @@ class Panel(tk.Frame):
         rnd = random.Random()
         m = px(10)
         bubbles = []
-        for _ in range(14):
+        for _ in range(24):
             x = rnd.choice((rnd.uniform(m * 0.2, m * 0.8), w - rnd.uniform(m * 0.2, m * 0.8),
                             rnd.uniform(m, w - m)))
-            r = rnd.uniform(px(2), px(5))
+            r = rnd.uniform(px(3), px(6))
             y = h + rnd.uniform(0, h * 0.6)
-            item = c.create_oval(x - r, y - r, x + r, y + r, outline=T.body_light, width=1, tags="burst")
-            bubbles.append((item, rnd.uniform(1.5, 3.5) * S, rnd.uniform(0, 6.28)))
+            color = rnd.choice((T.accent, T.lcd_on, T.btn_dark))
+            item = c.create_oval(x - r, y - r, x + r, y + r, outline=color, width=2, tags="burst")
+            shine = c.create_oval(x - r * 0.5, y - r * 0.6, x - r * 0.1, y - r * 0.2, fill="#ffffff", outline="",
+                                  tags="burst")
+            bubbles.append(((item, shine), rnd.uniform(1.5, 3.5) * S, rnd.uniform(0, 6.28)))
         steps = max(1, duration_ms // 40)
 
         def step(i=0):
@@ -319,18 +411,154 @@ class Panel(tk.Frame):
             if i >= steps:
                 c.delete("burst")
                 return
-            for item, speed, phase in bubbles:
-                c.move(item, math.sin(i / 5 + phase) * 0.6, -speed)
+            for items, speed, phase in bubbles:
+                for item in items:
+                    c.move(item, math.sin(i / 5 + phase) * 0.6, -speed)
             c.after(40, step, i + 1)
 
         step()
 
 
-def field(master, textvariable: tk.StringVar, width: int) -> tuple[Panel, tk.Entry]:
-    panel = Panel(master, pad=1)
-    entry = tk.Entry(panel.inner, textvariable=textvariable, width=width, bg=T.lcd_bg, fg=T.lcd_text,
-                     insertbackground=T.lcd_text, selectbackground=T.sel_bg, selectforeground=T.sel_fg,
-                     disabledbackground=T.lcd_bg, relief="flat", bd=0, highlightthickness=0,
+# ------------------------------------------------------------ overlays
+
+TRANSPARENT_KEY = "#010203"  # color keyed out of overlay windows
+
+
+def overlay(widget: tk.Misc, frames: int, draw, interval: int = 33) -> tk.Toplevel | None:
+    """Run a short animation in a borderless see-through window laid over `widget`.
+
+    Only Windows has color-keyed windows (and there clicks go through the transparent part); elsewhere
+    nothing is shown and None is returned. draw(canvas, frame, width, height) paints one frame.
+    """
+    try:
+        widget.update_idletasks()
+        w, h = widget.winfo_width(), widget.winfo_height()
+        if not widget.winfo_viewable() or w < 20 or h < 20:
+            return None
+        top = tk.Toplevel(widget)
+    except tk.TclError:
+        return None
+    top.withdraw()
+    top.overrideredirect(True)
+    try:
+        top.attributes("-transparentcolor", TRANSPARENT_KEY)
+    except tk.TclError:
+        top.destroy()
+        return None
+    top.attributes("-topmost", True)
+    try:
+        top.attributes("-disabled", True)  # never takes input
+    except tk.TclError:
+        pass
+    top.geometry(f"{w}x{h}+{widget.winfo_rootx()}+{widget.winfo_rooty()}")
+    c = tk.Canvas(top, width=w, height=h, bg=TRANSPARENT_KEY, highlightthickness=0, bd=0)
+    c.pack()
+    focus = widget.focus_get()
+    top.deiconify()
+    if focus is not None:  # showing a window activates it: give the focus back (e.g. to the task field)
+        focus.focus_force()
+
+    def step(i=0):
+        if not top.winfo_exists():
+            return
+        if i >= frames:
+            top.destroy()
+            return
+        c.delete("all")
+        draw(c, i, w, h)
+        top.after(interval, step, i + 1)
+
+    step()
+    return top
+
+
+def confetti_painter(colors: tuple[str, ...], count: int = 80, seed: int | None = None):
+    """Paper confetti falling, fluttering and spinning over the whole window."""
+    rnd = random.Random(seed)
+    pieces = [dict(x=rnd.uniform(0, 1), y=rnd.uniform(-0.5, 0.0), vy=rnd.uniform(0.012, 0.024),
+                   drift=rnd.uniform(4, 14), phase=rnd.uniform(0, 6.28), spin=rnd.uniform(-0.3, 0.3),
+                   size=rnd.uniform(3, 6), color=rnd.choice(colors), round=rnd.random() < 0.25)
+              for _ in range(count)]
+
+    def draw(c: tk.Canvas, i: int, w: int, h: int) -> None:
+        for p in pieces:
+            y = (p["y"] + p["vy"] * i + 0.00012 * i * i) * h
+            if y < -px(10) or y > h + px(10):
+                continue
+            x = p["x"] * w + math.sin(i * 0.15 + p["phase"]) * px(p["drift"])
+            s = px(p["size"])
+            if p["round"]:
+                c.create_oval(x - s / 2, y - s / 2, x + s / 2, y + s / 2, fill=p["color"], outline="")
+                continue
+            a = p["phase"] + p["spin"] * i
+            flip = abs(math.cos(i * 0.2 + p["phase"]))  # turning over: the strip looks thinner
+            dx, dy = math.cos(a) * s, math.sin(a) * s
+            ex, ey = -math.sin(a) * s * 0.45 * flip, math.cos(a) * s * 0.45 * flip
+            c.create_polygon(x - dx - ex, y - dy - ey, x + dx - ex, y + dy - ey, x + dx + ex, y + dy + ey,
+                             x - dx + ex, y - dy + ey, fill=p["color"], outline="")
+
+    return draw
+
+
+def bubble_painter(colors: tuple[str, ...], count: int = 26, frames: int = 75, seed: int | None = None):
+    """Soap bubbles rising from the bottom with a wobble, each popping near its own height."""
+    rnd = random.Random(seed)
+    bubbles = [dict(x=rnd.uniform(0.05, 0.95), r=rnd.uniform(4, 12), start=rnd.randint(0, frames // 3),
+                    speed=rnd.uniform(0.012, 0.022), pop=rnd.uniform(0.05, 0.6), phase=rnd.uniform(0, 6.28),
+                    color=rnd.choice(colors)) for _ in range(count)]
+
+    def draw(c: tk.Canvas, i: int, w: int, h: int) -> None:
+        for b in bubbles:
+            t = i - b["start"]
+            if t < 0:
+                continue
+            r = px(b["r"])
+            y = h + r - t * b["speed"] * h
+            x = b["x"] * w + math.sin(t / 5 + b["phase"]) * px(3)
+            if y < b["pop"] * h:  # popped: a few short lines for a moment, then gone
+                if y > b["pop"] * h - b["speed"] * h * 3:
+                    for k in range(6):
+                        a = k * math.pi / 3
+                        c.create_line(x + math.cos(a) * r * 0.8, y + math.sin(a) * r * 0.8,
+                                      x + math.cos(a) * r * 1.3, y + math.sin(a) * r * 1.3, fill=b["color"],
+                                      width=2)
+                continue
+            c.create_oval(x - r, y - r, x + r, y + r, outline=b["color"], width=2)
+            c.create_arc(x - r * 0.7, y - r * 0.7, x + r * 0.7, y + r * 0.7, start=100, extent=70, style="arc",
+                         outline="#ffffff", width=2)
+
+    return draw
+
+
+def confetti(widget: tk.Misc) -> tk.Toplevel | None:
+    """Setsuna: confetti over the whole app (the playlist included) when the timer starts."""
+    return overlay(widget, 60, confetti_painter(("#DB4C01", "#E94C53", "#111111", "#f7a35c", "#3f8f2f", "#ffd27a")))
+
+
+def bubbles(widget: tk.Misc) -> tk.Toplevel | None:
+    """Pastel: bubbles floating up over the playlist when it opens."""
+    return overlay(widget, 75, bubble_painter((T.accent, T.lcd_on, "#b59ce0", "#7cc7e8")))
+
+
+def orange_pieces(seconds: float, limit: int = 20) -> list[str]:
+    """Setsuna title: a quarter orange after 15 running minutes, a half after 30, a whole one per hour."""
+    minutes = int(max(0.0, seconds) // 60)
+    pieces = ["w"] * (minutes // 60)
+    rest = minutes % 60
+    if rest >= 30:
+        pieces.append("h")
+    if rest % 30 >= 15:
+        pieces.append("q")
+    return pieces[:limit]
+
+
+def field(master, textvariable: tk.StringVar, width: int, bg: str | None = None,
+          fg: str | None = None) -> tuple[Panel, tk.Entry]:
+    bg, fg = bg or T.lcd_bg, fg or T.lcd_text
+    panel = Panel(master, pad=1, bg=bg)
+    entry = tk.Entry(panel.inner, textvariable=textvariable, width=width, bg=bg, fg=fg,
+                     insertbackground=fg, selectbackground=T.sel_bg, selectforeground=T.sel_fg,
+                     disabledbackground=bg, relief="flat", bd=0, highlightthickness=0,
                      font=T.font("mono", 10))
     entry.pack(fill="x", padx=px(2), pady=px(2))
     return panel, entry
@@ -557,14 +785,17 @@ class SkinButton(tk.Canvas):
                 w = max(w + px(6), h)
             else:
                 w = h = max(w, h) + px(6)
+        if self.kind == "block":
+            w, h = w + px(6), h + px(6)
         # The glyph sits on the paw's big pad, lower than the middle.
         self.glyph_cy = h * 0.68 if self.kind == "paw" else h / 2
+        self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else (T.btn_face, T.btn_glyph))
         super().__init__(master, width=w, height=h, bg=master["bg"], highlightthickness=0, cursor="hand2")
         self.command = command
         self.w, self.h = w, h
         self._draw_face(pressed=False)
         self.glyph_items = self._glyph(glyph) if glyph else [
-            self.create_text(w / 2, self.glyph_cy, text=text, fill=T.btn_glyph, font=font)]
+            self.create_text(w / 2, self.glyph_cy, text=text, fill=self.glyph_color, font=font)]
         self.bind("<ButtonPress-1>", self._press)
         self.bind("<ButtonRelease-1>", self._release)
         self.tip = Tooltip(self, tooltip) if tooltip else None
@@ -573,7 +804,11 @@ class SkinButton(tk.Canvas):
         self.delete("face")
         w, h = self.w, self.h
         fill = T.btn_dark if pressed else T.btn_face
-        if self.kind == "paw":
+        if self.kind == "block":  # Mondrian: primary color field in a thick black frame, black when pressed
+            b = max(2, px(T.border - 1))
+            self.create_rectangle(b / 2, b / 2, w - b / 2, h - b / 2, fill="#111111" if pressed else self.fill,
+                                  outline="#111111", width=b, tags="face")
+        elif self.kind == "paw":
             draw_paw(self, 1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
         elif self.kind == "circle":
             if w == h:
@@ -597,7 +832,7 @@ class SkinButton(tk.Canvas):
     def _glyph(self, glyph: str) -> list[int]:
         cx, cy = self.w / 2, self.glyph_cy
         s = min(self.w, self.h) * (0.2 if self.kind == "paw" else 0.28)
-        fill = T.btn_glyph
+        fill = self.glyph_color
         if glyph == "play":
             return [self.create_polygon(cx - s * 0.8, cy - s, cx - s * 0.8, cy + s, cx + s, cy, fill=fill)]
         if glyph == "pause":
@@ -628,32 +863,54 @@ class SkinButton(tk.Canvas):
             self._set_glyph_color(T.lcd_bg)
         elif self.kind == "round":
             self._set_glyph_color(T.btn_light)
+        elif self.kind == "block":
+            self._set_glyph_color("#ffffff")
         for item in self.glyph_items:
             self.move(item, 1, 1)
 
     def _release(self, event):
         self._draw_face(pressed=False)
-        self._set_glyph_color(T.btn_glyph)
+        self._set_glyph_color(self.glyph_color)
         for item in self.glyph_items:
             self.move(item, -1, -1)
         if 0 <= event.x < self.w and 0 <= event.y < self.h:
             self.command()
 
 
+def blend(c1: str, c2: str, t: float) -> str:
+    """Color between c1 (t=0) and c2 (t=1); Tk has no alpha, so glows are drawn as blended rings."""
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(a, b))
+
+
 class ProductivityMeter(tk.Canvas):
     """One-line productivity meter. Clicking it calls on_click.
 
-    Default: text and a three-part bar. "sword": a katana whose blade glows neon blue for the
-    productive share and stays plain silver for the rest. "flowers": a branch that blossoms for the
-    productive share and stays bare twigs for the rest.
+    Styles (theme `meter`): "" text and a three-part bar; "sword" a katana whose blade glows neon blue
+    for the productive share; "flowers" a branch that blossoms for the productive share, and a click on
+    a flower turns it into a walnut for the rest of the day (on_walnut stores it); "lanterns" a string of
+    paper lanterns that light up; "cat" a bar with a fat white cat lying on it at 80%+ (click: tail wag,
+    blink or paw swat, in random order); "mondrian" color fields in thick black lines; "glow" a lamp bar
+    whose light grows with the share.
     """
 
-    def __init__(self, master, on_click):
-        self.h = px(28) if T.meter else px(18)
+    CAT_AT = 0.8
+
+    def __init__(self, master, on_click, walnuts=(), on_walnut=None):
+        self.h = {"cat": px(62), "lanterns": px(34), "glow": px(32), "flowers": px(32)}.get(T.meter, px(28) if T.meter else px(18))
         super().__init__(master, height=self.h, bg=master["bg"], highlightthickness=0, cursor="hand2")
+        self.bg = master["bg"]
         self.shares: tuple[float, float, float] | None = None
+        self.walnuts: set[int] = set(walnuts)
+        self.on_click, self.on_walnut = on_click, on_walnut
+        self.cat_pose = {"tail": 0.0, "face": False, "eyes": 1.0, "paw": 0.0}
+        self.cat_box: tuple[float, float, float, float] | None = None
+        self.cat_queue: list[str] = []
+        self.animating = False
+        self.walnut_ok = True  # flowers turn into walnuts only on today's meter
         self.bind("<Configure>", lambda e: self.draw())
-        self.bind("<Button-1>", lambda e: on_click())
+        self.bind("<Button-1>", self._clicked)
 
     def set(self, productive: float, neutral: float, distracting: float, total: float) -> None:
         shares = (productive / total, neutral / total, distracting / total) if total else None
@@ -661,68 +918,134 @@ class ProductivityMeter(tk.Canvas):
             self.shares = shares
             self.draw()
 
+    # ------------------------------------------------------------ clicks
+
+    def _clicked(self, event) -> None:
+        for item in reversed(self.find_overlapping(event.x - 1, event.y - 1, event.x + 1, event.y + 1)):
+            for tag in self.gettags(item):
+                if tag.startswith("flower") and tag[6:].isdigit() and self.walnut_ok:
+                    self.make_walnut(int(tag[6:]))
+                    return
+        box = self.cat_box
+        if box and box[0] <= event.x <= box[2] and box[1] <= event.y <= box[3]:
+            self.animate_cat()
+            return
+        self.on_click()
+
+    def make_walnut(self, index: int) -> None:
+        if index in self.walnuts:
+            return
+        self.walnuts.add(index)
+        self.draw()
+        if self.on_walnut:
+            self.on_walnut(sorted(self.walnuts))
+
+    # ------------------------------------------------------------ drawing
+
     def draw(self) -> None:
         self.delete("all")
+        self.cat_box = None
         w, h = self.winfo_width(), self.h
         font = T.font("mono", 9, "bold" if T.upper else "normal")
         prod, neutral, dist = self.shares or (0.0, 0.0, 0.0)
         label = (T.tx(f"Produktivno {prod:.0%}") if T.meter else T.tx(f"Produktivno {prod:.0%} · ometanje {dist:.0%}")
                  ) if self.shares else T.tx("Produktivnost: još nema podataka" if not T.meter else "Bez podataka")
-        text = self.create_text(0, h / 2, anchor="w", fill=T.text, font=font, text=label)
+        text_y = px(40) if T.meter == "cat" else h / 2  # the cat sits on the bar, its tail hangs below
+        text = self.create_text(0, text_y, anchor="w", fill=T.text, font=font, text=label)
         x0, x1 = self.bbox(text)[2] + px(10), w - px(2)
         if x1 - x0 < px(40) or (not self.shares and not T.meter):
             return
-        if T.meter == "sword":
+        style = T.meter
+        if style == "sword":
             self._sword(x0, x1, h / 2, prod)
-        elif T.meter == "flowers":
+        elif style == "flowers":
             self._branch(x0, x1, h / 2, prod)
+        elif style == "lanterns":
+            self._lanterns(x0, x1, prod)
+        elif style == "mondrian":
+            self._mondrian(x0, x1, h / 2, prod, dist)
+        elif style == "glow":
+            self._glow(x0, x1, h / 2, prod)
         else:
-            y0, y1 = h / 2 - px(4), h / 2 + px(4)
-            self.create_rectangle(x0, y0, x1, y1, fill=T.lcd_bg, outline=T.body_dark)
-            x = x0
-            for share, color in ((prod, T.lcd_on), (neutral, T.lcd_dim), (dist, T.accent)):
-                seg = (x1 - x0) * share
-                if seg >= 1:
-                    self.create_rectangle(x, y0, x + seg, y1, fill=color, width=0)
-                x += seg
+            cy = text_y
+            self._bar(x0, x1, cy, prod, neutral, dist)
+            if style == "cat" and prod >= self.CAT_AT:
+                self._cat(x0 + (x1 - x0) * 0.6, cy - px(4))
+
+    def _bar(self, x0, x1, cy, prod, neutral, dist) -> None:
+        y0, y1 = cy - px(4), cy + px(4)
+        self.create_rectangle(x0, y0, x1, y1, fill=T.lcd_bg, outline=T.body_dark)
+        x = x0
+        for share, color in ((prod, T.meter_fill or T.lcd_on), (neutral, T.lcd_dim), (dist, T.accent)):
+            seg = (x1 - x0) * share
+            if seg >= 1:
+                self.create_rectangle(x, y0, x + seg, y1, fill=color, width=0)
+            x += seg
 
     def _sword(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Katana: kashira, wrapped tsuka, oval tsuba, habaki and a curved blade with a kissaki point."""
         length = x1 - x0
-        grip_end = x0 + length * 0.2
-        # Grip (tsuka) with a diamond wrap, pommel and guard (tsuba).
-        self.create_rectangle(x0 + px(3), cy - px(3), grip_end, cy + px(3), fill="#1d2226", outline="#4b555c")
+        grip_end = x0 + length * 0.22
+        cy += px(2)
+        # Tsuka: dark wrap with silver diamonds (same as the samurai's armor), kashira cap at the end.
+        self.create_polygon(x0 + px(3), cy - px(3), grip_end, cy - px(3.4), grip_end, cy + px(3.4),
+                            x0 + px(3), cy + px(3), fill="#1d2226", outline="#4b555c")
         x = x0 + px(5)
-        while x + px(5) < grip_end:
-            self.create_polygon(x, cy, x + px(2.5), cy - px(2.5), x + px(5), cy, x + px(2.5), cy + px(2.5),
+        while x + px(5) < grip_end - px(1):
+            self.create_polygon(x, cy, x + px(2.5), cy - px(2.6), x + px(5), cy, x + px(2.5), cy + px(2.6),
                                 fill="#8e9aa3", outline="")
             x += px(6)
-        self.create_rectangle(x0, cy - px(4), x0 + px(3), cy + px(4), fill="#c99a6e", outline="")
-        self.create_oval(grip_end - px(1), cy - px(7), grip_end + px(4), cy + px(7), fill="#c99a6e",
-                         outline="#5a4128")
-        # Blade: slight katana curve rising to the tip.
+        self.create_rectangle(x0, cy - px(3.6), x0 + px(3), cy + px(3.6), fill="#c99a6e", outline="#5a4128")
+        # Tsuba (oval guard) and habaki (the collar at the blade's root).
+        self.create_oval(grip_end, cy - px(8), grip_end + px(4), cy + px(8), fill="#2a2f33", outline="#c99a6e")
         b0, b1 = grip_end + px(4), x1
-        n = 40
+        self.create_polygon(b0, cy - px(4), b0 + px(5), cy - px(4.3), b0 + px(5), cy + px(3.6), b0, cy + px(3.6),
+                            fill="#d9b25a", outline="#8a6a2a")
+        b0 += px(5)
+        n = 60
+        half = px(3.8)
+        point = 1 - min(0.12, px(16) / max(1.0, b1 - b0))  # where the kissaki (point) begins
 
-        def edge(t: float, top: bool) -> tuple[float, float]:
-            x = b0 + (b1 - b0) * t
-            lift = px(3) * t * t
-            half = px(4.2) * (1 - max(0.0, (t - 0.88) / 0.12))  # taper into the point
-            return x, cy - lift + (-half if top else half * 0.8)
+        def spine(t: float) -> float:  # sori: the blade curves up towards the point
+            return cy - px(5) * t * t
 
-        def polygon(t_end: float) -> list[float]:
+        def back(t: float) -> tuple[float, float]:
+            y = spine(t) - half
+            if t > point:  # the back runs almost straight into the point
+                y += half * 0.6 * ((t - point) / (1 - point)) ** 2
+            return b0 + (b1 - b0) * t, y
+
+        def edge(t: float) -> tuple[float, float]:
+            y = spine(t) + half
+            if t > point:  # the cutting edge sweeps up in a curve to meet the back
+                u = (t - point) / (1 - point)
+                y -= half * 1.6 * (1 - math.cos(u * math.pi / 2)) ** 0.8
+            return b0 + (b1 - b0) * t, y
+
+        def outline(t_end: float) -> list[float]:
             ts = [t_end * i / n for i in range(n + 1)]
-            pts = [edge(t, True) for t in ts] + [edge(t, False) for t in reversed(ts)]
+            pts = [back(t) for t in ts] + [edge(t) for t in reversed(ts)]
             return [v for p in pts for v in p]
 
-        self.create_polygon(polygon(1.0), fill="#b8c2c8", outline="#6f7b83")  # plain silver
-        if prod > 0.005:
-            t = min(1.0, prod)
-            self.create_polygon(polygon(t), fill="#1aa9e0", outline="#5fd8ff", width=2)  # glow
-            self.create_polygon(polygon(t), fill="#5fd8ff", outline="")
-            core = [edge(i * t / n, True) for i in range(n + 1)]
-            self.create_line([(x, y + px(2)) for x, y in core], fill="#e9fbff", width=max(1, px(1.2)))
+        t = min(1.0, prod) if prod > 0.005 else 0.0
+        if t:  # glow halo around the neon part: wide soft lines blending into the background
+            mid = [((back(i * t / n)[0]), (back(i * t / n)[1] + edge(i * t / n)[1]) / 2) for i in range(n + 1)]
+            for width, k in ((16, 0.18), (12, 0.32), (9, 0.5)):
+                self.create_line(mid, fill=blend(self.bg, "#5fd8ff", k), width=px(width), capstyle="round",
+                                 joinstyle="round", smooth=True)
+        self.create_polygon(outline(1.0), fill="#c3ccd2", outline="#6f7b83")  # plain silver
+        if t:
+            self.create_polygon(outline(t), fill="#3cc6f5", outline="#9eeaff")
+            # hamon: the wavy temper line, bright white-blue
+            ham = [(back(i * t / n)[0], edge(i * t / n)[1] - px(1.6) - math.sin(i * 1.3) * px(0.6))
+                   for i in range(n + 1)]
+            self.create_line(ham, fill="#e9fbff", width=max(1, px(1)), smooth=True)
         else:
-            self.create_line([edge(i / n, True) for i in range(n + 1)], fill="#e6ecef", width=1)
+            ham = [(edge(i / n)[0], edge(i / n)[1] - px(1.6) - math.sin(i * 1.3) * px(0.6)) for i in range(n)]
+            self.create_line(ham, fill="#eef2f4", width=1, smooth=True)
+        # Yokote: the line where the point begins.
+        yx = b0 + (b1 - b0) * point
+        self.create_line(yx, back(point)[1] + 1, yx, edge(point)[1] - 1, fill="#6f7b83")
 
     def _branch(self, x0: float, x1: float, cy: float, prod: float) -> None:
         bark, twig = "#2e1c10", "#3d2616"
@@ -732,33 +1055,219 @@ class ProductivityMeter(tk.Canvas):
             pts.append((x, cy + px(2) + math.sin(i / 3.2) * px(1.5)))
         self.create_line(pts, fill=bark, width=max(2, px(3)), smooth=True, capstyle="round")
         bloom_until = x0 + (x1 - x0) * prod
-        x, up = x0 + px(8), True
+        x, up, index = x0 + px(8), True, 0
         while x < x1 - px(4):
             base_y = cy + px(2) + math.sin((x - x0) / (x1 - x0) * 30 / 3.2) * px(1.5)
             tip = (x + px(5), base_y - px(8) if up else base_y + px(7))
             self.create_line(x, base_y, *tip, fill=twig, width=max(1, px(1.5)), capstyle="round")
-            if x <= bloom_until:  # a blossom on productive twigs, bare twig otherwise
+            if index in self.walnuts:
+                self._walnut(*tip)
+            elif x <= bloom_until:  # a blossom on productive twigs, bare twig otherwise
+                tag = f"flower{index}"
                 r = px(2.6)
                 for k in range(5):
                     a = k * 2 * math.pi / 5 + 0.3
                     px_, py_ = tip[0] + math.cos(a) * r, tip[1] + math.sin(a) * r
                     self.create_oval(px_ - r * 0.75, py_ - r * 0.75, px_ + r * 0.75, py_ + r * 0.75,
-                                     fill="#f7d3df", outline="#d99ab0")
+                                     fill="#f7d3df", outline="#d99ab0", tags=tag)
                 self.create_oval(tip[0] - r * 0.5, tip[1] - r * 0.5, tip[0] + r * 0.5, tip[1] + r * 0.5,
-                                 fill="#e8b923", outline="")
+                                 fill="#e8b923", outline="", tags=tag)
             x += px(11)
             up = not up
+            index += 1
+
+    def _walnut(self, cx: float, cy: float) -> None:
+        """A walnut in its shell: brown, wrinkled, with the seam down the middle."""
+        rx, ry = px(4), px(4.6)
+        self.create_oval(cx - rx, cy - ry, cx + rx, cy + ry, fill="#a8763e", outline="#5a3a1a")
+        self.create_line(cx, cy - ry, cx, cy + ry, fill="#5a3a1a")
+        for dy in (-0.45, 0.0, 0.45):
+            y = cy + ry * dy
+            self.create_line(cx - rx * 0.7, y, cx - rx * 0.25, y - px(1), fill="#6e4a24")
+            self.create_line(cx + rx * 0.25, y + px(1), cx + rx * 0.7, y, fill="#6e4a24")
+
+    def _lanterns(self, x0: float, x1: float, prod: float) -> None:
+        """Paper lanterns (chochin) on a sagging string; productive ones are lit and glow."""
+        top = px(5)
+        sag = px(5)
+        self.create_line([(x0 + (x1 - x0) * i / 20, top + sag * math.sin(math.pi * i / 20)) for i in range(21)],
+                         fill="#111111", width=1, smooth=True)
+        lw, lh = px(13), px(18)
+        count = max(1, int((x1 - x0) // (lw + px(7))))
+        step = (x1 - x0) / count
+        lit_n = round(count * prod)
+        for i in range(count):
+            cx = x0 + step * (i + 0.5)
+            sy = top + sag * math.sin(math.pi * (cx - x0) / (x1 - x0))
+            cy = sy + px(3) + lh / 2
+            lit = i < lit_n
+            self.create_line(cx, sy, cx, cy - lh / 2, fill="#111111")
+            if lit:
+                for k, g in ((0.25, px(6)), (0.45, px(4)), (0.7, px(2))):
+                    self.create_oval(cx - lw / 2 - g, cy - lh / 2 - g, cx + lw / 2 + g, cy + lh / 2 + g,
+                                     fill=blend(self.bg, "#ffb35c", k), outline="")
+            paper, rib = ("#E94C53", "#a8282f") if lit else ("#f1ece4", "#c9c2b6")
+            self.create_oval(cx - lw / 2, cy - lh / 2, cx + lw / 2, cy + lh / 2, fill=paper, outline=rib)
+            for f in (-0.28, 0.0, 0.28):
+                half = lw / 2 * math.sqrt(1 - (2 * f) ** 2)
+                self.create_line(cx - half, cy + lh * f, cx + half, cy + lh * f, fill=rib)
+            if lit:
+                self.create_oval(cx - lw * 0.18, cy - lh * 0.2, cx + lw * 0.18, cy + lh * 0.2, fill="#ffd27a",
+                                 outline="")
+            for y in (cy - lh / 2, cy + lh / 2 - px(2)):
+                self.create_rectangle(cx - lw * 0.28, y, cx + lw * 0.28, y + px(2), fill="#111111", outline="")
+
+    def _mondrian(self, x0: float, x1: float, cy: float, prod: float, dist: float) -> None:
+        """Yellow for productive, red for distracting, white for the rest, between thick black lines."""
+        b = px(3)
+        y0, y1 = cy - px(8), cy + px(8)
+        self.create_rectangle(x0, y0, x1, y1, fill="#ffffff", outline="")
+        xp = x0 + (x1 - x0) * prod
+        xd = x1 - (x1 - x0) * dist
+        if xp - x0 >= 1:
+            self.create_rectangle(x0, y0, xp, y1, fill=MONDRIAN_YELLOW, outline="")
+        if x1 - xd >= 1:
+            self.create_rectangle(xd, y0, x1, y1, fill=MONDRIAN_RED, outline="")
+        for x in (xp, xd):
+            if x0 + 1 < x < x1 - 1:
+                self.create_line(x, y0, x, y1, fill="#111111", width=b)
+        self.create_rectangle(x0 + b / 2, y0 + b / 2, x1 - b / 2, y1 - b / 2, outline="#111111", width=b)
+
+    def _glow(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Lamp bar: the filled part shines, and the halo around it grows as it fills."""
+        r = px(4)
+        lit = bool(T.dark_variant)
+        fill = T.meter_fill or T.lcd_on
+        xp = x0 + (x1 - x0) * prod
+        if lit and xp - x0 > r:
+            spread = px(4) + px(8) * prod
+            for k in (0.22, 0.45, 0.75):
+                g = spread * (1 - k)
+                round_rect(self, x0 - g, cy - r - g, xp + g, cy + r + g, r + g, fill=blend(self.bg, fill, k),
+                           outline="")
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill=T.lcd_off, outline=T.body_dark)
+        if xp - x0 > r:
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill=fill, outline="")
+            if lit:
+                round_rect(self, x0 + px(2), cy - r * 0.35, xp - px(2), cy + r * 0.2, r * 0.3, fill="#fffbe8",
+                           outline="")
+
+    # ------------------------------------------------------------ the cat
+
+    def _cat(self, cx: float, base: float) -> None:
+        """Fat white cat loafing on the bar in profile, facing left with its small head turned away
+        (only the back of the head shows); the tail hangs down over the bar.
+
+        cx is the middle of the body, base the bar's top edge.
+        """
+        p = self.cat_pose
+        white, line, spot = "#ffffff", "#77737c", "#b3afb7"
+        bw, bh = px(54), px(25)
+        bx0, bx1 = cx - bw / 2, cx + bw / 2
+        lw = max(1, px(1))
+        # Tail (behind the body): from the rump over the bar's far edge, hanging below it.
+        swing = p["tail"]
+        tail = [(bx1 - px(8), base - px(6)), (bx1 + px(2), base - px(1)), (bx1 + px(4) + swing * px(3), base + px(9)),
+                (bx1 + px(2) + swing * px(9), base + px(21))]
+        self.create_line(tail, fill=line, width=px(7), smooth=True, capstyle="round", tags="cat")
+        self.create_line(tail, fill=white, width=px(7) - 2 * lw, smooth=True, capstyle="round", tags="cat")
+        tip = tail[-1]
+        self.create_oval(tip[0] - px(2.5), tip[1] - px(2.5), tip[0] + px(2.5), tip[1] + px(2.5), fill=spot,
+                         outline="", tags="cat")
+        # Body: a loaf, flat at the bottom, highest over the back.
+        body = [(bx0 + bw * 0.12, base), (bx0 + bw * 0.02, base - bh * 0.3), (bx0 + bw * 0.06, base - bh * 0.8),
+                (bx0 + bw * 0.3, base - bh * 0.98), (bx0 + bw * 0.62, base - bh * 1.04), (bx1 - bw * 0.06, base - bh * 0.8),
+                (bx1, base - bh * 0.32), (bx1 - bw * 0.06, base), (bx0 + bw * 0.5, base + px(1))]
+        self.create_polygon([v for pt in body for v in pt], smooth=True, fill=white, outline=line, width=lw,
+                            tags="cat")
+        rnd = random.Random(7)
+        for sx, sy, sr in ((0.45, 0.74, 3.2), (0.56, 0.62, 1.6), (0.76, 0.82, 2.4), (0.3, 0.4, 1.4), (0.84, 0.5, 1.5),
+                           (0.62, 0.86, 1.3), (0.2, 0.7, 1.1)):
+            x, y, r = bx0 + bw * sx, base - bh * sy, px(sr)
+            self.create_oval(x - r * 1.5, y - r, x + r * 1.5, y + r * rnd.uniform(0.8, 1.1), fill=spot, outline="",
+                             tags="cat")
+        # Haunch: the folded back leg.
+        self.create_arc(bx1 - bw * 0.38, base - bh * 0.62, bx1 - bw * 0.04, base + bh * 0.3, start=30, extent=120,
+                        style="arc", outline=line, width=lw, tags="cat")
+        # Front paw: tucked under the chest, or reaching out for a swat.
+        reach = p["paw"]
+        px0, py0 = bx0 + bw * 0.1, base - px(2)
+        tip_x, tip_y = px0 - px(3) - reach * px(12), py0 - reach * px(9)
+        self.create_line(px0 + px(4), py0, tip_x, tip_y, fill=line, width=px(5), capstyle="round", tags="cat")
+        self.create_line(px0 + px(4), py0, tip_x, tip_y, fill=white, width=px(5) - 2 * lw, capstyle="round",
+                         tags="cat")
+        # Head: small, at the front of the loaf, ears up.
+        hr = px(8)
+        hx, hy = bx0 + bw * 0.1, base - bh * 0.92
+        for ex, tilt in ((-0.6, -1), (0.35, 1)):
+            ear_x = hx + hr * ex
+            self.create_polygon(ear_x - px(3.5), hy - hr * 0.55, ear_x + tilt * px(0.8), hy - hr - px(5),
+                                ear_x + px(3.5), hy - hr * 0.5, fill=white, outline=line, width=lw, tags="cat")
+        self.create_oval(hx - hr, hy - hr, hx + hr, hy + hr * 0.92, fill=white, outline=line, width=lw, tags="cat")
+        self.create_oval(hx + px(1), hy - hr + px(1.5), hx + px(5), hy - hr + px(4.5), fill=spot, outline="",
+                         tags="cat")
+        if p["face"]:  # turned towards us: eyes (slowly blinking) and a pink nose
+            eye = p["eyes"]
+            for ex in (hx - px(3.2), hx + px(3.2)):
+                if eye > 0.2:
+                    self.create_oval(ex - px(1.4), hy - px(1.6) * eye, ex + px(1.4), hy + px(1.6) * eye,
+                                     fill="#3b3a3e", outline="", tags="cat")
+                else:
+                    self.create_arc(ex - px(1.8), hy - px(1.6), ex + px(1.8), hy + px(1.2), start=180, extent=180,
+                                    style="arc", outline="#3b3a3e", width=lw, tags="cat")
+            self.create_polygon(hx - px(1.3), hy + px(2.4), hx + px(1.3), hy + px(2.4), hx, hy + px(3.8),
+                                fill="#e9a3b0", outline="", tags="cat")
+        self.cat_box = (min(bx0, tip_x) - px(4), hy - hr - px(6), bx1 + px(14), base + px(24))
+
+    def animate_cat(self) -> str | None:
+        """Play the next of the three cat animations (shuffled each round)."""
+        if self.animating or not self.cat_box:
+            return None
+        if not self.cat_queue:
+            self.cat_queue = random.sample(["tail", "blink", "paw"], 3)
+        kind = self.cat_queue.pop()
+        frames: list[dict] = []
+        if kind == "tail":  # three swings left and right
+            frames = [{"tail": math.sin(i / 16 * 2 * math.pi * 3) * 1.0} for i in range(49)]
+        elif kind == "blink":  # turn the head, a slow blink, turn back
+            frames = ([{"face": True, "eyes": 1.0}] * 8 + [{"face": True, "eyes": 1 - i / 6} for i in range(7)]
+                      + [{"face": True, "eyes": 0.0}] * 5 + [{"face": True, "eyes": i / 6} for i in range(7)]
+                      + [{"face": True, "eyes": 1.0}] * 8)
+        else:  # a quick swat with the paw
+            frames = ([{"paw": i / 4} for i in range(5)] + [{"paw": 1.0}] * 3
+                      + [{"paw": 1 - i / 8} for i in range(9)])
+        frames.append({})
+        self.animating = True
+
+        def step(i=0):
+            if not self.winfo_exists():
+                return
+            self.cat_pose = {"tail": 0.0, "face": False, "eyes": 1.0, "paw": 0.0, **frames[i]}
+            self.draw()
+            if i + 1 < len(frames):
+                self.after(40, step, i + 1)
+            else:
+                self.animating = False
+
+        step()
+        return kind
 
 
 class TitleBar(tk.Canvas):
     """Title strip styled by the theme; with on_menu it gets a small menu button on the left."""
 
     def __init__(self, master, title: str, on_menu=None):
-        self.h = px(44) if T.title_style == "ears" else px(18)
+        self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
+        self.pieces: list[str] = []  # Setsuna: orange pieces earned by the running timer
         self.bind("<Configure>", lambda e: self.draw())
+
+    def set_pieces(self, pieces: list[str]) -> None:
+        if pieces != self.pieces:
+            self.pieces = list(pieces)
+            self.draw()
 
     def draw(self):
         self.delete("all")
@@ -776,6 +1285,15 @@ class TitleBar(tk.Canvas):
                                     fill=T.body_dark, outline="")
             round_rect(self, 0, h - band, w - 1, h + px(8), px(8), fill=T.lcd_bg, outline="")
             text_color, text_y = T.lcd_text, h - band / 2
+        if style == "mondrian":  # color fields between thick black lines
+            b = px(4)
+            for x0_, x1_, color in ((0, w * 0.17, MONDRIAN_RED), (w * 0.8, w * 0.92, MONDRIAN_BLUE),
+                                    (w * 0.92, w, MONDRIAN_YELLOW)):
+                self.create_rectangle(x0_, 0, x1_, h, fill=color, outline="")
+            for x in (w * 0.17, w * 0.8, w * 0.92):
+                self.create_line(x, 0, x, h, fill="#111111", width=b)
+            self.create_line(0, h - b / 2, w, h - b / 2, fill="#111111", width=b)
+            text_y = h / 2 - px(1)
         if style == "grain":  # wood grain
             for i, y in enumerate((3, 6, 10, 13, 16)):
                 pts = []
@@ -803,14 +1321,26 @@ class TitleBar(tk.Canvas):
             y = h - px(3)
             self.create_line(left, y, x0 - px(12), y, x0 - px(6), px(3), x1 + px(6), px(3), x1 + px(12), y,
                              w - px(6), y, fill=T.accent)
-        elif style == "oranges":
-            for x in (x0 - px(14), x1 + px(14)):
-                draw_orange(self, x, h / 2 + px(1), px(5))
+        elif style == "oranges":  # earned pieces, alternating left and right of the title, outwards
+            r, step = px(6), px(15)
+            for i, kind in enumerate(self.pieces):
+                k = i // 2 + 1
+                x = x0 - k * step + px(4) if i % 2 == 0 else x1 + k * step - px(4)
+                if r < x < w - r:
+                    draw_orange_piece(self, x, h / 2 + px(2), r, kind)
+        elif style == "egg":
+            lit = T.key.endswith("_lit")
+            for x in (x0 - px(16), x1 + px(16)):
+                draw_egg(self, x, h / 2, px(12), lit)
         if self.on_menu:
             r = px(6)
             cx, cy = px(11), text_y
             if style == "ears":  # on the dark band: a cream button
                 box = self.create_oval(cx - r, cy - r, cx + r, cy + r, fill=T.lcd_text, outline="")
+            elif style == "mondrian":  # a white square on the red field
+                cx = px(13)
+                box = self.create_rectangle(cx - r, cy - r, cx + r, cy + r, fill="#ffffff", outline="#111111",
+                                            width=2)
             elif T.shape == "round":
                 box = self.create_oval(cx - r, cy - r, cx + r, cy + r, fill=T.btn_face, outline=T.btn_dark)
             elif T.shape == "chamfer":

@@ -25,6 +25,9 @@ DEFAULTS: dict = {
     # built-in rules (Google Docs, Word, ... vs. YouTube, Facebook, Instagram, shopping sites).
     "extra_productive": [],
     "extra_distracting": [],
+    # Walnut skin: flowers on the meter clicked into walnuts, kept for that day only.
+    "walnut_day": "",
+    "walnuts": [],
 }
 
 
