@@ -151,7 +151,7 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "eink"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -249,6 +249,33 @@ def test_dandelion_blows_only_after_midnight(browser, server):
     ctx.close()
 
 
+def test_hourglass_turns_every_25_minutes(page):
+    pick_skin(page, "hourglass")
+    page.fill("#task", "Pesak")
+    page.click("#playBtn")
+    assert page.locator("#hourglass polygon").count() >= 2 and page.locator("#hourglass.running").count() == 1
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 26 * 60000")  # past the first turn
+    page.wait_for_selector("#hourglass.flip")
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece.d').length === 1")
+    page.click("#pauseBtn")
+    page.wait_for_function("!document.querySelector('#hourglass.running')")  # the sand stops in mid-air
+    page.click("#stopBtn")
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece.d').length === 0")
+
+
+def test_lofi_record_spins_and_turns_over(page):
+    pick_skin(page, "lofi")
+    page.fill("#task", "Lofi")
+    page.click("#playBtn")
+    assert page.locator("#turntable.running").count() == 1 and page.get_attribute("body", "class").find("raining") >= 0
+    assert page.locator("#turntable circle[fill='#f2a65a']").count() == 1  # side A
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 46 * 60000")
+    page.wait_for_selector("#turntable circle[fill='#e8899a']")  # turned over to side B
+    page.click("#pauseBtn")
+    page.wait_for_function("!document.querySelector('#turntable.running')")  # the record stops, the needle lifts
+    page.click("#stopBtn")
+
+
 def test_csv_export_and_backup_restore(page, tmp_path):
     page.fill("#task", "rad; sa tačkom-zarezom")
     page.click("#playBtn")
@@ -274,22 +301,22 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'eink'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'hourglass', 'lofi', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 55
+    assert len(result) == 65
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v6')")
-    cached = page.evaluate("caches.open('ptt-v6').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v8')")
+    cached = page.evaluate("caches.open('ptt-v8').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

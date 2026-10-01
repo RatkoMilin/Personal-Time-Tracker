@@ -5,9 +5,9 @@
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
-                 ["coffee", "My Passion"], ["eink", "E-ink"]];
+                 ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
-                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211",
+                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
@@ -425,6 +425,80 @@
     return true;
   }
 
+  // Peščani sat: one turn of the glass per 25 minutes of the task (as on the laptop); the sand falls while
+  // the timer runs, stops in mid-air on pause, and every full turn leaves a dune beside the title.
+  const HG_ROUND = 25 * 60000;
+  let hgKey = "", hgRounds = null;
+  function renderHourglass(ms, playing) {
+    const svg = $("hourglass"), rounds = Math.floor(ms / HG_ROUND), f = (ms % HG_ROUND) / HG_ROUND;
+    if (hgRounds !== null && playing && rounds > hgRounds) {
+      svg.classList.remove("flip");
+      void svg.getBoundingClientRect();
+      svg.classList.add("flip");
+      sound("flip");
+    }
+    hgRounds = rounds;
+    if (svg.classList.contains("running") !== playing) svg.classList.toggle("running", playing);
+    const key = `${Math.round(f * 200)}|${ms > 0}`;
+    if (key === hgKey) return;
+    hgKey = key;
+    const cx = 15, cy = 22, top = 4, bottom = 40, half = 10, neck = 1.6, bulb = 18;
+    const edge = y => neck + (half - neck) * Math.abs(y - cy) / bulb;
+    const pts = list => list.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" ");
+    const left = 1 - f;
+    let body = "";
+    if (left > 0.005) {
+      const level = cy - bulb * Math.sqrt(left);
+      body += `<polygon points="${pts([[cx - edge(level), level], [cx + edge(level), level], [cx + neck, cy], [cx - neck, cy]])}" fill="#e2b866"/>`;
+    }
+    let surface = bottom;
+    if (f > 0.005) {
+      const height = bulb * (1 - Math.sqrt(1 - f)), mound = Math.min(4, height * 0.6);
+      surface = bottom - height;
+      body += `<polygon points="${pts([[cx - edge(bottom), bottom], [cx + edge(bottom), bottom], [cx + edge(surface), surface], [cx, surface - mound], [cx - edge(surface), surface]])}" fill="#e2b866"/>`;
+      body += `<polygon points="${pts([[cx - edge(bottom) * 0.5, bottom], [cx, surface - mound * 0.6], [cx + edge(bottom) * 0.15, bottom]])}" fill="#b98a3c"/>`;
+    }
+    if (left > 0.005 && f > 0 && ms > 0) body += `<line class="stream" x1="${cx}" y1="${cy}" x2="${cx}" y2="${f1(surface - 2)}"/>`;
+    body += `<polygon points="${pts([[cx - half, top], [cx + half, top], [cx + neck, cy], [cx + half, bottom], [cx - half, bottom], [cx - neck, cy]])}" fill="none" stroke="#fffaf0" stroke-width="1.2"/>`;
+    body += `<rect x="2" y="1" width="26" height="3" fill="#7a5230"/><rect x="2" y="40" width="26" height="3" fill="#7a5230"/>`;
+    body += `<line x1="3.5" y1="4" x2="3.5" y2="40" stroke="#7a5230" stroke-width="1.4"/><line x1="26.5" y1="4" x2="26.5" y2="40" stroke="#7a5230" stroke-width="1.4"/>`;
+    svg.innerHTML = body;
+  }
+
+  // Lofi: a record player; the record spins while the timer runs, the tonearm crosses one 45-minute side of
+  // the task's time and the record is turned over (A, B, A...); on pause the needle lifts (as on the laptop).
+  const SIDE = 45 * 60000;
+  let ttKey = "", ttSides = null;
+  function renderTurntable(ms, st) {
+    const svg = $("turntable"), sides = Math.floor(ms / SIDE), prog = (ms % SIDE) / SIDE;
+    if (ttSides !== null && st === "playing" && sides > ttSides) sound("flip");
+    ttSides = sides;
+    const raining = st === "playing";
+    if (document.body.classList.contains("raining") !== raining) document.body.classList.toggle("raining", raining);
+    if (svg.classList.contains("running") !== raining) svg.classList.toggle("running", raining);
+    const key = `${Math.round(prog * 200)}|${st}|${sides % 2}`;
+    if (key === ttKey) return;
+    ttKey = key;
+    const cx = 20.8, cy = 22, r = 18.5, px = 45, py = 7;
+    let nx = 45, ny = 36;
+    if (st !== "stopped") {
+      const a = 20 * Math.PI / 180, rr = r * (0.95 - 0.55 * prog);
+      nx = cx + Math.cos(a) * rr; ny = cy + Math.sin(a) * rr;
+    }
+    const lift = st === "paused" ? 2 : 0;
+    svg.innerHTML = `<rect x="1" y="1" width="50" height="42" rx="4" fill="#9a6a48" stroke="#6e4a33"/>` +
+      `<circle cx="${cx}" cy="${cy}" r="${r + 1}" fill="#3a3346"/>` +
+      `<g class="platter" style="transform-origin:${cx}px ${cy}px"><circle cx="${cx}" cy="${cy}" r="${r}" fill="#15121c"/>` +
+      [0.86, 0.72, 0.58].map(k => `<circle cx="${cx}" cy="${cy}" r="${f1(r * k)}" fill="none" stroke="#2a2436"/>`).join("") +
+      `<circle cx="${cx}" cy="${cy}" r="${f1(r * 0.34)}" fill="${sides % 2 ? "#e8899a" : "#f2a65a"}"/>` +
+      `<circle cx="${f1(cx + r * 0.21)}" cy="${cy}" r="1.4" fill="#3a2a1a"/></g>` +
+      `<circle cx="${cx}" cy="${cy}" r="1" fill="#e8e0d0"/>` +
+      `<circle cx="${px}" cy="${py}" r="3" fill="#c9c2b6" stroke="#6e6a64"/>` +
+      (lift ? `<line x1="${px}" y1="${py}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#2a2436" stroke-width="1.5"/>` : "") +
+      `<line x1="${px}" y1="${py}" x2="${f1(nx - lift)}" y2="${f1(ny - lift)}" stroke="#d8d2c6" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<rect x="${f1(nx - lift - 1.6)}" y="${f1(ny - lift - 1.6)}" width="3.2" height="3.2" fill="#e8e0d0"/>`;
+  }
+
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
   function bulletHole() {
     const btn = $("playBtn");
@@ -461,8 +535,13 @@
     piecesKey = "-";
     renderPieces([]);
     applyLamp();
-    const style = ["pastel", "cat", "setsuna", "egg", "dandelion"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
     dandelionKey = "";
+    hgKey = "";
+    hgRounds = null;
+    ttKey = "";
+    ttSides = null;
+    document.body.classList.remove("raining");
     buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
@@ -568,6 +647,11 @@
     }
     if (skin() === "setsuna") renderPieces(st === "stopped" ? [] : orangePieces(ms));
     if (skin() === "dandelion") renderDandelion();
+    if (skin() === "hourglass") {
+      renderPieces(st === "stopped" ? [] : Array(Math.min(12, Math.floor(ms / HG_ROUND))).fill("d"));
+      renderHourglass(st === "stopped" ? 0 : ms, st === "playing");
+    }
+    if (skin() === "lofi") renderTurntable(st === "stopped" ? 0 : ms, st);
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
