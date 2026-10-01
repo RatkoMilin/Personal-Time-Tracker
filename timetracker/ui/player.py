@@ -569,8 +569,11 @@ class Player(tk.Tk):
 
     def show_productivity(self):
         day = self._viewed_day()
-        ProductivityDialog(self, productivity.summarize(self.db, *timeutil.day_bounds(day)),
-                           skin.T.tx(timeutil.fmt_day_header(day)))
+        summary = productivity.summarize(self.db, *timeutil.day_bounds(day))
+        title = "Produktivnost"
+        if skin.T.meter == "coffee" and summary.share(productivity.PRODUCTIVE) >= skin.ProductivityMeter.CAT_AT:
+            title = "Impossible!"  # My Passion: the answer to the meter's "How is possible?"
+        return ProductivityDialog(self, summary, skin.T.tx(timeutil.fmt_day_header(day)), title)
 
     def _update_display(self):
         T = skin.T

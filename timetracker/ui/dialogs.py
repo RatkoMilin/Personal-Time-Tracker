@@ -192,8 +192,8 @@ class IdleReminder(_Window):
 class ProductivityDialog(_Window):
     """Small dashboard behind the productivity meter: time per category and its top items."""
 
-    def __init__(self, parent, summary, day_title: str):
-        super().__init__(parent, "Produktivnost")
+    def __init__(self, parent, summary, day_title: str, title: str = "Produktivnost"):
+        super().__init__(parent, title)
         from ..productivity import DISTRACTING, NEUTRAL, PRODUCTIVE
 
         T = skin.T
