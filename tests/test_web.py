@@ -129,7 +129,7 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "eink"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -144,6 +144,55 @@ def test_every_skin_renders(page):
             page.wait_for_timeout(600)
             page.screenshot(path=str(Path(shots) / f"web_{skin}.png"), full_page=True)
     assert db(page)["settings"]["skin"] == "eink"
+
+
+def pick_skin(page, skin):
+    page.click("#menuBtn")
+    page.click(f"#skins [data-skin={skin}]")
+    page.click("#menuClose")
+
+
+def test_egg_lamp_lights_only_while_working(page):
+    pick_skin(page, "egg")
+    lit = "document.body.classList.contains('lit')"
+    assert page.evaluate(lit) is False
+    page.fill("#task", "Lampa")
+    page.click("#playBtn")
+    assert page.evaluate(lit) is True
+    page.click("#pauseBtn")
+    assert page.evaluate(lit) is False
+    page.click("#pauseBtn")
+    assert page.evaluate(lit) is True
+    page.click("#stopBtn")
+    assert page.evaluate(lit) is False
+
+
+def test_setsuna_confetti_and_oranges(page):
+    pick_skin(page, "setsuna")
+    page.fill("#task", "Narandže")
+    page.click("#playBtn")
+    assert page.locator(".fx .confetto").count() > 20
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 75 * 60000")
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece').length === 2")
+    assert page.locator("#piecesL .piece.w").count() == 1 and page.locator("#piecesR .piece.q").count() == 1
+    page.click("#stopBtn")
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece').length === 0")
+
+
+def test_matrix_digits_jumble_and_pastel_bubbles(page):
+    page.fill("#task", "Matrix")
+    page.click("#playBtn")
+    shown = page.evaluate("""() => new Promise(resolve => {
+        const seen = new Set();
+        const t = setInterval(() => seen.add([...document.querySelectorAll('#clock [style]')].map(n => n.style.fill).join()), 20);
+        setTimeout(() => { clearInterval(t); resolve(seen.size); }, 500);
+    })""")
+    assert shown > 3  # the segments kept changing while the digits jumbled
+    page.click("#stopBtn")
+    pick_skin(page, "pastel")
+    page.click("#plBtn")
+    page.click("#plBtn")
+    assert page.locator(".fx .bubble").count() > 10
 
 
 def test_csv_export_and_backup_restore(page, tmp_path):
@@ -171,22 +220,22 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'eink'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 35
+    assert len(result) == 45
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v3')")
-    cached = page.evaluate("caches.open('ptt-v3').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v4')")
+    cached = page.evaluate("caches.open('ptt-v4').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

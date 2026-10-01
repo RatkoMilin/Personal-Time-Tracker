@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import queue
+import random
 import threading
 import time
 import tkinter as tk
@@ -15,7 +16,7 @@ from ..config import Settings
 from ..db import Database
 from ..tracker import IdleEnd, IdleStart, Tracker
 from . import skin
-from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog
+from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
 IDLE_CHOICES = [(0, "Isključeno"), (5, "5 min"), (10, "10 min"), (15, "15 min"), (30, "30 min")]
@@ -37,6 +38,8 @@ class Player(tk.Tk):
         self._blink = False
         self._quitting = False
         self._tray_key = None
+        self._scramble_left = 0
+        self._clock_text = ""
         self.reminder: IdleReminder | None = None
         self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
@@ -51,7 +54,7 @@ class Player(tk.Tk):
         self.tray = tray.Tray(self.events.put, self.show, self.play_pause, self.quit_app,
                               lambda: self.db.running_entry() is not None)
         self.tray_available = False
-        self.sounds = sounds.SoundPlayer(data_dir / "sounds", lambda: self.settings["sounds"], lambda: skin.T.key)
+        self.sounds = sounds.SoundPlayer(data_dir / "sounds", lambda: self.settings["sounds"], lambda: skin.T.dark_variant or skin.T.key)
 
         running = db.running_entry()
         if running:
@@ -77,13 +80,23 @@ class Player(tk.Tk):
 
     # ------------------------------------------------------------------ layout
 
+    def _skin_key(self) -> str:
+        """Theme to show: the chosen skin, or its lit variant while the timer runs (lamp skins)."""
+        theme = skin.THEMES.get(self.settings["skin"], skin.THEMES["matrix"])
+        if theme.hidden:
+            theme = skin.THEMES.get(theme.dark_variant, skin.THEMES["matrix"])
+        if theme.lit_variant and self.db.running_entry():
+            return theme.lit_variant
+        return theme.key
+
     def _build_ui(self):
-        T = skin.use(self, self.settings["skin"])
-        self.sounds.prepare(T.key)
+        T = skin.use(self, self._skin_key())
+        self.sounds.prepare(T.dark_variant or T.key)
         self.ui = tk.Frame(self, bg=T.body)
         self.ui.pack(fill="both", expand=True)
         self._build_menu()
-        skin.TitleBar(self.ui, APP_NAME, self._popup_menu).pack(fill="x")
+        self.titlebar = skin.TitleBar(self.ui, APP_NAME, self._popup_menu)
+        self.titlebar.pack(fill="x")
         self._build_main()
         self._build_playlist()
         if self.settings["show_playlist"]:
@@ -91,17 +104,21 @@ class Player(tk.Tk):
         self.refresh()
 
     def set_skin(self, key: str):
-        if key == skin.T.key:
+        if key == self.settings["skin"] or key not in skin.THEMES:
             return
         self.settings.update({"skin": key})
         if self.mini is not None:  # rebuilt in the new skin the next time it is shown
             self.mini.destroy()
             self.mini = None
+        self._rebuild_ui()
+        self.sounds.play("start")  # a taste of the new skin
+
+    def _rebuild_ui(self):
+        self._scramble_left = 0
         self.ui.destroy()
         for menu in (self.menu, self.row_menu):
             menu.destroy()
         self._build_ui()
-        self.sounds.play("start")  # a taste of the new skin
 
     def _click(self, command):
         """Wrap a button command so it plays the skin's click sound first."""
@@ -152,7 +169,7 @@ class Player(tk.Tk):
         row.pack(fill="x", pady=(skin.px(5), 0))
         skin.label(row, "Zadatak").grid(row=0, column=0, sticky="w")
         skin.label(row, "Projekat").grid(row=0, column=1, sticky="w", padx=(skin.px(6), 0))
-        task_panel, self.task_entry = skin.field(row, self.task_var, 26)
+        task_panel, self.task_entry = skin.field(row, self.task_var, 26, bg=T.task_bg or None, fg=T.task_fg or None)
         task_panel.grid(row=1, column=0, sticky="we")
         proj_panel, self.project_cb = skin.combo(row, self.project_var, 15)
         proj_panel.grid(row=1, column=1, sticky="we", padx=(skin.px(6), 0))
@@ -184,9 +201,10 @@ class Player(tk.Tk):
         skin.SkinButton(head, self._click(lambda: self.shift_day(-1)), glyph="next", width=18, height=16,
                         tooltip="Sledeći dan").pack(side="right")
 
-        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern)
+        panel = self.pl_panel = skin.Panel(self.pl_frame, pad=2, pattern=T.pl_pattern, bg=T.list_bg or None)
         panel.pack(fill="x")
-        self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.lcd_bg, fg=T.lcd_text,
+        self.listbox = tk.Listbox(panel.inner, width=PL_WIDTH, height=8, bg=T.list_bg or T.lcd_bg,
+                                  fg=T.list_fg or T.lcd_text,
                                   selectbackground=T.sel_bg, selectforeground=T.sel_fg, font=T.font("mono", 9),
                                   relief="flat", highlightthickness=0, activestyle="none", bd=0)
         self.listbox.pack(fill="both")
@@ -195,7 +213,8 @@ class Player(tk.Tk):
         self.listbox.bind("<Return>", lambda e: self.edit_selected())
         self.listbox.bind("<Button-3>", self._row_menu)
 
-        self.meter = skin.ProductivityMeter(self.pl_frame, self._click(self.show_productivity))
+        self.meter = skin.ProductivityMeter(self.pl_frame, self._click(self.show_productivity),
+                                            walnuts=self._walnuts_today(), on_walnut=self._save_walnuts)
         self.meter.pack(fill="x", pady=(skin.px(3), 0))
 
         foot = tk.Frame(self.pl_frame, bg=T.body)
@@ -214,14 +233,17 @@ class Player(tk.Tk):
     def _build_menu(self):
         self.menu = tk.Menu(self, tearoff=False)
         skins = tk.Menu(self.menu, tearoff=False)
-        self.skin_var = tk.StringVar(value=skin.T.key)
+        self.skin_var = tk.StringVar(value=self.settings["skin"])
         for theme in skin.THEMES.values():
+            if theme.hidden:
+                continue
             skins.add_radiobutton(label=theme.name, value=theme.key, variable=self.skin_var,
                                   command=lambda: self.set_skin(self.skin_var.get()))
         self.menu.add_cascade(label="Skin", menu=skins)
         self.sounds_var = tk.BooleanVar(value=self.settings["sounds"])
         self.menu.add_checkbutton(label="Zvučni efekti", variable=self.sounds_var,
                                   command=lambda: self.settings.update({"sounds": self.sounds_var.get()}))
+        self.menu.add_command(label="Produktivni sajtovi i programi...", command=self.edit_sites)
         self.idle_var = tk.IntVar(value=self.settings["idle_minutes"])
         idle = tk.Menu(self.menu, tearoff=False)
         for minutes, text in IDLE_CHOICES:
@@ -272,6 +294,9 @@ class Player(tk.Tk):
         self.paused = False
         self.sounds.play("start")
         self.refresh()
+        self._scramble()
+        if skin.T.confetti:
+            skin.confetti(self)
 
     def pause(self):
         if self.db.running_entry():
@@ -280,6 +305,7 @@ class Player(tk.Tk):
             self.paused = True
             self.sounds.play("pause")
             self.refresh()
+            self._scramble()
         elif self.paused:
             self.play()
 
@@ -389,7 +415,8 @@ class Player(tk.Tk):
             self.pl_frame.pack(fill="x")
             if skin.T.pl_pattern == "bubbles":
                 self.update_idletasks()
-                self.pl_panel.bubble_burst()
+                if skin.bubbles(self.pl_frame) is None:  # no see-through windows: bubbles along the edges
+                    self.pl_panel.bubble_burst()
         else:
             self.pl_frame.pack_forget()
         self.settings.update({"show_playlist": show})
@@ -398,6 +425,9 @@ class Player(tk.Tk):
 
     def refresh(self):
         """Rebuild everything that depends on the database."""
+        if self._skin_key() != skin.T.key:  # lamp skin: lit only while the timer runs
+            self._rebuild_ui()  # builds and refreshes everything
+            return
         self.project_cb.configure(values=list(self.db.project_names().values()))
         self._fill_playlist()
         self._update_display()
@@ -424,11 +454,11 @@ class Player(tk.Tk):
                 left = left[: room - 1] + "~"
             self.listbox.insert("end", left.ljust(room) + " " + right)
             if e.running:
-                self.listbox.itemconfigure("end", fg=T.lcd_on)
+                self.listbox.itemconfigure("end", fg=T.sel_bg if T.list_bg else T.lcd_on)
             self._pl_ids.append(e.id)
         if not self._pl_ids:
             self.listbox.insert("end", "  nema unosa za ovaj dan")
-            self.listbox.itemconfigure(0, fg=T.lcd_dim)
+            self.listbox.itemconfigure(0, fg=T.list_fg or T.lcd_dim)
         elif sel and sel[0] < len(self._pl_ids):
             self.listbox.selection_set(sel[0])
         total = timeutil.fmt_clock(reports.total_between(self.db, a, b, now))
@@ -440,8 +470,41 @@ class Player(tk.Tk):
 
     def _update_meter(self):
         s = productivity.summarize(self.db, *timeutil.day_bounds(self._viewed_day()))
+        today = self.day_offset == 0
+        walnuts = set(self._walnuts_today()) if today else set()
+        self.meter.walnut_ok = today
+        if walnuts != self.meter.walnuts:
+            self.meter.walnuts = walnuts
+            self.meter.draw()
         self.meter.set(s.seconds[productivity.PRODUCTIVE], s.seconds[productivity.NEUTRAL],
                        s.seconds[productivity.DISTRACTING], s.total)
+
+    def _walnuts_today(self) -> list[int]:
+        """Flowers turned into walnuts today (they stay walnuts until the next day)."""
+        if self.settings["walnut_day"] != date.today().isoformat():
+            return []
+        return [i for i in self.settings["walnuts"] if isinstance(i, int)]
+
+    def _save_walnuts(self, walnuts: list[int]):
+        self.sounds.play("click")
+        self.settings.update({"walnut_day": date.today().isoformat(), "walnuts": walnuts})
+
+    def edit_sites(self):
+        today = productivity.summarize(self.db, *timeutil.day_bounds(date.today()))
+        others = [label for label, _ in today.labels.get(productivity.NEUTRAL, []) if label != "nepoznato"]
+        SitesDialog(self, self.settings["extra_productive"], self.settings["extra_distracting"], others,
+                    self.save_sites)
+
+    def save_sites(self, productive: list[str], distracting: list[str]):
+        """New productive / distracting words: used right away, and today's matching programs move over."""
+        self.settings.update({"extra_productive": productive, "extra_distracting": distracting})
+        self.tracker.classifier = productivity.Classifier(productive, distracting)
+        since = timeutil.day_bounds(date.today())[0]
+        for words, category in ((productive, productivity.PRODUCTIVE), (distracting, productivity.DISTRACTING)):
+            for word in words:
+                if word.lower().endswith(".exe"):
+                    self.db.recategorize_activity(productivity.program_name(word), category, since)
+        self._update_meter()
 
     def show_productivity(self):
         day = self._viewed_day()
@@ -462,6 +525,9 @@ class Player(tk.Tk):
             secs = 0
         h, rem = divmod(int(secs), 3600)
         text = f"{min(h, 99):02d}:{rem // 60:02d}:{rem % 60:02d}"
+        self._clock_text = text
+        if T.title_style == "oranges":
+            self.titlebar.set_pieces(skin.orange_pieces(secs) if state != self.STOPPED else [])
         task = self.task_var.get().strip() or "(bez naziva)"
         project = self.project_var.get().strip()
         today = reports.total_between(self.db, *timeutil.period_bounds("today"), now)
@@ -475,7 +541,9 @@ class Player(tk.Tk):
                                          fg=T.lcd_on if state == self.PLAYING else T.lcd_dim)
             self.info.configure(text=f"danas {timeutil.fmt_hours(today)}  ·  {status}")
         else:
-            if state == self.PAUSED and self._blink and T.blink:
+            if self._scramble_left > 0:
+                pass  # the digits are jumbling (Matrix play/pause)
+            elif state == self.PAUSED and self._blink and T.blink:
                 self.clock.set("  :  :  ")
             else:
                 self.clock.set(text, T.lcd_on if state != self.STOPPED else T.lcd_dim)
@@ -498,6 +566,29 @@ class Player(tk.Tk):
         if key != self._tray_key:
             self._tray_key = key
             self.tray.update(running is not None, tip)
+
+    def _scramble(self, frames: int = 12):
+        """Matrix: the digits jumble for a moment like a broken clock, then settle one by one."""
+        if not skin.T.scramble or self.clock is None:
+            return
+        self._scramble_left = frames
+        settle = [random.randint(frames // 3, frames) for _ in range(8)]
+
+        def step():
+            if self._quitting or self.clock is None or not self.clock.winfo_exists():
+                self._scramble_left = 0
+                return
+            self._scramble_left -= 1
+            if self._scramble_left <= 0:
+                self._update_display()
+                return
+            frame = frames - self._scramble_left
+            shown = "".join(ch if ch == ":" or frame >= settle[i] else random.choice("0123456789")
+                            for i, ch in enumerate(self._clock_text))
+            self.clock.set(shown, skin.T.lcd_on)
+            self.after(50, step)
+
+        step()
 
     def _draw_state_icon(self, state: str):
         T = skin.T

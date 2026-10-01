@@ -8,14 +8,16 @@ Desni klik → **Skin**:
 
 | Skin | Izgled |
 |---|---|
-| Matrix (digitalni) | klasični Winamp: zelene LCD cifre na crnom, 3D dugmad |
-| Pastel (roze-plavi) | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava; kad otvoriš PL, kroz listu prođu providni mehurići |
-| Orah (analogni) | miran i najjednostavniji: okvir od orahovog drveta, tamnozeleni panel, analogni sat sa kazaljkama; pokazatelj produktivnosti je grana koja procveta |
-| Silver samuraj | oštar: srebrni oklop, odsečeni uglovi, iskošene neonsko plave cifre; pokazatelj produktivnosti je mač čije sečivo svetli neonsko plavo |
-| Mačkasti | krem bela i tamno siva: mačje uši na vrhu, dugmići su mačije šapice, PL lista je pegava |
-| Setsuna Orange | #DB4C01, #E94C53, bela i crna: narandže kod tajmera, okrugla dugmad, zeleni listovi narandže u PL listi |
+| Matrix | klasični Winamp: zelene LCD cifre na crnom, 3D dugmad; na start i pauzu cifre se na trenutak izmešaju kao pokvaren sat |
+| Pastel | mekan: zaobljene ivice, zaobljene cifre, roze i svetloplava; kad otvoriš PL, preko liste se dižu i pucaju mehurići |
+| Orah | miran: okvir od orahovog drveta, tamnozeleni panel, analogni sat; produktivnost je grana koja procveta, a klik na cvet ga pretvara u orah (ostaje orah do sutra) |
+| Samuraj | oštar: srebrni oklop, odsečeni uglovi, iskošene neonsko plave cifre; produktivnost je katana čije sečivo svetli neonsko plavo, sa sjajem oko plavog dela |
+| Mačkasti | krem bela i tamno siva: mačje uši, dugmići su šapice, pegava PL lista; na 80%+ produktivnosti na traci leži debela bela maca, a klik na nju: mrda repom, okrene se i trepne ili udari šapicom (nasumičnim redom) |
+| Setsuna | #DB4C01, #E94C53, bela i crna: okrugla dugmad, listovi narandže u PL; na start konfete preko cele aplikacije, dok tajmer radi pored naslova se ređaju narandže (četvrt posle 15 min, pola posle 30, cela za svaki sat); produktivnost su japanski lampioni koji se pale |
+| Mondrian | bela sa debelim crnim linijama i osnovnim bojama #dd0100, #225095, #fac901: crvena PL lista, plavo polje za zadatak i PLAY, žuta produktivnost |
+| Jaje | lampa: sivo i tamno sivo dok tajmer stoji, a krem i belo (svetlo upaljeno) samo dok radiš; traka produktivnosti sija sve jače kako se puni |
 
-Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Matrix digitalne pištaljke, Pastel mehuriće, Drvo kucanje u drvo, Sajber zvuk mača (izvlačenje, zamah, zvek), Mačkasti mjaukanje, Setsuna sočne "citrus" tonove. Zvuci se prave u kodu (`timetracker/sounds.py`), nema audio fajlova. Isključuju se u meniju: **Zvučni efekti**. Podsetnik za neaktivnost i tada pusti sistemski zvuk.
+Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Matrix digitalne pištaljke, Pastel mehuriće, Orah kucanje u drvo, Samuraj zvuk mača (izvlačenje, zamah, zvek), Mačkasti mjaukanje, Setsuna sočne "citrus" tonove, Mondrian obične čiste tonove, Jaje "plop" kao kad jaje ili oblutak padne u vodu. Zvuci se prave u kodu (`timetracker/sounds.py`), nema audio fajlova. Isključuju se u meniju: **Zvučni efekti**. Podsetnik za neaktivnost i tada pusti sistemski zvuk.
 
 ## Kako se koristi
 
@@ -29,7 +31,7 @@ Svaki skin ima svoje zvučne efekte za start, pauzu, stop, klik i podsetnik: Mat
    - **+ DODAJ**: ručno dodaj vreme koje si zaboravio da pokreneš
 5. **⏏** izvozi CSV za Excel (ova nedelja, prošla nedelja, mesec...).
 
-Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za neaktivnost, uvek na vrhu, pokretanje sa Windows-om, izvoz, folder sa podacima, izlaz.
+Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, zvuci, produktivni sajtovi i programi, podsetnik za neaktivnost, uvek na vrhu, ažuriranje, mini traka, pokretanje sa Windows-om, izvoz, folder sa podacima, izlaz.
 
 `Ctrl+Space` pali i pauzira tajmer.
 
@@ -41,12 +43,12 @@ Desni klik bilo gde (ili dugmence gore levo) otvara meni: skin, podsetnik za nea
 
 - Produktivno: Google Docs / Sheets / Slides, Word, Excel, PowerPoint, OneNote, LibreOffice, Notion, Obsidian, Overleaf.
 - Ometanje: YouTube, Facebook, Messenger, Instagram, TikTok, Netflix, Reddit, X/Twitter i prodavnice (Amazon, eBay, AliExpress, Temu, Shein, Zalando, Etsy, KupujemProdajem, Ananas, Gigatron, WinWin i stranice sa "shop" ili "korpa" u naslovu).
-- Sve ostalo je "ostalo". Svoje reči dodaješ u `settings.json`: `"extra_productive": ["figma", "blender.exe"]`, `"extra_distracting": ["9gag"]` (važi posle ponovnog pokretanja).
+- Sve ostalo je "ostalo". Svoje dodaješ u meniju **Produktivni sajtovi i programi...**: po jedna reč u redu, deo naslova ili sajt (`figma`, `canva.com`) ili program (`blender.exe`). Ispod je lista programa koji su danas bili u "ostalo"; izabereš jedan i klikneš **→ Produktivno** ili **→ Ometanje**. Važi odmah, a današnje vreme tog programa se odmah prebaci.
 - Čuva se samo kategorija i kratak naziv (npr. "YouTube", "Word"), **nikad naslov prozora**. Vreme dok si neaktivan ili je ekran zaključan se ne broji.
 
 ## Na telefonu
 
-Postoji i web verzija za telefon (folder `web/`): isti izgled, sva 4 skina i zvuci, lista unosa, CSV izvoz. Radi i bez interneta.
+Postoji i web verzija za telefon (folder `web/`): isti izgled, svi skinovi i zvuci (bez pokazatelja produktivnosti), lista unosa, CSV izvoz. Radi i bez interneta.
 
 **Adresa:** https://ratkomilin.github.io/Personal-Time-Tracker/
 

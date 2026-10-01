@@ -2,6 +2,7 @@
 
 matrix: digital blips   pastel: bubbles   wood: knocks on wood   cyber: sword swooshes and rings
 cat: meows and a purr-like "mrrp"   setsuna: bright citrus plucks
+mondrian: plain clean beeps   egg: a "plop", like an egg or a pebble dropped into water
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -158,8 +159,36 @@ def _pluck(freq: float, dur: float = 0.25) -> list[float]:
     return [a + b for a, b in zip(tone(freq, freq, dur, tau=0.07), tone(freq * 2, freq * 2, dur, tau=0.03, amp=0.35))]
 
 
+def _beep(freq: float, dur: float = 0.09) -> list[float]:
+    return tone(freq, freq, dur, attack=0.004, amp=0.8)
+
+
+def _plop(pitch: float = 1.0, amp: float = 1.0, seed: int = 21) -> list[float]:
+    """Water plop: a soft low thump, then the air pocket's ringing pitch rising quickly, and a tiny splash."""
+    thump = tone(140 * pitch, 90 * pitch, 0.16, attack=0.003, tau=0.025, amp=0.7)
+    bloop = _silence(0.012) + tone(260 * pitch, 900 * pitch, 0.148, attack=0.006, tau=0.035)
+    splash = noise(0.16, tau=0.015, amp=0.12, seed=seed, lowpass=(0.25, 0.08))
+    return [amp * (a + b + c) for a, b, c in zip(thump, bloop, splash)]
+
+
 def render(skin: str, event: str) -> list[float]:
-    if skin == "pastel":
+    if skin.startswith("egg"):
+        kit = {
+            "start": [(0, _plop(1.0)), (0.14, _plop(1.9, 0.35, seed=22))],  # the egg, then a little drop
+            "pause": [(0, _plop(1.3, 0.8))],
+            "stop": [(0, _plop(0.75))],
+            "click": [(0, tone(900, 1900, 0.04, attack=0.003, tau=0.012, amp=0.6))],
+            "alert": [(0, _plop(1.0)), (0.22, _plop(1.25, seed=23)), (0.44, _plop(1.5, seed=24))],
+        }
+    elif skin == "mondrian":
+        kit = {
+            "start": [(0, _beep(1047)), (0.1, _beep(1568))],
+            "pause": [(0, _beep(1319, 0.07))],
+            "stop": [(0, _beep(1568)), (0.1, _beep(1047))],
+            "click": [(0, _beep(1760, 0.025))],
+            "alert": [(0, _beep(1568, 0.12)), (0.2, _beep(1568, 0.12)), (0.4, _beep(1568, 0.12))],
+        }
+    elif skin == "pastel":
         kit = {
             "start": [(0, _bubble(420)), (0.08, _bubble(600)), (0.16, _bubble(850))],
             "pause": [(0, _bubble(620))],

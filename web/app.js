@@ -3,11 +3,10 @@
   "use strict";
 
   const KEY = "ptt.v1";
-  const SKINS = [["matrix", "Matrix (digitalni)"], ["pastel", "Pastel (roze-plavi)"], ["wood", "Orah (analogni)"],
-                 ["cyber", "Silver samuraj"], ["cat", "Mačkasti"],
-                 ["setsuna", "Setsuna Orange"], ["eink", "E-ink (crno-belo)"]];
+  const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
+                 ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
-                        eink: "#ffffff" };
+                        mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
   const EXPORTS = [["Ova nedelja", "this_week"], ["Prošla nedelja", "last_week"], ["Ovaj mesec", "this_month"],
@@ -239,10 +238,94 @@
     return db.ui.paused ? "paused" : "stopped";
   }
 
+  // Egg lamp: the light is on only while the timer runs.
+  function applyLamp() {
+    const lit = skin() === "egg" && !!running();
+    if (document.body.classList.contains("lit") !== lit) document.body.classList.toggle("lit", lit);
+    const color = THEME_COLOR[lit ? "egg_lit" : skin()];
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta.getAttribute("content") !== color) meta.setAttribute("content", color);
+  }
+
+  // Setsuna: a quarter orange after 15 running minutes, a half after 30, a whole one per hour (as on the laptop).
+  function orangePieces(ms) {
+    const minutes = Math.floor(Math.max(0, ms) / 60000), rest = minutes % 60;
+    const pieces = Array(Math.floor(minutes / 60)).fill("w");
+    if (rest >= 30) pieces.push("h");
+    if (rest % 30 >= 15) pieces.push("q");
+    return pieces.slice(0, 12);
+  }
+  let piecesKey = "";
+  function renderPieces(pieces) {
+    const key = pieces.join("");
+    if (key === piecesKey) return;
+    piecesKey = key;
+    const left = pieces.filter((_, i) => i % 2 === 0), right = pieces.filter((_, i) => i % 2 === 1);
+    $("piecesL").innerHTML = left.reverse().map(p => `<i class="piece ${p}"></i>`).join("");
+    $("piecesR").innerHTML = right.map(p => `<i class="piece ${p}"></i>`).join("");
+  }
+
+  // Short effects in a layer over the page that ignores touches.
+  function effect(target, count, make, ms) {
+    const layer = document.createElement("div");
+    layer.className = "fx";
+    const box = target.getBoundingClientRect();
+    Object.assign(layer.style, { left: box.left + "px", top: box.top + "px", width: box.width + "px", height: box.height + "px" });
+    for (let i = 0; i < count; i++) layer.appendChild(make(i));
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), ms);
+    return layer;
+  }
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function confetti() {
+    const colors = ["#DB4C01", "#E94C53", "#111111", "#f7a35c", "#3f8f2f", "#ffd27a"];
+    return effect(document.documentElement, 70, () => {
+      const p = document.createElement("i");
+      p.className = "confetto" + (Math.random() < 0.25 ? " round" : "");
+      Object.assign(p.style, { left: rand(0, 100) + "%", background: colors[Math.floor(Math.random() * colors.length)],
+        animationDelay: rand(0, 0.5) + "s", animationDuration: rand(1.6, 2.4) + "s" });
+      p.style.setProperty("--drift", rand(-40, 40) + "px");
+      p.style.setProperty("--spin", rand(-720, 720) + "deg");
+      return p;
+    }, 3200);
+  }
+  function bubbles() {
+    const colors = ["#8fb8ec", "#e0679b", "#b59ce0", "#7cc7e8"];
+    return effect($("playlist"), 24, () => {
+      const b = document.createElement("i");
+      const size = rand(8, 24);
+      b.className = "bubble";
+      Object.assign(b.style, { left: rand(3, 95) + "%", width: size + "px", height: size + "px",
+        borderColor: colors[Math.floor(Math.random() * colors.length)], animationDelay: rand(0, 0.9) + "s",
+        animationDuration: rand(1.6, 2.6) + "s" });
+      b.style.setProperty("--rise", -rand(45, 105) + "%");
+      return b;
+    }, 3800);
+  }
+
+  // Matrix: on play/pause the digits jumble like a broken clock, then settle one by one.
+  let scrambleUntil = 0;
+  function scramble() {
+    if (skin() !== "matrix") return;
+    const start = Date.now(), frames = 12, settle = [...clockPattern].map(() => 4 + Math.floor(Math.random() * 8));
+    scrambleUntil = start + frames * 50;
+    const step = () => {
+      const frame = Math.floor((Date.now() - start) / 50);
+      if (frame >= frames || skin() !== "matrix") { scrambleUntil = 0; renderDisplay(); return; }
+      const shown = [...lastClockText].map((ch, i) => ch === ":" || frame >= settle[i] ? ch : String(Math.floor(Math.random() * 10)));
+      setClock(shown.join(""), "var(--lcd-on)");
+      setTimeout(step, 50);
+    };
+    step();
+  }
+  let lastClockText = "00:00:00";
+
   function applySkin() {
     document.body.dataset.skin = skin();
-    document.querySelector('meta[name="theme-color"]').setAttribute("content", THEME_COLOR[skin()]);
-    const style = ["pastel", "cat", "setsuna"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    piecesKey = "-";
+    renderPieces([]);
+    applyLamp();
+    const style = ["pastel", "cat", "setsuna", "egg"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
     buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
@@ -271,6 +354,8 @@
     db.ui.paused = false;
     sound("start");
     commit();
+    scramble();
+    if (skin() === "setsuna") confetti();
   }
 
   function pause() {
@@ -280,6 +365,7 @@
       db.ui.paused = true;
       sound("pause");
       commit();
+      scramble();
     } else if (db.ui.paused) {
       play();
     }
@@ -324,7 +410,9 @@
       $("elapsed").classList.toggle("dim", st !== "playing");
       $("info").textContent = `danas ${hours(today)}  ·  ${{ playing: "u toku", paused: "pauza", stopped: "stoji" }[st]}`;
     } else {
-      if (st === "paused" && blink && !eink()) setClock(clockPattern.replace(/8/g, " "), "var(--lcd-on)");
+      lastClockText = text;
+      if (scrambleUntil > now) { /* the digits are jumbling */ }
+      else if (st === "paused" && blink && !eink()) setClock(clockPattern.replace(/8/g, " "), "var(--lcd-on)");
       else setClock(text, st === "stopped" ? "var(--lcd-dim)" : "var(--lcd-on)");
       const icon = "state-icon " + st;
       if ($("stateIcon").className !== icon) $("stateIcon").className = icon;
@@ -339,6 +427,7 @@
       const week = totalBetween(...periodBounds("this_week"), now);
       setText($("info"), upper(`Danas   ${dur(today)}\nNedelja ${dur(week)}`));
     }
+    if (skin() === "setsuna") renderPieces(st === "stopped" ? [] : orangePieces(ms));
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
@@ -389,6 +478,7 @@
   }
 
   function render() {
+    applyLamp();
     renderProjects();
     renderPlaylist();
     renderDisplay();
@@ -571,13 +661,7 @@
     $("plBtn").addEventListener("click", withClick(() => {
       db.settings.showPlaylist = !db.settings.showPlaylist;
       commit();
-      if (db.settings.showPlaylist && skin() === "pastel") {  // faint bubbles rising through the list
-        const pl = $("playlist");
-        pl.classList.remove("bubbling");
-        void pl.offsetWidth;
-        pl.classList.add("bubbling");
-        setTimeout(() => pl.classList.remove("bubbling"), 2800);
-      }
+      if (db.settings.showPlaylist && skin() === "pastel") bubbles();  // bubbles rising over the list
     }));
     $("prevDay").addEventListener("click", withClick(() => { dayOffset++; render(); }));
     $("nextDay").addEventListener("click", withClick(() => { dayOffset = Math.max(0, dayOffset - 1); render(); }));
