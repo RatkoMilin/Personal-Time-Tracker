@@ -322,6 +322,30 @@ MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
 ICE_EDGE = "#9fc6d4"  # the bluish rim of an ice cube
 
 
+def toon_colors(glyph: str | None, text: str | None) -> tuple[str, str]:
+    """(fill, glyph) of a Grafiti button: every one sprayed in its own loud color."""
+    by_glyph = {"play": ("#b6ff2e", "#111111"), "pause": ("#3ad1ff", "#111111"), "stop": ("#ff8a1f", "#111111"),
+                "eject": ("#a259ff", "#ffffff"), "prev": ("#ffe600", "#111111"), "next": ("#ffe600", "#111111")}
+    if glyph in by_glyph:
+        return by_glyph[glyph]
+    palette = (("#ff3aa0", "#ffffff"), ("#b6ff2e", "#111111"), ("#3ad1ff", "#111111"), ("#a259ff", "#ffffff"))
+    return palette[sum(map(ord, text or "")) % len(palette)]
+
+
+def rotate_item(c: tk.Canvas, item: int, degrees: float, cx: float, cy: float) -> None:
+    """Turn a canvas polygon or line around (cx, cy)."""
+    if not degrees:
+        return
+    a = math.radians(degrees)
+    ca, sa = math.cos(a), math.sin(a)
+    pts = c.coords(item)
+    out = []
+    for i in range(0, len(pts), 2):
+        dx, dy = pts[i] - cx, pts[i + 1] - cy
+        out += [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca]
+    c.coords(item, *out)
+
+
 def block_colors(role: str | None) -> tuple[str, str]:
     """(fill, glyph) of a Mondrian button by its role."""
     return {"play": (MONDRIAN_BLUE, "#ffffff"), "pause": (MONDRIAN_YELLOW, "#111111"),
@@ -515,6 +539,13 @@ class Panel(tk.Frame):
             b, s = px(T.border), px(4)
             round_rect(c, s, s, w - 1, h - 1, px(T.radius), fill="#111111", outline="")
             round_rect(c, b / 2, b / 2, w - 1 - s, h - 1 - s, px(T.radius), fill=self.bg, outline="#111111", width=b)
+            from .y2k import TAG_COLORS, draw_splat
+
+            rnd = random.Random(w * 31 + h * 17)  # a couple of paint hits on the frame, the same every redraw
+            for k in range(2 if w > px(120) else 1):
+                x, y = rnd.choice(((rnd.uniform(px(12), w - px(16)), b / 2), (rnd.uniform(px(12), w - px(16)), h - s - b / 2),
+                                   (b / 2, rnd.uniform(px(10), h - px(14))), (w - s - b / 2, rnd.uniform(px(10), h - px(14)))))
+                draw_splat(c, x, y, px(rnd.uniform(2.5, 4)), rnd.choice(TAG_COLORS), rnd.randrange(1000))
         elif T.shape == "block":  # Mondrian: a flat color field inside a thick black line
             b = px(T.border)
             c.create_rectangle(b / 2, b / 2, w - b / 2, h - b / 2, fill=self.bg, outline="#111111", width=b)
@@ -591,11 +622,30 @@ class Panel(tk.Frame):
             self._draw_oasis(c, w, h)
             return
         if self.pattern in ("jungle", "tags"):
-            from .y2k import draw_tag, draw_vine
+            from .y2k import FERN_GREENS, TAG_COLORS, draw_fern, draw_scribble, draw_splat, draw_sticker, draw_tag, draw_vine
 
-            if self.pattern == "jungle":  # mist hanging in the margin, leaves for every finished phrase
+            rnd = random.Random(w * 7 + h)
+            if self.pattern == "jungle":  # ferns growing up from the bottom corners and hanging from the top ones
                 round_rect(c, px(4), px(4), w - px(4), h - px(4), px(T.radius) + px(4), fill="",
                            outline=blend(self.bg, T.accent, 0.25))
+                for x, y, angle, curl in ((px(10), h - px(4), 82, -0.5), (w - px(10), h - px(4), 98, 0.5),
+                                          (px(10), px(4), -80, 0.4), (w - px(10), px(4), -100, -0.4)):
+                    length = h * (0.55 if y > h / 2 else 0.35)
+                    draw_fern(c, x, y, length, angle, rnd.choice(FERN_GREENS), curl=curl, leaflet=px(10))
+            else:  # the wall is a mess: paint splats, marker scribbles and stickers all over the margin
+                spots = [(rnd.uniform(px(6), w - px(6)), rnd.choice((rnd.uniform(px(4), px(20)),
+                                                                     rnd.uniform(h - px(22), h - px(6)))))
+                         for _ in range(int(w / px(30)))]
+                spots += [(rnd.choice((rnd.uniform(px(4), px(20)), rnd.uniform(w - px(22), w - px(6)))),
+                           rnd.uniform(px(6), h - px(6))) for _ in range(int(h / px(30)))]
+                for k, (x, y) in enumerate(spots):
+                    kind = k % 4
+                    if kind in (0, 3):
+                        draw_splat(c, x, y, px(rnd.uniform(2, 5)), rnd.choice(TAG_COLORS), k)
+                    elif kind == 1:
+                        draw_scribble(c, x - px(8), y, px(16), k, rnd.choice(("#f5f5f5", "#ff3aa0", "#b6ff2e")))
+                    else:
+                        draw_sticker(c, x, y, px(12), k)
             for k, (x, y) in enumerate(self._growth_spots(w, h)[:self.growth]):
                 if self.pattern == "jungle":
                     draw_vine(c, x, y, px(26), k)
@@ -1077,7 +1127,9 @@ class SkinButton(tk.Canvas):
         self.glyph_cy = h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if self.kind == "toon" else h / 2
         self.glyph_cx = (w - px(3)) / 2 if self.kind == "toon" else w / 2
         self.shift = px(3) if self.kind == "toon" else 1  # how far the glyph moves when pressed
-        self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else (T.btn_face, T.btn_glyph))
+        self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else
+                                       toon_colors(glyph, text) if self.kind == "toon" else (T.btn_face, T.btn_glyph))
+        self.tilt = random.Random(f"{glyph}{text}").uniform(-4, 4) if self.kind == "toon" else 0.0
         super().__init__(master, width=w, height=h, bg=master["bg"], highlightthickness=0, cursor="hand2")
         self.command = command
         self.on_press, self.sound = on_press, sound
@@ -1130,9 +1182,12 @@ class SkinButton(tk.Canvas):
         elif self.kind == "toon":  # cel-shaded: fat outline and a hard shadow; pressed, it drops into the shadow
             s, b = px(3), max(2, px(2.5))
             off = s if pressed else 0
-            round_rect(self, s, s, w - 1, h - 1, px(9), fill="#111111", outline="", tags="face")
-            round_rect(self, b / 2 + off, b / 2 + off, w - 1 - s - b / 2 + off, h - 1 - s - b / 2 + off, px(9),
-                       fill=T.btn_light if pressed else T.btn_face, outline="#111111", width=b, tags="face")
+            shadow = round_rect(self, s, s, w - 1, h - 1, px(9), fill="#111111", outline="", tags="face")
+            face = round_rect(self, b / 2 + off, b / 2 + off, w - 1 - s - b / 2 + off, h - 1 - s - b / 2 + off, px(9),
+                              fill=blend(self.fill, "#ffffff", 0.4) if pressed else self.fill, outline="#111111",
+                              width=b, tags="face")
+            for item in (shadow, face):  # a little crooked, like it was stuck on the wall
+                rotate_item(self, item, self.tilt, w / 2, h / 2)
         elif self.kind == "circle":
             if w == h:
                 self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
@@ -1773,7 +1828,7 @@ class TitleBar(tk.Canvas):
     def __init__(self, master, title: str, on_menu=None):
         self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
                   "coffee": px(26), "dunes": px(22), "lofi": px(22), "speed": px(20), "blades": px(24), "fog": px(20),
-                  "canopy": px(24), "tags": px(28)}.get(T.title_style, px(18))
+                  "canopy": px(30), "tags": px(28)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
@@ -1822,24 +1877,43 @@ class TitleBar(tk.Canvas):
             for k, color in enumerate(("#8a4fc4", "#f29a1f", "#2a8fd6", "#6cbb22")):
                 x = w - px(6) - k * px(7)
                 round_rect(self, x - px(5), px(2), x + px(3), h - px(2), px(3), fill=color, outline="")
-        if style == "canopy":  # jungle leaves hanging from the top on both sides
+        if style == "canopy":  # ferns and big leaves hanging from the top on both sides
+            from .y2k import FERN_GREENS, draw_fern
+
             rnd = random.Random(11)
-            for x in (px(30), px(48), px(66), w - px(30), w - px(48), w - px(66)):
-                draw_leaf(self, x, px(6) + rnd.uniform(0, px(4)), px(16), 90 + rnd.uniform(-35, 35),
-                          rnd.choice(("#2f8f5b", "#1f6e4a", "#3fae6c")))
-        if style == "tags":  # the title sprayed on: fat letters with a black outline
+            for k, x in enumerate((px(30), px(48), px(66), px(84), w - px(30), w - px(48), w - px(66), w - px(84))):
+                if k % 2:
+                    draw_leaf(self, x, px(6) + rnd.uniform(0, px(4)), px(16), 90 + rnd.uniform(-35, 35),
+                              rnd.choice(FERN_GREENS))
+                else:
+                    draw_fern(self, x, 0, h * rnd.uniform(1.0, 1.2), -90 + rnd.uniform(-25, 25), rnd.choice(FERN_GREENS),
+                              curl=rnd.choice((-0.6, 0.6)), leaflet=px(4.5))
+        angle = 0
+        if style == "tags":  # the title sprayed on crooked, fat letters with a black outline, over a messy wall
+            from .y2k import TAG_COLORS, draw_scribble, draw_splat
+
+            rnd = random.Random(23)
+            for k in range(12):
+                x = w * (k + 0.5) / 12 + rnd.uniform(-px(8), px(8))
+                y = rnd.uniform(px(5), h - px(5))
+                if k % 3 == 1:
+                    draw_scribble(self, x - px(10), y, px(20), k, rnd.choice(("#111111", "#ff3aa0", "#3ad1ff")))
+                else:
+                    draw_splat(self, x, y, px(rnd.uniform(4, 7)), rnd.choice(TAG_COLORS[1:]), k)
             font = T.font("sans", 11, "bold")
+            angle = 3
             for dx in (-2, 0, 2):
                 for dy in (-2, 0, 2):
                     if dx or dy:
-                        self.create_text(w / 2 + px(dx), text_y + px(dy), text=T.tx(self.title), fill="#111111", font=font)
+                        self.create_text(w / 2 + px(dx), text_y + px(dy), text=T.tx(self.title), fill="#111111", font=font,
+                                         angle=angle)
             text_color = "#ff3aa0"
         if T.glow:  # iced text: a soft light halo around it
             for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                 self.create_text(w / 2 + dx, text_y + dy, text=T.tx(self.title), fill=blend(T.body, T.glow, 0.8),
                                  font=font)
             text_color = blend(T.body, "#eef8fb", 0.88)  # a little see-through, like ice
-        text = self.create_text(w / 2, text_y, text=T.tx(self.title), fill=text_color, font=font)
+        text = self.create_text(w / 2, text_y, text=T.tx(self.title), fill=text_color, font=font, angle=angle)
         x0, y0, x1, y1 = self.bbox(text)
         left = px(22) if self.on_menu else px(6)
         if style == "stripes":

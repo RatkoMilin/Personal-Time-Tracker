@@ -375,14 +375,75 @@ def draw_tag(c: tk.Canvas, x: float, y: float, size: float, seed: int) -> None:
                          outline="#111111", width=1)
 
 
+FERN_GREENS = ("#2f8f5b", "#3fae6c", "#1f6e4a", "#5ccf8a")
+
+
+def draw_fern(c: tk.Canvas, x: float, y: float, length: float, angle: float, color: str = "#3fae6c",
+              curl: float = 0.5, leaflet: float | None = None) -> None:
+    """A fern frond from (x, y) towards angle (degrees, counterclockwise, 90 = up): a stem that curls a
+    little and pairs of leaflets that get smaller towards the tip."""
+    n = max(5, min(12, int(length / px(3.5))))  # short fronds get fewer leaflets, so they stay apart
+    leaflet = leaflet if leaflet is not None else min(px(11), length * 0.24)
+    a, step = math.radians(angle), length / n
+    pts = [(x, y)]
+    for i in range(1, n + 1):
+        a += curl / n
+        pts.append((pts[-1][0] + math.cos(a) * step, pts[-1][1] - math.sin(a) * step))
+    c.create_line([v for pt in pts for v in pt], fill=blend(color, "#0b1a14", 0.35), width=max(1, px(1.2)),
+                  smooth=True, capstyle="round")
+    for i in range(1, n):
+        t = i / n
+        (x0, y0), (x1, y1) = pts[i - 1], pts[i]
+        d = math.atan2(-(y1 - y0), x1 - x0)
+        size = leaflet * (1 - t) ** 0.7 + px(1.5)
+        for side in (1, -1):  # leaflets point forward, off both sides of the stem
+            b = d + side * math.radians(55)
+            c.create_line(x1, y1, x1 + math.cos(b) * size, y1 - math.sin(b) * size, fill=color,
+                          width=max(1, size * 0.32), capstyle="round")
+
+
 def draw_vine(c: tk.Canvas, x: float, y: float, size: float, seed: int) -> None:
-    """A jungle cluster: three big leaves and a curl of vine."""
+    """A jungle cluster: a few fern fronds fanning out from one spot, and a big leaf."""
     rnd = random.Random(seed)
-    greens = ("#2f8f5b", "#3fae6c", "#1f6e4a", "#5ccf8a")
-    c.create_line(x, y, x + size * 0.3, y - size * 0.35, x - size * 0.1, y - size * 0.6, fill="#2a5a3a",
-                  width=max(1, px(1.2)), smooth=True)
     for k in range(3):
-        angle = rnd.uniform(-160, -20) + k * 40
-        a = math.radians(angle)
-        skin.draw_leaf(c, x + math.cos(a) * size * 0.3, y + math.sin(a) * size * 0.3, size * rnd.uniform(0.85, 1.1),
-                       angle, greens[(seed + k) % len(greens)])
+        draw_fern(c, x, y, size * rnd.uniform(0.9, 1.25), 60 + k * 30 + rnd.uniform(-10, 10),
+                  FERN_GREENS[(seed + k) % len(FERN_GREENS)], curl=rnd.choice((-0.6, 0.6)), leaflet=size * 0.22)
+    angle = rnd.uniform(-160, -20)
+    skin.draw_leaf(c, x, y - size * 0.1, size * 0.8, angle, FERN_GREENS[(seed + 3) % len(FERN_GREENS)])
+
+
+def draw_splat(c: tk.Canvas, x: float, y: float, r: float, color: str, seed: int) -> None:
+    """A paint splat: a spiky blob and a few droplets flung around it."""
+    rnd = random.Random(seed)
+    pts = []
+    for k in range(14):
+        a = k * 2 * math.pi / 14
+        rr = r * (rnd.uniform(1.0, 1.6) if k % 2 else rnd.uniform(0.55, 0.8))
+        pts += [x + math.cos(a) * rr, y + math.sin(a) * rr]
+    c.create_polygon(pts, fill=color, outline="", smooth=True)
+    for _ in range(4):
+        a, d = rnd.uniform(0, 2 * math.pi), r * rnd.uniform(1.8, 2.6)
+        dr = r * rnd.uniform(0.12, 0.25)
+        c.create_oval(x + math.cos(a) * d - dr, y + math.sin(a) * d - dr, x + math.cos(a) * d + dr,
+                      y + math.sin(a) * d + dr, fill=color, outline="")
+
+
+def draw_scribble(c: tk.Canvas, x: float, y: float, w: float, seed: int, color: str = "#111111") -> None:
+    """A quick marker scribble: a loose zigzag."""
+    rnd = random.Random(seed)
+    pts = [x, y]
+    for k in range(1, 7):
+        pts += [x + w * k / 6, y + rnd.uniform(-w * 0.18, w * 0.18)]
+    c.create_line(pts, fill=color, width=max(1, px(1.3)), smooth=True, capstyle="round")
+
+
+def draw_sticker(c: tk.Canvas, x: float, y: float, size: float, seed: int) -> None:
+    """A slapped-on sticker: a white tilted label with a colored dot and a black edge."""
+    rnd = random.Random(seed)
+    a = math.radians(rnd.uniform(-25, 25))
+    hw, hh = size * 0.6, size * 0.38
+    corners = [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)]
+    pts = [v for dx, dy in corners for v in (x + dx * math.cos(a) - dy * math.sin(a), y + dx * math.sin(a) + dy * math.cos(a))]
+    c.create_polygon(pts, fill="#ffffff", outline="#111111", width=max(1, px(1.2)))
+    r = hh * 0.6
+    c.create_oval(x - r, y - r, x + r, y + r, fill=TAG_COLORS[seed % len(TAG_COLORS)], outline="#111111")

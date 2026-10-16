@@ -315,11 +315,13 @@ def test_towers_one_per_task_and_growth_around_the_list(page):
     page.fill("#task", "Jungle")
     page.click("#playBtn")
     assert page.locator("#pads.running rect.pad").count() == 16
+    page.wait_for_selector("#growth .base")
+    assert page.locator("#growth .base").count() == 1 and page.locator("#growth .grow").count() == 0  # ferns, no phrase yet
     page.evaluate("window.PTT.db.entries.at(-1).start = Date.now() - 81 * 60000")
-    page.wait_for_function("document.querySelectorAll('#growth path').length > 0")  # a phrase is done: leaves
+    page.wait_for_function("document.querySelectorAll('#growth .grow').length === 1")  # a phrase is done: more ferns
     page.click("#stopBtn")
     pick_skin(page, "graffiti")
-    page.wait_for_function("document.querySelectorAll('#growth polygon').length >= 2")  # one tag (81 min today)
+    page.wait_for_function("document.querySelectorAll('#growth .grow').length === 1")  # one tag (81 min today) on a messy wall
     assert page.evaluate("document.documentElement.scrollWidth") <= 390
 
 

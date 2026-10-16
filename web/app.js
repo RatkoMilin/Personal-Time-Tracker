@@ -646,16 +646,71 @@
     return [[m, h - m], [w - m * 1.2, h - m * 1.2], [w * 0.5, h - m], [m, h * 0.45], [w - m * 1.2, h * 0.45],
             [w * 0.25, m], [w * 0.75, m], [w * 0.27, h - m], [w * 0.73, h - m]];
   }
-  function vineSvg(x, y, size, k) {
-    const rnd = mulberry(k + 7), greens = ["#2f8f5b", "#3fae6c", "#1f6e4a", "#5ccf8a"];
-    let out = `<path d="M${f1(x)},${f1(y)} Q${f1(x + size * 0.3)},${f1(y - size * 0.35)} ${f1(x - size * 0.1)},${f1(y - size * 0.6)}" fill="none" stroke="#2a5a3a" stroke-width="1.2"/>`;
-    for (let i = 0; i < 3; i++) {
-      const angle = -160 + rnd() * 140 + i * 40, a = angle * Math.PI / 180, len = size * (0.85 + rnd() * 0.25);
-      const lx = x + Math.cos(a) * size * 0.3, ly = y + Math.sin(a) * size * 0.3;
-      out += `<g transform="translate(${f1(lx)} ${f1(ly)}) rotate(${f1(angle)})"><path d="M${f1(-len / 2)},0 Q0,${f1(-len * 0.3)} ${f1(len / 2)},0 Q0,${f1(len * 0.3)} ${f1(-len / 2)},0Z" fill="${greens[(k + i) % 4]}"/>` +
-        `<line x1="${f1(-len * 0.4)}" x2="${f1(len * 0.4)}" y1="0" y2="0" stroke="#7cc46a" stroke-width=".8"/></g>`;
+  // A fern frond from (x, y) towards angle (degrees, 90 = up): a curling stem and pairs of leaflets that
+  // get smaller towards the tip (as on the laptop).
+  function fernSvg(x, y, length, angle, color, curl = 0.5, leaflet = 10) {
+    const n = Math.max(5, Math.min(12, Math.floor(length / 3.5))), step = length / n, pts = [[x, y]];
+    let a = angle * Math.PI / 180;
+    for (let i = 1; i <= n; i++) {
+      a += curl / n;
+      const [px, py] = pts[i - 1];
+      pts.push([px + Math.cos(a) * step, py - Math.sin(a) * step]);
+    }
+    let out = `<polyline points="${ptsAttr(pts)}" fill="none" stroke="#1f4a36" stroke-width="1.2" stroke-linecap="round"/>`;
+    for (let i = 1; i < n; i++) {
+      const t = i / n, [x0, y0] = pts[i - 1], [x1, y1] = pts[i], d = Math.atan2(-(y1 - y0), x1 - x0);
+      const size = leaflet * Math.pow(1 - t, 0.7) + 1.5;
+      for (const side of [1, -1]) {
+        const b = d + side * 55 * Math.PI / 180;
+        out += `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x1 + Math.cos(b) * size)}" y2="${f1(y1 - Math.sin(b) * size)}" stroke="${color}" stroke-width="${f1(Math.max(1, size * 0.32))}" stroke-linecap="round"/>`;
+      }
     }
     return out;
+  }
+  const FERN_GREENS = ["#2f8f5b", "#3fae6c", "#1f6e4a", "#5ccf8a"];
+  function vineSvg(x, y, size, k) {  // a phrase done: fern fronds fanning out from one spot
+    const rnd = mulberry(k + 7);
+    let out = "";
+    for (let i = 0; i < 3; i++) {
+      out += fernSvg(x, y, size * (0.9 + rnd() * 0.35), 60 + i * 30 + (rnd() - 0.5) * 20, FERN_GREENS[(k + i) % 4],
+                     rnd() < 0.5 ? -0.6 : 0.6, size * 0.22);
+    }
+    return `<g class="grow">${out}</g>`;
+  }
+  function fernBase(w, h) {  // ferns growing up from the bottom corners and hanging from the top ones
+    return `<g class="base">` + [[10, h - 4, 82, -0.5, 0.55], [w - 10, h - 4, 98, 0.5, 0.55], [10, 4, -80, 0.4, 0.35],
+      [w - 10, 4, -100, -0.4, 0.35]].map(([x, y, a, c, k], i) => fernSvg(x, y, h * k, a, FERN_GREENS[i % 4], c, 10)).join("") + `</g>`;
+  }
+  function splatSvg(x, y, r, color, seed) {
+    const rnd = mulberry(seed + 11), pts = [];
+    for (let k = 0; k < 14; k++) {
+      const a = k * 2 * Math.PI / 14, rr = r * (k % 2 ? 1 + rnd() * 0.6 : 0.55 + rnd() * 0.25);
+      pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
+    }
+    let out = `<polygon points="${ptsAttr(pts)}" fill="${color}" stroke="${color}" stroke-linejoin="round"/>`;
+    for (let k = 0; k < 4; k++) {
+      const a = rnd() * 2 * Math.PI, d = r * (1.8 + rnd() * 0.8);
+      out += `<circle cx="${f1(x + Math.cos(a) * d)}" cy="${f1(y + Math.sin(a) * d)}" r="${f1(r * (0.12 + rnd() * 0.13))}" fill="${color}"/>`;
+    }
+    return out;
+  }
+  function wallMess(w, h) {  // Grafiti: paint splats, marker scribbles and stickers all over the margin
+    const rnd = mulberry(w * 7 + h), edge = (lo, hi) => (rnd() < 0.5 ? lo + rnd() * 16 : hi - 16 * rnd());
+    const spots = [];
+    for (let i = 0; i < Math.floor(w / 30); i++) spots.push([6 + rnd() * (w - 12), edge(4, h - 6)]);
+    for (let i = 0; i < Math.floor(h / 30); i++) spots.push([edge(4, w - 6), 6 + rnd() * (h - 12)]);
+    let out = `<g class="base">`;
+    spots.forEach(([x, y], k) => {
+      if (k % 4 === 1) {
+        const pts = [[x - 8, y]];
+        for (let i = 1; i < 7; i++) pts.push([x - 8 + 16 * i / 6, y + (rnd() - 0.5) * 6]);
+        out += `<polyline points="${ptsAttr(pts)}" fill="none" stroke="${["#f5f5f5", "#ff3aa0", "#b6ff2e"][k % 3]}" stroke-width="1.3" stroke-linecap="round"/>`;
+      } else if (k % 4 === 2) {
+        out += `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${f1((rnd() - 0.5) * 50)})"><rect x="-7" y="-4.5" width="14" height="9" fill="#fff" stroke="#111" stroke-width="1.2"/>` +
+          `<circle r="2.7" fill="${TAG_COLORS[k % 6]}" stroke="#111"/></g>`;
+      } else out += splatSvg(x, y, 2 + rnd() * 3, TAG_COLORS[Math.floor(rnd() * 6)], k);
+    });
+    return out + `</g>`;
   }
   function tagSvg(x, y, size, k) {
     const rnd = mulberry(k + 3), color = TAG_COLORS[k % TAG_COLORS.length];
@@ -665,7 +720,7 @@
     const head = [[bx + ux * size * 0.3, by + uy * size * 0.3], [bx - uy * size * 0.22, by + ux * size * 0.22], [bx + uy * size * 0.22, by - ux * size * 0.22]];
     const line = `M${pts.map(([px, py]) => `${f1(px)},${f1(py)}`).join(" L")}`, thick = Math.max(3, size * 0.2);
     const [dx, dy] = pts[1];
-    let out = `<line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="#111" stroke-width="4" stroke-linecap="round"/>` +
+    let out = `<g class="grow"><line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="#111" stroke-width="4" stroke-linecap="round"/>` +
       `<line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>` +
       `<path d="${line}" fill="none" stroke="#111" stroke-width="${f1(thick + 3)}" stroke-linecap="round" stroke-linejoin="round"/>` +
       `<polygon points="${ptsAttr(head)}" fill="${color}" stroke="#111" stroke-width="1.5"/>` +
@@ -677,7 +732,7 @@
       const cx = x - size * 0.5, cy = y - size * 0.4, c = size * 0.13;
       out += `<polygon points="${ptsAttr([[cx - c * 1.5, cy + c], [cx - c * 1.5, cy - c * 0.5], [cx - c * 0.6, cy + c * 0.2], [cx, cy - c], [cx + c * 0.6, cy + c * 0.2], [cx + c * 1.5, cy - c * 0.5], [cx + c * 1.5, cy + c]])}" fill="#ffe600" stroke="#111"/>`;
     }
-    return out;
+    return out + `</g>`;
   }
   function renderGrowth(kind, n) {
     const svg = $("growth"), w = svg.clientWidth, h = svg.clientHeight;
@@ -685,7 +740,8 @@
     if (key === growthKey || !w) return;
     growthKey = key;
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.innerHTML = growthSpots(w, h).slice(0, n).map(([x, y], k) => kind === "tags" ? tagSvg(x, y, 28, k) : vineSvg(x, y, 26, k)).join("");
+    svg.innerHTML = (kind === "tags" ? wallMess(w, h) : fernBase(w, h)) +
+      growthSpots(w, h).slice(0, n).map(([x, y], k) => kind === "tags" ? tagSvg(x, y, 28, k) : vineSvg(x, y, 26, k)).join("");
   }
 
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
