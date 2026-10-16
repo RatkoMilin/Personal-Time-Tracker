@@ -32,6 +32,17 @@ def task_total(db: Database, description: str, project_id: int | None, now: floa
                if e.description == description and e.project_id == project_id)
 
 
+def task_groups(db: Database, now: float | None = None) -> list[tuple[str, int | None, float]]:
+    """Today's tasks (name, project, seconds), in the order they were first started."""
+    now = time.time() if now is None else now
+    a = timeutil.day_start(timeutil.ts_to_date(now))
+    groups: dict[tuple[str, int | None], float] = {}
+    for e in db.entries_between(a, now + 1):
+        key = (e.description, e.project_id)
+        groups[key] = groups.get(key, 0.0) + overlap(e.start_ts, e.end_ts if e.end_ts is not None else now, a, now)
+    return [(desc, pid, secs) for (desc, pid), secs in groups.items()]
+
+
 def export_csv(db: Database, path: str, a: float, b: float, now: float | None = None) -> int:
     """Write entries overlapping [a, b) to a CSV that Excel opens directly. Returns the row count."""
     now = time.time() if now is None else now

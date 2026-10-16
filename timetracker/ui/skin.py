@@ -100,6 +100,7 @@ class Theme:
     layers: tuple = ()
     glow: str = ""
     play_fx: str = ""  # "bullet": the play button takes a shot when pressed (the hole fades away)
+    meter_colors: tuple = ()  # the "eq" meter's lit bars: (first, last) color
 
     def font(self, kind: str = "sans", size: int = 10, weight: str = "normal") -> tuple:
         families = self.mono if kind == "mono" else self.sans
@@ -253,12 +254,96 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="normal", upper=False,
         shape="round", radius=12, panel_outline="#4a3f6b", title_style="lofi", segments="round",
-        clock_deco="vinyl", pl_pattern="rain", meter="eq",
+        clock_deco="vinyl", pl_pattern="rain", meter="eq", meter_colors=("#f2a65a", "#e8899a"),
+    ),
+    # ---------------------------------------------------------------- the 2000s
+    Theme(
+        key="kinetic", name="Kinetik",
+        # a night race: indigo black, cyan and magenta neon, chrome buttons
+        body="#0d0b1e", body_light="#2a2550", body_dark="#05040c", text="#cfd8ff", accent="#ff2fb3",
+        lcd_bg="#05060f", lcd_on="#2ff3ff", lcd_off="#0c1a2a", lcd_dim="#3b6a8a", lcd_text="#bfefff",
+        btn_face="#b8c0d0", btn_light="#f2f5fa", btn_dark="#4a5266", btn_glyph="#0d0b1e",
+        sel_bg="#ff2fb3", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Bahnschrift", "DejaVu Sans"),
+        shape="chamfer", panel_outline="#2ff3ff", title_style="speed", segments="sharp",
+        clock_deco="speedo", pl_pattern="streaks", meter="boost",
+    ),
+    Theme(
+        key="blades", name="Blades",
+        # glossy white panels, green orbs, the colored blade edges
+        body="#e9ecef", body_light="#ffffff", body_dark="#b9c0c7", text="#2b3036", accent="#5aa51a",
+        lcd_bg="#f7f9fa", lcd_on="#4c9a12", lcd_off="#e3e8ec", lcd_dim="#9aa5ae", lcd_text="#2b3036",
+        btn_face="#6cbb22", btn_light="#a6e05a", btn_dark="#3f7a0e", btn_glyph="#ffffff",
+        sel_bg="#6cbb22", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=12, panel_outline="#c3cad1", title_style="blades", segments="round",
+        button="orb", clock_deco="ring", meter="gamerscore",
+    ),
+    Theme(
+        key="towers", name="Kristalne kule",
+        # the boot screen: black, deep blue fog, pale blue crystal
+        body="#05070f", body_light="#1a2340", body_dark="#000000", text="#b8c8f0", accent="#4a7dff",
+        lcd_bg="#02040b", lcd_on="#9fc4ff", lcd_off="#0a1226", lcd_dim="#3c5288", lcd_text="#c8d8ff",
+        btn_face="#1a2340", btn_light="#3a4c80", btn_dark="#080c1a", btn_glyph="#cfe0ff",
+        sel_bg="#2e4fb0", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=6, panel_outline="#22346e", title_style="fog", segments="hex",
+        clock_deco="towers", pl_pattern="stars", meter="crystal",
+    ),
+    Theme(
+        key="atmos", name="Atmos",
+        # atmospheric jungle at night: dark green, teal, a bit of lime
+        body="#0f1f1c", body_light="#1f3a34", body_dark="#071210", text="#cfe8dc", accent="#36d6b0",
+        lcd_bg="#06120f", lcd_on="#6dffc8", lcd_off="#0d211c", lcd_dim="#3f7a66", lcd_text="#bff0dc",
+        btn_face="#1f3a34", btn_light="#2f5a50", btn_dark="#0a1714", btn_glyph="#9ff5d6",
+        sel_bg="#2a8f78", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=8, panel_outline="#1f3a34", title_style="canopy", segments="round",
+        clock_deco="pads", pl_pattern="jungle", meter="eq", meter_colors=("#36d6b0", "#b6ff5a"),
+    ),
+    Theme(
+        key="graffiti", name="Grafiti",
+        # cel-shaded street: yellow wall, fat black outlines, loud pink, lime and cyan
+        body="#ffd23f", body_light="#fff0a0", body_dark="#111111", text="#111111", accent="#ff3aa0",
+        lcd_bg="#1a1a1a", lcd_on="#b6ff2e", lcd_off="#2a2a2a", lcd_dim="#7a7a7a", lcd_text="#f5f5f5",
+        btn_face="#ff3aa0", btn_light="#ff8cc8", btn_dark="#111111", btn_glyph="#ffffff",
+        sel_bg="#3ad1ff", sel_fg="#111111",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI Black", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="toon", radius=12, border=3, panel_outline="#111111", title_style="tags", segments="round",
+        button="toon", pl_pattern="tags", meter="spray",
     ),
 )}
 
 MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
 ICE_EDGE = "#9fc6d4"  # the bluish rim of an ice cube
+
+
+def toon_colors(glyph: str | None, text: str | None) -> tuple[str, str]:
+    """(fill, glyph) of a Grafiti button: every one sprayed in its own loud color."""
+    by_glyph = {"play": ("#b6ff2e", "#111111"), "pause": ("#3ad1ff", "#111111"), "stop": ("#ff8a1f", "#111111"),
+                "eject": ("#a259ff", "#ffffff"), "prev": ("#ffe600", "#111111"), "next": ("#ffe600", "#111111")}
+    if glyph in by_glyph:
+        return by_glyph[glyph]
+    palette = (("#ff3aa0", "#ffffff"), ("#b6ff2e", "#111111"), ("#3ad1ff", "#111111"), ("#a259ff", "#ffffff"))
+    return palette[sum(map(ord, text or "")) % len(palette)]
+
+
+def rotate_item(c: tk.Canvas, item: int, degrees: float, cx: float, cy: float) -> None:
+    """Turn a canvas polygon or line around (cx, cy)."""
+    if not degrees:
+        return
+    a = math.radians(degrees)
+    ca, sa = math.cos(a), math.sin(a)
+    pts = c.coords(item)
+    out = []
+    for i in range(0, len(pts), 2):
+        dx, dy = pts[i] - cx, pts[i + 1] - cy
+        out += [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca]
+    c.coords(item, *out)
 
 
 def block_colors(role: str | None) -> tuple[str, str]:
@@ -416,10 +501,12 @@ class Panel(tk.Frame):
         self.plain = plain  # no box at all: only the content shows
         self.bg = bg or T.lcd_bg
         self.level = 0.0  # oasis: how productive (0..1); the palms around the playlist follow it
-        self.raining = False  # lofi: rain running down the window frame while the timer runs
-        margin = px(18) if pattern == "oasis" else px(9) if pattern else 0
-        pad = (px(pad) + (px(T.radius / 3) if T.shape == "round" else px(2)) + margin
-               + (px(T.border) if T.shape == "block" else 0) + px(2) * len(T.layers))
+        self.moving = False  # rain / speed streaks running around the playlist while the timer runs
+        self.growth = 0  # jungle leaves / graffiti tags drawn around the playlist
+        margin = px(26) if pattern in ("jungle", "tags") else px(18) if pattern == "oasis" else px(9) if pattern else 0
+        pad = (px(pad) + (px(T.radius / 3) if T.shape in ("round", "toon") else px(2)) + margin
+               + (px(T.border) if T.shape == "block" else 0) + (px(T.border) + px(4) if T.shape == "toon" else 0)
+               + px(2) * len(T.layers))
         if plain:
             pad = px(2)
         self.canvas = tk.Canvas(self, bg=master["bg"], highlightthickness=0, bd=0)
@@ -448,6 +535,17 @@ class Panel(tk.Frame):
             round_rect(c, 0, 0, w - 1, h - 1, px(T.radius), fill=self.bg, outline=T.panel_outline)
         elif T.shape == "chamfer":
             chamfer_rect(c, 0, 0, w - 1, h - 1, px(7), fill=self.bg, outline=T.panel_outline)
+        elif T.shape == "toon":  # Grafiti: cel-shaded, a fat black outline and a hard shadow
+            b, s = px(T.border), px(4)
+            round_rect(c, s, s, w - 1, h - 1, px(T.radius), fill="#111111", outline="")
+            round_rect(c, b / 2, b / 2, w - 1 - s, h - 1 - s, px(T.radius), fill=self.bg, outline="#111111", width=b)
+            from .y2k import TAG_COLORS, draw_splat
+
+            rnd = random.Random(w * 31 + h * 17)  # a couple of paint hits on the frame, the same every redraw
+            for k in range(2 if w > px(120) else 1):
+                x, y = rnd.choice(((rnd.uniform(px(12), w - px(16)), b / 2), (rnd.uniform(px(12), w - px(16)), h - s - b / 2),
+                                   (b / 2, rnd.uniform(px(10), h - px(14))), (w - s - b / 2, rnd.uniform(px(10), h - px(14)))))
+                draw_splat(c, x, y, px(rnd.uniform(2.5, 4)), rnd.choice(TAG_COLORS), rnd.randrange(1000))
         elif T.shape == "block":  # Mondrian: a flat color field inside a thick black line
             b = px(T.border)
             c.create_rectangle(b / 2, b / 2, w - b / 2, h - b / 2, fill=self.bg, outline="#111111", width=b)
@@ -484,28 +582,75 @@ class Panel(tk.Frame):
         for x, base, lean in spots[:palms]:
             draw_palm(c, x, base, size, lean)
 
-    def set_rain(self, on: bool) -> None:
-        """Lofi: raindrops slide down the frame around the playlist while the timer runs."""
-        if on == self.raining:
+    def set_moving(self, on: bool) -> None:
+        """While the timer runs: raindrops slide down the frame (Lofi), speed streaks fly past (Kinetik)."""
+        if on == self.moving:
             return
-        self.raining = on
+        self.moving = on
         if on:
-            self._rain_step()
+            self._move_step()
 
-    def _rain_step(self) -> None:
+    def _move_step(self) -> None:
         c = self.canvas
-        if not c.winfo_exists() or not self.raining:
+        if not c.winfo_exists() or not self.moving:
             return
-        h = c.winfo_height()
+        w, h = c.winfo_width(), c.winfo_height()
         for item in c.find_withtag("drop"):
             c.move(item, -0.5, 3 * S)
             if c.coords(item)[1] > h:
                 c.move(item, px(5), -h - px(10))
-        c.after(60, self._rain_step)
+        for item in c.find_withtag("streak"):
+            c.move(item, -7 * S, 0)
+            if c.coords(item)[2] < 0:
+                c.move(item, w + px(16), 0)
+        c.after(60, self._move_step)
+
+    def set_growth(self, n: int) -> None:
+        """Atmos: leaf clusters around the playlist; Grafiti: tags on the wall around it."""
+        if n != self.growth:
+            self.growth = n
+            self._redraw()
+
+    def _growth_spots(self, w: int, h: int) -> list[tuple[float, float]]:
+        """Places in the wide margin, in the order things appear there."""
+        m = px(19)  # the middle of the margin band
+        return [(m, h - m), (w - m * 1.2, h - m * 1.2), (w * 0.5, h - m), (m, h * 0.45), (w - m * 1.2, h * 0.45),
+                (w * 0.25, m), (w * 0.75, m), (w * 0.27, h - m), (w * 0.73, h - m)]
 
     def _draw_pattern(self, c: tk.Canvas, w: int, h: int) -> None:
         if self.pattern == "oasis":
             self._draw_oasis(c, w, h)
+            return
+        if self.pattern in ("jungle", "tags"):
+            from .y2k import FERN_GREENS, TAG_COLORS, draw_fern, draw_scribble, draw_splat, draw_sticker, draw_tag, draw_vine
+
+            rnd = random.Random(w * 7 + h)
+            if self.pattern == "jungle":  # ferns growing up from the bottom corners and hanging from the top ones
+                round_rect(c, px(4), px(4), w - px(4), h - px(4), px(T.radius) + px(4), fill="",
+                           outline=blend(self.bg, T.accent, 0.25))
+                for x, y, angle, curl in ((px(10), h - px(4), 82, -0.5), (w - px(10), h - px(4), 98, 0.5),
+                                          (px(10), px(4), -80, 0.4), (w - px(10), px(4), -100, -0.4)):
+                    length = h * (0.55 if y > h / 2 else 0.35)
+                    draw_fern(c, x, y, length, angle, rnd.choice(FERN_GREENS), curl=curl, leaflet=px(10))
+            else:  # the wall is a mess: paint splats, marker scribbles and stickers all over the margin
+                spots = [(rnd.uniform(px(6), w - px(6)), rnd.choice((rnd.uniform(px(4), px(20)),
+                                                                     rnd.uniform(h - px(22), h - px(6)))))
+                         for _ in range(int(w / px(30)))]
+                spots += [(rnd.choice((rnd.uniform(px(4), px(20)), rnd.uniform(w - px(22), w - px(6)))),
+                           rnd.uniform(px(6), h - px(6))) for _ in range(int(h / px(30)))]
+                for k, (x, y) in enumerate(spots):
+                    kind = k % 4
+                    if kind in (0, 3):
+                        draw_splat(c, x, y, px(rnd.uniform(2, 5)), rnd.choice(TAG_COLORS), k)
+                    elif kind == 1:
+                        draw_scribble(c, x - px(8), y, px(16), k, rnd.choice(("#f5f5f5", "#ff3aa0", "#b6ff2e")))
+                    else:
+                        draw_sticker(c, x, y, px(12), k)
+            for k, (x, y) in enumerate(self._growth_spots(w, h)[:self.growth]):
+                if self.pattern == "jungle":
+                    draw_vine(c, x, y, px(26), k)
+                else:
+                    draw_tag(c, x, y, px(28), k)
             return
         # Deterministic, so the pattern does not jump around when the window redraws.
         rnd = random.Random(w * 7919 + h)
@@ -535,6 +680,15 @@ class Panel(tk.Frame):
                 ln = rnd.uniform(px(4), px(8))
                 c.create_line(x, y, x - ln * 0.25, y + ln, fill=rnd.choice(("#6f6698", "#8f86b8", "#5a527e")),
                               tags="drop")
+        elif self.pattern == "streaks":  # speed lines in neon, flying past while the timer runs
+            for x, y in spots:
+                ln = rnd.uniform(px(6), px(16))
+                c.create_line(x, y, x + ln, y, fill=rnd.choice(("#2ff3ff", "#ff2fb3", "#3a3a8a")), tags="streak")
+        elif self.pattern == "stars":  # the boot screen's particles: tiny points of light in the fog
+            for x, y in spots:
+                r = rnd.uniform(0.6, 1.4) * S
+                c.create_oval(x - r, y - r, x + r, y + r, fill=blend(self.bg, T.lcd_on, rnd.uniform(0.25, 0.8)),
+                              outline="")
         elif self.pattern == "bubbles":  # barely visible
             for x, y in spots[::3]:
                 r = rnd.uniform(px(2), px(4))
@@ -961,24 +1115,28 @@ class SkinButton(tk.Canvas):
                 w = max(w + px(6), h)
             else:
                 w = h = max(w, h) + px(10)
-        if self.kind == "circle":
+        if self.kind in ("circle", "orb"):
             if text:
                 h = h + px(4)
                 w = max(w + px(6), h)
             else:
                 w = h = max(w, h) + px(6)
-        if self.kind == "block":
+        if self.kind in ("block", "toon"):
             w, h = w + px(6), h + px(6)
-        # The glyph sits on the paw's big pad, lower than the middle.
-        self.glyph_cy = h * 0.68 if self.kind == "paw" else h / 2
-        self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else (T.btn_face, T.btn_glyph))
+        # The glyph sits on the paw's big pad, lower than the middle; on a cartoon button, off its shadow.
+        self.glyph_cy = h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if self.kind == "toon" else h / 2
+        self.glyph_cx = (w - px(3)) / 2 if self.kind == "toon" else w / 2
+        self.shift = px(3) if self.kind == "toon" else 1  # how far the glyph moves when pressed
+        self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else
+                                       toon_colors(glyph, text) if self.kind == "toon" else (T.btn_face, T.btn_glyph))
+        self.tilt = random.Random(f"{glyph}{text}").uniform(-4, 4) if self.kind == "toon" else 0.0
         super().__init__(master, width=w, height=h, bg=master["bg"], highlightthickness=0, cursor="hand2")
         self.command = command
         self.on_press, self.sound = on_press, sound
         self.w, self.h = w, h
         self._draw_face(pressed=False)
         self.glyph_items = self._glyph(glyph) if glyph else [
-            self.create_text(w / 2, self.glyph_cy, text=text, fill=self.glyph_color, font=font)]
+            self.create_text(self.glyph_cx, self.glyph_cy, text=text, fill=self.glyph_color, font=font)]
         self.bind("<ButtonPress-1>", self._press)
         self.bind("<ButtonRelease-1>", self._release)
         self.tip = Tooltip(self, tooltip) if tooltip else None
@@ -1010,6 +1168,26 @@ class SkinButton(tk.Canvas):
             else:
                 round_rect(self, 1, 1, w - 2, h - 2, (h - 3) / 2, fill=T.btn_dark if pressed else T.btn_face,
                            outline=T.btn_dark, tags="face")
+        elif self.kind == "orb":  # a glossy orb: a light shine over the top half, gone while pressed
+            if w == h:
+                self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline=T.btn_dark, tags="face")
+                if not pressed:
+                    self.create_oval(w * 0.2, h * 0.08, w * 0.8, h * 0.5, fill=blend(T.btn_face, "#ffffff", 0.5),
+                                     outline="", tags="face")
+            else:
+                round_rect(self, 1, 1, w - 2, h - 2, (h - 3) / 2, fill=fill, outline=T.btn_dark, tags="face")
+                if not pressed:
+                    round_rect(self, px(5), px(2.5), w - px(5), h * 0.48, h * 0.2, fill=blend(T.btn_face, "#ffffff", 0.45),
+                               outline="", tags="face")
+        elif self.kind == "toon":  # cel-shaded: fat outline and a hard shadow; pressed, it drops into the shadow
+            s, b = px(3), max(2, px(2.5))
+            off = s if pressed else 0
+            shadow = round_rect(self, s, s, w - 1, h - 1, px(9), fill="#111111", outline="", tags="face")
+            face = round_rect(self, b / 2 + off, b / 2 + off, w - 1 - s - b / 2 + off, h - 1 - s - b / 2 + off, px(9),
+                              fill=blend(self.fill, "#ffffff", 0.4) if pressed else self.fill, outline="#111111",
+                              width=b, tags="face")
+            for item in (shadow, face):  # a little crooked, like it was stuck on the wall
+                rotate_item(self, item, self.tilt, w / 2, h / 2)
         elif self.kind == "circle":
             if w == h:
                 self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
@@ -1030,7 +1208,7 @@ class SkinButton(tk.Canvas):
         self.tag_lower("face")
 
     def _glyph(self, glyph: str) -> list[int]:
-        cx, cy = self.w / 2, self.glyph_cy
+        cx, cy = self.glyph_cx, self.glyph_cy
         s = min(self.w, self.h) * (0.2 if self.kind == "paw" else 0.28)
         fill = self.glyph_color
         if glyph == "play":
@@ -1060,7 +1238,7 @@ class SkinButton(tk.Canvas):
         """
         self.delete("hole")
         rnd = random.Random()
-        cx = self.w / 2 + rnd.uniform(-0.15, 0.15) * self.w
+        cx = self.glyph_cx + rnd.uniform(-0.15, 0.15) * self.w
         cy = self.glyph_cy + rnd.uniform(-0.15, 0.15) * self.h
         r = max(2.5, min(self.w, self.h) * 0.13)
         face, bg = self.fill if self.kind == "block" else T.btn_face, self["bg"]
@@ -1129,7 +1307,7 @@ class SkinButton(tk.Canvas):
         elif self.kind == "block":
             self._set_glyph_color("#ffffff")
         for item in self.glyph_items:
-            self.move(item, 1, 1)
+            self.move(item, self.shift, self.shift)
         if self.sound:
             self.sound()
         if self.on_press:
@@ -1141,7 +1319,7 @@ class SkinButton(tk.Canvas):
         self._draw_face(pressed=False)
         self._set_glyph_color(self.glyph_color)
         for item in self.glyph_items:
-            self.move(item, -1, -1)
+            self.move(item, -self.shift, -self.shift)
         if not self.on_press and 0 <= event.x < self.w and 0 <= event.y < self.h:
             self.command()
 
@@ -1241,6 +1419,14 @@ class ProductivityMeter(tk.Canvas):
             self._eq(x0, x1, h, prod)
         elif style == "coffee":
             self._coffee(x0, x1, h / 2, prod)
+        elif style == "boost":
+            self._boost(x0, x1, h / 2, prod)
+        elif style == "gamerscore":
+            self._gamerscore(x0, x1, h / 2, prod)
+        elif style == "crystal":
+            self._crystal(x0, x1, h / 2, prod)
+        elif style == "spray":
+            self._spray(x0, x1, h / 2, prod)
         else:
             cy = text_y
             self._bar(x0, x1, cy, prod, neutral, dist)
@@ -1437,7 +1623,8 @@ class ProductivityMeter(tk.Canvas):
         for i in range(n):
             bh = (px(4) + rnd.random() * (h - px(12))) * (0.35 + 0.65 * prod)
             x = x0 + i * (bw + gap)
-            color = blend("#f2a65a", "#e8899a", i / max(1, n - 1)) if i < lit else T.body_light
+            first, last = T.meter_colors or ("#f2a65a", "#e8899a")
+            color = blend(first, last, i / max(1, n - 1)) if i < lit else T.body_light
             self.create_rectangle(x, base - bh, x + bw, base, fill=color, outline="")
 
     def _bw(self, x0: float, x1: float, cy: float, prod: float) -> None:
@@ -1447,6 +1634,64 @@ class ProductivityMeter(tk.Canvas):
         xp = x0 + (x1 - x0) * prod
         if xp - x0 > r:
             round_rect(self, x0, cy - r, xp, cy + r, r, fill="#111111", outline="")
+
+    def _boost(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Kinetik: a row of chevrons, lit cyan to magenta for the productive share (the boost bar)."""
+        cw, gap = px(7), px(2)
+        n = max(1, int((x1 - x0 + gap) // (cw + gap)))
+        lit = round(n * prod)
+        hh = px(6)
+        for i in range(n):
+            x = x0 + i * (cw + gap)
+            color = blend("#2ff3ff", "#ff2fb3", i / max(1, n - 1)) if i < lit else T.body_light
+            self.create_polygon(x, cy - hh, x + cw * 0.55, cy - hh, x + cw, cy, x + cw * 0.55, cy + hh, x, cy + hh,
+                                x + cw * 0.45, cy, fill=color, outline="")
+
+    def _gamerscore(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Blades: a glossy green bar and the score, up to 1000G."""
+        score = f"{round(prod * 1000)}G"
+        font = T.font("sans", 8, "bold")
+        badge = self.create_text(x1, cy, anchor="e", text=score, fill=T.accent, font=font)
+        x1 = self.bbox(badge)[0] - px(6)
+        r = px(5)
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill="#dfe4e8", outline="#b9c0c7")
+        xp = x0 + (x1 - x0) * prod
+        if xp - x0 > r:
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill="#6cbb22", outline="#3f7a0e")
+            round_rect(self, x0 + px(2), cy - r + px(1.5), xp - px(2), cy - px(0.5), r * 0.4,
+                       fill=blend("#6cbb22", "#ffffff", 0.5), outline="")
+
+    def _crystal(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Kristalne kule: a row of crystal shards that light up pale blue."""
+        cw, gap = px(7), px(3)
+        n = max(1, int((x1 - x0 + gap) // (cw + gap)))
+        lit = round(n * prod)
+        hh = px(8)
+        for i in range(n):
+            x = x0 + i * (cw + gap) + cw / 2
+            if i < lit:
+                self.create_oval(x - cw, cy - hh - px(1), x + cw, cy + hh + px(1), fill=blend(self.bg, "#4a7dff", 0.25),
+                                 outline="")
+                face, side = "#9fc4ff", "#cfe0ff"
+            else:
+                face, side = "#141c38", "#1e2a52"
+            self.create_polygon(x, cy - hh, x + cw / 2, cy, x, cy + hh, x - cw / 2, cy, fill=face, outline="")
+            self.create_polygon(x, cy - hh, x, cy + hh, x - cw / 2, cy, fill=side, outline="")
+
+    def _spray(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Grafiti: a pink spray stroke across the wall, as long as the productive share, with drips."""
+        rnd = random.Random(5)
+        self.create_line(x0, cy + px(7), x1, cy + px(7), fill="#111111", width=max(1, px(1.5)))
+        xp = x0 + (x1 - x0) * prod
+        if xp - x0 < px(3):
+            return
+        pts = [(x0 + (xp - x0) * i / 12, cy + math.sin(i * 1.7) * px(1.5)) for i in range(13)]
+        self.create_line(pts, fill="#111111", width=px(9), smooth=True, capstyle="round")
+        self.create_line(pts, fill="#ff3aa0", width=px(6), smooth=True, capstyle="round")
+        for k in range(int((xp - x0) / px(30))):  # drips
+            x = x0 + (xp - x0) * (k + 0.5) / max(1, int((xp - x0) / px(30)))
+            self.create_line(x, cy, x, cy + px(5) + rnd.uniform(0, px(5)), fill="#ff3aa0", width=px(2),
+                             capstyle="round")
 
     COFFEE_TEXT = "How is possible?"
 
@@ -1582,7 +1827,8 @@ class TitleBar(tk.Canvas):
 
     def __init__(self, master, title: str, on_menu=None):
         self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
-                  "coffee": px(26), "dunes": px(22), "lofi": px(22)}.get(T.title_style, px(18))
+                  "coffee": px(26), "dunes": px(22), "lofi": px(22), "speed": px(20), "blades": px(24), "fog": px(20),
+                  "canopy": px(30), "tags": px(28)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
@@ -1626,12 +1872,48 @@ class TitleBar(tk.Canvas):
                     pts += [x, px(y) + math.sin((x + i * 37) / 23) * px(1.2)]
                 self.create_line(pts, fill=T.body_light, smooth=True)
         font = T.font("sans", 8 if T.upper else 9, "bold" if T.upper or style == "coffee" else "normal")
+        if style == "blades":  # the edges of the other blades stacked on the right, a gloss over the top
+            self.create_rectangle(0, 0, w, h * 0.45, fill=T.body_light, outline="")
+            for k, color in enumerate(("#8a4fc4", "#f29a1f", "#2a8fd6", "#6cbb22")):
+                x = w - px(6) - k * px(7)
+                round_rect(self, x - px(5), px(2), x + px(3), h - px(2), px(3), fill=color, outline="")
+        if style == "canopy":  # ferns and big leaves hanging from the top on both sides
+            from .y2k import FERN_GREENS, draw_fern
+
+            rnd = random.Random(11)
+            for k, x in enumerate((px(30), px(48), px(66), px(84), w - px(30), w - px(48), w - px(66), w - px(84))):
+                if k % 2:
+                    draw_leaf(self, x, px(6) + rnd.uniform(0, px(4)), px(16), 90 + rnd.uniform(-35, 35),
+                              rnd.choice(FERN_GREENS))
+                else:
+                    draw_fern(self, x, 0, h * rnd.uniform(1.0, 1.2), -90 + rnd.uniform(-25, 25), rnd.choice(FERN_GREENS),
+                              curl=rnd.choice((-0.6, 0.6)), leaflet=px(4.5))
+        angle = 0
+        if style == "tags":  # the title sprayed on crooked, fat letters with a black outline, over a messy wall
+            from .y2k import TAG_COLORS, draw_scribble, draw_splat
+
+            rnd = random.Random(23)
+            for k in range(12):
+                x = w * (k + 0.5) / 12 + rnd.uniform(-px(8), px(8))
+                y = rnd.uniform(px(5), h - px(5))
+                if k % 3 == 1:
+                    draw_scribble(self, x - px(10), y, px(20), k, rnd.choice(("#111111", "#ff3aa0", "#3ad1ff")))
+                else:
+                    draw_splat(self, x, y, px(rnd.uniform(4, 7)), rnd.choice(TAG_COLORS[1:]), k)
+            font = T.font("sans", 11, "bold")
+            angle = 3
+            for dx in (-2, 0, 2):
+                for dy in (-2, 0, 2):
+                    if dx or dy:
+                        self.create_text(w / 2 + px(dx), text_y + px(dy), text=T.tx(self.title), fill="#111111", font=font,
+                                         angle=angle)
+            text_color = "#ff3aa0"
         if T.glow:  # iced text: a soft light halo around it
             for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                 self.create_text(w / 2 + dx, text_y + dy, text=T.tx(self.title), fill=blend(T.body, T.glow, 0.8),
                                  font=font)
             text_color = blend(T.body, "#eef8fb", 0.88)  # a little see-through, like ice
-        text = self.create_text(w / 2, text_y, text=T.tx(self.title), fill=text_color, font=font)
+        text = self.create_text(w / 2, text_y, text=T.tx(self.title), fill=text_color, font=font, angle=angle)
         x0, y0, x1, y1 = self.bbox(text)
         left = px(22) if self.on_menu else px(6)
         if style == "stripes":
@@ -1658,6 +1940,20 @@ class TitleBar(tk.Canvas):
                 x = x0 - k * step + px(4) if i % 2 == 0 else x1 + k * step - px(4)
                 if r < x < w - r:
                     draw_orange_piece(self, x, h / 2 + px(2), r, kind)
+        elif style == "speed":  # speed lines rushing past both sides, chevrons pointing ahead
+            for k, (y, color) in enumerate(((h * 0.3, "#2ff3ff"), (h * 0.5, "#ff2fb3"), (h * 0.7, "#2ff3ff"))):
+                self.create_line(left + k * px(10), y, x0 - px(8) - (2 - k) * px(6), y, fill=color)
+                self.create_line(x1 + px(8) + k * px(5), y, w - px(30) - k * px(8), y, fill=color)
+            for k in range(3):
+                x = w - px(24) + k * px(6)
+                self.create_line(x, h * 0.25, x + px(4), h / 2, x, h * 0.75, fill="#ff2fb3", width=max(1, px(1.5)))
+        elif style == "fog":  # the boot screen's particles drifting in the blue fog
+            rnd = random.Random(3)
+            for _ in range(18):
+                x = rnd.choice((rnd.uniform(left, x0 - px(8)), rnd.uniform(x1 + px(8), w - px(6))))
+                y, r = rnd.uniform(px(3), h - px(3)), rnd.uniform(0.7, 1.6) * S
+                self.create_oval(x - r, y - r, x + r, y + r, fill=blend(T.body, T.lcd_on, rnd.uniform(0.3, 0.9)),
+                                 outline="")
         elif style == "lofi":  # a crescent moon on the left, a warm desk lamp on the right
             mx, my, r = x0 - px(18), h / 2, px(6)
             self.create_oval(mx - r, my - r, mx + r, my + r, fill="#f6e3b4", outline="")
@@ -1707,6 +2003,8 @@ class TitleBar(tk.Canvas):
             elif T.shape == "chamfer":
                 box = self.create_polygon(cx, cy - r, cx + r, cy, cx, cy + r, cx - r, cy, fill=T.btn_face,
                                           outline=T.accent)
+            elif T.shape == "toon":
+                box = self.create_oval(cx - r, cy - r, cx + r, cy + r, fill=T.btn_face, outline="#111111", width=2)
             else:
                 box = self.create_rectangle(cx - r + 1, cy - r + 1, cx + r - 1, cy + r - 1, fill=T.btn_face,
                                             outline=T.btn_dark)

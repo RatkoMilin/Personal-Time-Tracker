@@ -3,7 +3,10 @@
    cat: meows, setsuna: citrus plucks, mondrian: plain beeps, egg: a water "plop",
    dandelion: wind and rustling grass, coffee: revolver shot, espresso steam (PL), ice cubes, cup pings,
    hourglass: pouring sand, desert wind, a bell "ding" when the glass turns over ("flip"),
-   lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop. */
+   lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop,
+   kinetic: a trance stab over a turbo, brakes, a pass-by per lap, blades: glassy bloops and an achievement chime,
+   towers: a deep boot swoosh with crystal shimmer, atmos: a jungle break at 174 BPM and a reese bass,
+   graffiti: the spray can's rattle and hiss, a record scratch on PL. */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -26,6 +29,8 @@
       phase += 2 * Math.PI * f / RATE;
       let v = Math.sin(phase);
       if (form === "square") v = v >= 0 ? 1 : -1;
+      else if (form === "saw") v = 2 * ((phase / (2 * Math.PI)) % 1) - 1;
+      else if (form === "triangle") v = 2 / Math.PI * Math.asin(v);
       let env = attack ? Math.min(1, t / attack) : 1;
       if (tau) env *= Math.exp(-t / tau);
       env *= Math.min(1, (dur - t) / 0.008);
@@ -168,7 +173,81 @@
                                        noise(dur, { tau: dur / 2, amp: 0.15, seed: 95, lowpass: [0.3, 0.05] }));
   const drop = seed => noise(0.03, { tau: 0.008, amp: 0.8, seed, lowpass: [0.4, 0.4] });
 
+  const lowpass = (samples, a) => { let y = 0; return samples.map(v => (y += a * (v - y))); };
+  const supersaw = (freqs, dur, tau = 0.2, amp = 0.3) => lowpass(add(...freqs.flatMap(f => [0.993, 1, 1.007]
+    .map(d => tone(f * d, f * d, dur, "saw", 0.003, tau, amp)))), 0.45);
+  const shimmer = (start, dur, sparks, seed = 121) => {
+    const rnd = mulberry32(seed), out = [];
+    for (let k = 0; k < sparks; k++) {
+      const f = 2200 + rnd() * 2000;
+      out.push([start + rnd() * dur, tone(f, f, 0.25, "sine", 0.003, 0.07, 0.15 + rnd() * 0.2)]);
+    }
+    return out;
+  };
+  const kick = (amp = 1) => add(tone(150, 45, 0.22, "sine", 0.001, 0.07, amp), noise(0.22, { tau: 0.004, amp: 0.3 * amp, seed: 131, lowpass: [0.5, 0.5] }));
+  const snare = (amp = 1, seed = 132) => add(tone(220, 180, 0.18, "sine", 0.001, 0.04, 0.5 * amp), noise(0.18, { tau: 0.05, amp, seed, highpass: 0.25 }));
+  const hat = (amp = 0.5, seed = 133) => noise(0.04, { tau: 0.01, amp, seed, highpass: 0.6 });
+  const reese = (f0, f1, dur) => lowpass(add(tone(f0 * 0.99, f1 * 0.99, dur, "saw", 0.004, null, 0.5),
+                                             tone(f0 * 1.01, f1 * 1.01, dur, "saw", 0.004, null, 0.5)), 0.12);
+  const rattle = (seed = 151) => add(tone(2800, 2500, 0.035, "sine", 0.001, 0.006), noise(0.035, { tau: 0.004, amp: 0.6, seed, highpass: 0.4 }));
+  const spray = (dur, seed = 152) => noise(dur, { amp: 0.8, seed, highpass: 0.5, shape: f => Math.min(1, f / 0.04) * Math.min(1, (1 - f) / 0.25) });
+  const scratch = (seed = 155) => {
+    const wikka = [];
+    for (let k = 0; k < 2; k++) wikka.push(tone(260, 1100, 0.09, "saw", 0.002, null, 0.5), tone(1100, 260, 0.09, "saw", 0.002, null, 0.5));
+    const out = new Float32Array(wikka.reduce((n, a) => n + a.length, 0));
+    let at = 0;
+    for (const a of wikka) { out.set(a, at); at += a.length; }
+    return lowpass(add(out, noise(out.length / RATE, { amp: 0.25, seed, highpass: 0.3 })), 0.5);
+  };
+  const S16 = 60 / 174 / 4;  // a sixteenth note at 174 BPM
+
   const KITS = {
+    kinetic: {
+      start: () => [[0, supersaw([440, 554.4, 659.3], 0.55)], [0, tone(110, 880, 0.4, "saw", 0.004, 0.2, 0.2)], [0.05, swoosh(0.4, true, 101)]],
+      pause: () => [[0, noise(0.32, { amp: 0.9, seed: 102, lowpass: [0.5, 0.15], highpass: 0.2, shape: f => (1 - f) * (0.7 + 0.3 * Math.sin(f * 90)) })],
+                    [0, tone(900, 500, 0.3, "saw", 0.004, 0.15, 0.15)]],
+      stop: () => [[0, tone(600, 60, 0.6, "saw", 0.004, 0.3, 0.5)], [0, noise(0.6, { tau: 0.2, amp: 0.3, seed: 103, lowpass: [0.2, 0.03] })]],
+      click: () => [[0, tone(2400, 2400, 0.03, "triangle", 0.001, 0.01, 0.6)]],
+      flip: () => [[0, beep(1760, 0.06)], [0, tone(1200, 500, 0.45, "saw", 0.002, 0.25, 0.3)], [0.05, swoosh(0.4, false, 104)]],
+      alert: () => [[0, beep(1320, 0.1)], [0.15, beep(1320, 0.1)], [0.3, beep(1760, 0.3)]],
+    },
+    blades: {
+      start: () => [[0, tone(392, 392, 0.6, "sine", 0.005, 0.25, 0.6)], [0, ping(1568, 0.5, 0.15)],
+                    [0.09, tone(587, 587, 0.5, "sine", 0.005, 0.22, 0.5)], [0.09, ping(2349, 0.4, 0.12)]],
+      pause: () => [[0, tone(800, 1200, 0.08, "sine", 0.002, 0.03, 0.3)], [0, swoosh(0.2, true, 111)]],
+      stop: () => [[0, tone(587, 587, 0.3, "sine", 0.004, 0.12, 0.6)], [0.1, tone(392, 392, 0.4, "sine", 0.004, 0.15, 0.6)]],
+      click: () => [[0, tone(2600, 2600, 0.035, "sine", 0.001, 0.008, 0.6)], [0, tone(5200, 5200, 0.03, "sine", 0.001, 0.005, 0.2)]],
+      flip: () => [[0, tone(784, 784, 0.7, "sine", 0.004, 0.3, 0.5)], [0, ping(1568, 0.6, 0.2)], [0.12, tone(1175, 1175, 0.6, "sine", 0.004, 0.28, 0.45)],
+                   [0.12, ping(2349, 0.5, 0.18)], [0.24, ping(3136, 0.5, 0.18)]],
+      alert: () => [[0, ping(1568, 0.4, 0.15)], [0.1, ping(2349, 0.35, 0.12)], [0.4, ping(1568, 0.4, 0.15)], [0.5, ping(2349, 0.35, 0.12)]],
+    },
+    towers: {
+      start: () => [[0, tone(65, 98, 0.85, "sine", 0.01, 0.45)],
+                    [0, noise(0.85, { amp: 0.35, seed: 121, lowpass: [0.02, 0.12], shape: f => Math.min(1, f / 0.05) * (1 - f) })], ...shimmer(0.1, 0.6, 8, 122)],
+      pause: () => shimmer(0, 0.3, 5, 123),
+      stop: () => [[0, tone(98, 41, 0.7, "sine", 0.01, 0.35)], [0, noise(0.7, { tau: 0.3, amp: 0.3, seed: 124, lowpass: [0.08, 0.02] })]],
+      click: () => [[0, tone(3500, 3500, 0.04, "sine", 0.001, 0.01, 0.7)]],
+      flip: () => [[0, bell(2093, 0.8, 0.3)], ...shimmer(0.05, 0.6, 10, 125)],
+      alert: () => [[0, bell(1568, 0.5, 0.2)], [0.25, bell(2093, 0.6, 0.25)]],
+    },
+    atmos: {
+      start: () => [[0, kick()], [S16, hat()], [2 * S16, snare()], [3 * S16, hat(0.3, 134)], [3.5 * S16, snare(0.35, 135)],
+                    [4 * S16, kick(0.8)], [5 * S16, hat(0.5, 136)], [6 * S16, snare(1, 137)]],
+      pause: () => [[0, noise(0.35, { amp: 1, seed: 138, lowpass: [0.6, 0.02], shape: f => 1 - f })]],
+      stop: () => [[0, kick()], [0, reese(55, 41, 0.7)]],
+      click: () => [[0, hat(0.6, 139)]],
+      flip: () => [...Array.from({ length: 8 }, (_, i) => [i * S16 / 2, snare(0.4 + 0.08 * i, 140 + i)]), [0.35, keys([220, 261.6, 329.6], 0.6)]],
+      alert: () => [[0, snare()], [2 * S16, snare(1, 141)], [0.35, keys([220, 329.6], 0.5)]],
+    },
+    graffiti: {
+      start: () => [[0, rattle()], [0.09, rattle(156)], [0.2, spray(0.55)]],
+      pause: () => [[0, spray(0.18, 153)]],
+      stop: () => [[0, knock(1.8, 1, 154)], [0.06, rattle(157)]],
+      click: () => [[0, rattle(158)]],
+      pl: () => [[0, scratch()]],
+      flip: () => [[0, rattle()], [0.08, rattle(156)], [0.16, rattle(157)], [0.25, spray(0.6, 159)]],
+      alert: () => [[0, scratch(160)], [0.45, rattle()], [0.53, rattle(156)]],
+    },
     lofi: {
       start: () => [[0, drop(92)], [0.03, keys([261.6, 329.6, 392.0, 493.9])], ...crackle(0.8, 6)],
       pause: () => [[0, tapeStop(0.3)]],
