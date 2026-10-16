@@ -712,24 +712,30 @@
     });
     return out + `</g>`;
   }
+  // A tag like a little jellyfish: a fat outlined blob, paint drips hanging from it, a star or a crown on top.
   function tagSvg(x, y, size, k) {
-    const rnd = mulberry(k + 3), color = TAG_COLORS[k % TAG_COLORS.length];
-    const pts = [[x - size * 0.6, y + size * 0.15]];
-    for (let i = 1; i < 5; i++) pts.push([x - size * 0.6 + size * 0.3 * i, y + (i % 2 ? -1 : 1) * size * (0.18 + rnd() * 0.14)]);
-    const [[ax, ay], [bx, by]] = pts.slice(-2), d = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / d, uy = (by - ay) / d;
-    const head = [[bx + ux * size * 0.3, by + uy * size * 0.3], [bx - uy * size * 0.22, by + ux * size * 0.22], [bx + uy * size * 0.22, by - ux * size * 0.22]];
-    const line = `M${pts.map(([px, py]) => `${f1(px)},${f1(py)}`).join(" L")}`, thick = Math.max(3, size * 0.2);
-    const [dx, dy] = pts[1];
-    let out = `<g class="grow"><line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="#111" stroke-width="4" stroke-linecap="round"/>` +
-      `<line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>` +
-      `<path d="${line}" fill="none" stroke="#111" stroke-width="${f1(thick + 3)}" stroke-linecap="round" stroke-linejoin="round"/>` +
-      `<polygon points="${ptsAttr(head)}" fill="${color}" stroke="#111" stroke-width="1.5"/>` +
-      `<path d="${line}" fill="none" stroke="${color}" stroke-width="${f1(thick)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const rnd = mulberry(k + 3), color = TAG_COLORS[k % TAG_COLORS.length], pts = [];
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2 * Math.PI / 9, rr = size * (0.4 + rnd() * 0.15);
+      pts.push([x + Math.cos(a) * rr * 1.4, y + Math.sin(a) * rr * 0.75]);
+    }
+    let out = `<g class="grow">`;
+    for (const dx of [-(0.1 + rnd() * 0.2) * size, (0.1 + rnd() * 0.25) * size]) {
+      const end = y + size * (0.45 + rnd() * 0.2);
+      out += `<line x1="${f1(x + dx)}" y1="${f1(y)}" x2="${f1(x + dx)}" y2="${f1(end)}" stroke="#111" stroke-width="4" stroke-linecap="round"/>` +
+        `<line x1="${f1(x + dx)}" y1="${f1(y)}" x2="${f1(x + dx)}" y2="${f1(end)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+    }
+    // a smooth closed blob through the points (quadratic curves between midpoints)
+    const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    let d = `M${mid(pts[8], pts[0]).map(f1).join(",")}`;
+    pts.forEach((pt, i) => { d += ` Q${pt.map(f1).join(",")} ${mid(pt, pts[(i + 1) % 9]).map(f1).join(",")}`; });
+    out += `<path d="${d}Z" fill="${color}" stroke="#111" stroke-width="1.5"/>` +
+      `<line x1="${f1(x - size * 0.3)}" y1="${f1(y - size * 0.05)}" x2="${f1(x + size * 0.25)}" y2="${f1(y - size * 0.15)}" stroke="#fff" stroke-width="1.5"/>`;
     if (k % 2) {
-      const r = size * 0.2, cx = x - size * 0.55, cy = y - size * 0.35;
+      const r = size * 0.22, cx = x + size * 0.45, cy = y - size * 0.4;
       out += `<polygon points="${ptsAttr(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }))}" fill="#fff" stroke="#111"/>`;
     } else {
-      const cx = x - size * 0.5, cy = y - size * 0.4, c = size * 0.13;
+      const cx = x - size * 0.1, cy = y - size * 0.45, c = size * 0.18;
       out += `<polygon points="${ptsAttr([[cx - c * 1.5, cy + c], [cx - c * 1.5, cy - c * 0.5], [cx - c * 0.6, cy + c * 0.2], [cx, cy - c], [cx + c * 0.6, cy + c * 0.2], [cx + c * 1.5, cy - c * 0.5], [cx + c * 1.5, cy + c]])}" fill="#ffe600" stroke="#111"/>`;
     }
     return out + `</g>`;

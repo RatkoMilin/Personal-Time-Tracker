@@ -337,31 +337,26 @@ TAG_COLORS = ("#ff3aa0", "#b6ff2e", "#3ad1ff", "#ff8a1f", "#a259ff", "#ffe600")
 
 
 def draw_tag(c: tk.Canvas, x: float, y: float, size: float, seed: int) -> None:
-    """A graffiti tag: a fat squiggle in a loud color with a black outline, an arrow at its end, a star or
-    a crown on top and one paint drip."""
+    """A graffiti tag that looks like a little jellyfish: a fat outlined blob in a loud color, paint drips
+    hanging from it, and a star or a crown on top."""
     rnd = random.Random(seed)
     color = TAG_COLORS[seed % len(TAG_COLORS)]
-    pts = [(x - size * 0.6, y + size * 0.15)]
-    for k in range(1, 5):
-        pts.append((x - size * 0.6 + size * 0.3 * k, y + (-1) ** k * size * rnd.uniform(0.18, 0.32)))
-    (ax, ay), (bx, by) = pts[-2], pts[-1]
-    d = math.hypot(bx - ax, by - ay) or 1
-    ux, uy = (bx - ax) / d, (by - ay) / d
-    head = [bx + ux * size * 0.3, by + uy * size * 0.3, bx - uy * size * 0.22, by + ux * size * 0.22,
-            bx + uy * size * 0.22, by - ux * size * 0.22]
-    thick = max(3, size * 0.2)
-    flat = [v for pt in pts for v in pt]
-    drip_x = pts[1][0]
-    c.create_line(drip_x, pts[1][1], drip_x, pts[1][1] + size * 0.45, fill="#111111", width=px(2) + 2, capstyle="round")
-    c.create_line(drip_x, pts[1][1], drip_x, pts[1][1] + size * 0.45, fill=color, width=px(2), capstyle="round")
-    c.create_line(flat, fill="#111111", width=thick + px(3), smooth=True, capstyle="round", joinstyle="round")
-    c.create_polygon(head, fill=color, outline="#111111", width=max(1, px(1.5)))
-    c.create_line(flat, fill=color, width=thick, smooth=True, capstyle="round", joinstyle="round")
-    c.create_line([v for pt in pts[:3] for v in (pt[0], pt[1] - thick * 0.25)], fill="#ffffff",
-                  width=max(1, px(1)), smooth=True)
+    pts = []
+    for k in range(9):
+        a = k * 2 * math.pi / 9
+        rr = size * rnd.uniform(0.4, 0.55)
+        pts += [x + math.cos(a) * rr * 1.4, y + math.sin(a) * rr * 0.75]
+    lw = max(1, px(1.5))
+    for dx in (rnd.uniform(-0.3, -0.1), rnd.uniform(0.1, 0.35)):  # the drips running down
+        dx *= size
+        end = y + size * rnd.uniform(0.45, 0.65)
+        c.create_line(x + dx, y, x + dx, end, fill="#111111", width=lw + px(2.5), capstyle="round")
+        c.create_line(x + dx, y, x + dx, end, fill=color, width=px(2.5), capstyle="round")
+    c.create_polygon(pts, smooth=True, fill=color, outline="#111111", width=lw)
+    c.create_line(x - size * 0.3, y - size * 0.05, x + size * 0.25, y - size * 0.15, fill="#ffffff", width=lw)
     if seed % 2:  # a star
-        r = size * 0.2
-        cx, cy = x - size * 0.55, y - size * 0.35
+        r = size * 0.22
+        cx, cy = x + size * 0.45, y - size * 0.4
         star = []
         for k in range(10):
             a = -math.pi / 2 + k * math.pi / 5
@@ -369,7 +364,7 @@ def draw_tag(c: tk.Canvas, x: float, y: float, size: float, seed: int) -> None:
             star += [cx + math.cos(a) * rr, cy + math.sin(a) * rr]
         c.create_polygon(star, fill="#ffffff", outline="#111111", width=1)
     else:  # a crown
-        cx, cy, s = x - size * 0.5, y - size * 0.4, size * 0.13
+        cx, cy, s = x - size * 0.1, y - size * 0.45, size * 0.18
         c.create_polygon(cx - s * 1.5, cy + s, cx - s * 1.5, cy - s * 0.5, cx - s * 0.6, cy + s * 0.2, cx, cy - s,
                          cx + s * 0.6, cy + s * 0.2, cx + s * 1.5, cy - s * 0.5, cx + s * 1.5, cy + s, fill="#ffe600",
                          outline="#111111", width=1)
