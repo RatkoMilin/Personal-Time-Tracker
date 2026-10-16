@@ -151,7 +151,8 @@ def test_every_skin_renders(page):
     page.fill("#task", "Dizajn početne strane")
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
-    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi", "eink"):
+    for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi",
+                 "kinetic", "blades", "towers", "atmos", "graffiti", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -276,6 +277,52 @@ def test_lofi_record_spins_and_turns_over(page):
     page.click("#stopBtn")
 
 
+def test_kinetic_speedometer_laps_and_speed_lines(page):
+    pick_skin(page, "kinetic")
+    page.fill("#task", "Trka")
+    page.click("#playBtn")
+    assert page.locator("#speedo path").count() >= 1 and page.get_attribute("body", "class").find("racing") >= 0
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 31 * 60000")
+    page.wait_for_function("document.querySelector('#speedo').textContent.includes('L3')")
+    page.click("#pauseBtn")
+    page.wait_for_function("!document.body.classList.contains('racing')")
+    page.click("#stopBtn")
+
+
+def test_blades_ring_fills_and_achievement_pops_up(page):
+    pick_skin(page, "blades")
+    page.fill("#task", "Fokus")
+    page.click("#playBtn")
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 31 * 60000")
+    page.wait_for_function("document.querySelectorAll('#ring .q.on').length === 2")
+    page.evaluate("window.PTT.db.entries[0].start = Date.now() - 61 * 60000")
+    page.wait_for_selector(".toast")
+    assert "Achievement unlocked" in page.inner_text(".toast") and "1h" in page.inner_text(".toast")
+    page.click("#stopBtn")
+
+
+def test_towers_one_per_task_and_growth_around_the_list(page):
+    pick_skin(page, "towers")
+    page.fill("#task", "Prvi")
+    page.click("#playBtn")
+    page.click("#stopBtn")
+    page.fill("#task", "Drugi")
+    page.click("#playBtn")
+    page.wait_for_function("document.querySelectorAll('#towers .tower').length === 2")
+    assert page.locator("#towers .tower.active").count() == 1
+    page.click("#stopBtn")
+    pick_skin(page, "atmos")
+    page.fill("#task", "Jungle")
+    page.click("#playBtn")
+    assert page.locator("#pads.running rect.pad").count() == 16
+    page.evaluate("window.PTT.db.entries.at(-1).start = Date.now() - 81 * 60000")
+    page.wait_for_function("document.querySelectorAll('#growth path').length > 0")  # a phrase is done: leaves
+    page.click("#stopBtn")
+    pick_skin(page, "graffiti")
+    page.wait_for_function("document.querySelectorAll('#growth polygon').length >= 2")  # one tag (81 min today)
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+
+
 def test_csv_export_and_backup_restore(page, tmp_path):
     page.fill("#task", "rad; sa tačkom-zarezom")
     page.click("#playBtn")
@@ -301,22 +348,23 @@ def test_csv_export_and_backup_restore(page, tmp_path):
 def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
-        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'hourglass', 'lofi', 'eink'])
+        for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'hourglass', 'lofi',
+                           'kinetic', 'blades', 'towers', 'atmos', 'graffiti', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 65
+    assert len(result) == 90
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v8')")
-    cached = page.evaluate("caches.open('ptt-v8').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v9')")
+    cached = page.evaluate("caches.open('ptt-v9').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

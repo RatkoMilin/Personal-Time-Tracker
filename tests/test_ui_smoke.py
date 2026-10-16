@@ -622,13 +622,78 @@ def test_lofi_turntable_and_rain(app):
     app.task_var.set("Lofi")
     app.play()
     app._update_display()
-    assert app.pl_panel.raining and app.turntable.state == "playing"
+    assert app.pl_panel.moving and app.turntable.state == "playing"
     entry = app.db.running_entry()
     app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - 45 * 60 - 2, None)
     app._update_display()  # a side is done: the record is turned over
     assert flips == [1]
     app.pause()
     app._update_display()
-    assert not app.pl_panel.raining and app.turntable.state == "paused"
+    assert not app.pl_panel.moving and app.turntable.state == "paused"
     app.stop()
+    app.set_skin("matrix")
+
+
+def _run_for(app, minutes):
+    entry = app.db.running_entry()
+    app.db.update_entry(entry.id, entry.description, entry.project_id, time.time() - minutes * 60, None)
+    app._update_display()
+
+
+def test_2000s_skins_gadgets(app):
+    from timetracker import reports
+    from timetracker.ui import y2k
+
+    assert y2k.laps_done(29 * 60) == 1 and y2k.speed_target(0, False) == 0 and y2k.speed_target(90 * 60, True) == 1
+    assert y2k.quarters_lit(31 * 60) == 2 and y2k.hours_done(61 * 60) == 1
+    assert y2k.pads_lit(26 * 60) == 5 and y2k.phrases_done(81 * 60) == 1 and y2k.tags_for(3.5 * 3600) == 3
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+
+    app.set_skin("kinetic")  # a lap every 15 minutes; on pause the needle rolls back slowly
+    laps = []
+    app.speedo.on_lap = lambda: laps.append(1)
+    app.task_var.set("Trka")
+    app.play()
+    _run_for(app, 14.9)
+    assert app.pl_panel.moving and not laps
+    _run_for(app, 15.1)
+    assert laps == [1] and app.speedo.speed > 0.15
+    app.pause()
+    app._update_display()
+    assert 0 < app.speedo.speed < 0.3 and not app.pl_panel.moving
+    app.stop()
+
+    app.set_skin("blades")  # an achievement for every full hour
+    hours = []
+    app.ring.on_hour = hours.append
+    app.task_var.set("Fokus")
+    app.play()
+    _run_for(app, 59.9)
+    _run_for(app, 60.1)
+    assert hours == [1] and y2k.quarters_lit(app.ring.seconds) == 0
+    app._achievement(1)  # the toast itself builds and closes by itself
+    app.stop()
+
+    app.set_skin("towers")  # one tower per task of the day, the running one marked
+    app.task_var.set("Drugi")
+    app.play()
+    app._update_display()
+    assert len(app.towers.groups) == 3 and app.towers.active == 2
+
+    app.set_skin("atmos")  # a full phrase grows leaves around the list
+    phrases = []
+    app.pads.on_phrase = lambda: phrases.append(1)
+    _run_for(app, 79.9)
+    assert app.pl_panel.growth == 0
+    _run_for(app, 80.1)
+    assert phrases == [1] and app.pl_panel.growth == 1
+    app.stop()
+    app._update_display()
+    assert app.pl_panel.growth == 0
+
+    app.set_skin("graffiti")  # a tag for every full hour worked today, all tasks together
+    app._update_display()
+    assert app.pl_panel.growth == y2k.tags_for(sum(g[2] for g in reports.task_groups(app.db)))
+    assert app.pl_panel.growth >= 2
     app.set_skin("matrix")

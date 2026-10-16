@@ -19,6 +19,7 @@ from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .hourglass import Hourglass, rounds_done
 from .vinyl import Turntable
+from . import y2k
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -161,6 +162,7 @@ class Player(tk.Tk):
         panel.pack(fill="x")
         lcd = panel.inner
         self.clock = self.dial = self.marquee = self.hourglass = self.turntable = None
+        self.speedo = self.ring = self.towers = self.pads = None
         if T.display == "analog":
             self.dial = skin.AnalogDial(lcd)
             self.dial.pack(side="left")
@@ -185,6 +187,17 @@ class Player(tk.Tk):
             if T.clock_deco == "vinyl":  # Lofi: a record player, one side per 45 minutes of the task
                 self.turntable = Turntable(lcd, on_flip=self._sound("flip"))
                 self.turntable.pack(side="left", padx=(0, skin.px(8)))
+            gadget = None
+            if T.clock_deco == "speedo":  # Kinetik: the needle climbs with the task, a lap every 15 minutes
+                gadget = self.speedo = y2k.Speedometer(lcd, on_lap=self._sound("flip"))
+            elif T.clock_deco == "ring":  # Blades: a quarter of the ring per 15 minutes, an achievement per hour
+                gadget = self.ring = y2k.RingOfLight(lcd, on_hour=self._achievement)
+            elif T.clock_deco == "towers":  # Kristalne kule: a crystal tower for each of today's tasks
+                gadget = self.towers = y2k.Towers(lcd, on_level=self._sound("flip"))
+            elif T.clock_deco == "pads":  # Atmos: a pad per 5 minutes, leaves for every full phrase
+                gadget = self.pads = y2k.Pads(lcd, on_phrase=self._sound("flip"))
+            if gadget is not None:
+                gadget.pack(side="left", padx=(0, skin.px(8)))
             self.clock = skin.SevenSegment(lcd)
             self.clock.pack(side="left")
             right = tk.Frame(lcd, bg=T.lcd_bg)
@@ -612,8 +625,24 @@ class Player(tk.Tk):
             self.hourglass.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
         if self.turntable is not None:
             self.turntable.set(secs if state != self.STOPPED else 0, state)
-        if T.pl_pattern == "rain":
-            self.pl_panel.set_rain(state == self.PLAYING)
+        if T.pl_pattern in ("rain", "streaks"):
+            self.pl_panel.set_moving(state == self.PLAYING)
+        if self.speedo is not None:
+            self.speedo.set(secs if state != self.STOPPED else 0, state)
+        if self.ring is not None:
+            self.ring.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
+        if self.pads is not None:
+            self.pads.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
+        if T.pl_pattern == "jungle":  # leaves for every finished phrase of the task
+            self.pl_panel.set_growth(y2k.phrases_done(secs) if state != self.STOPPED else 0)
+        if self.towers is not None or T.pl_pattern == "tags":
+            groups = reports.task_groups(self.db, now)
+            if self.towers is not None:
+                key = (running.description, running.project_id) if running else None
+                active = next((i for i, (d, p, _) in enumerate(groups) if (d, p) == key), None)
+                self.towers.set([g[2] for g in groups], active)
+            if T.pl_pattern == "tags":  # Grafiti: a tag on the wall for every full hour worked today
+                self.pl_panel.set_growth(y2k.tags_for(sum(g[2] for g in groups)))
         task = self.task_var.get().strip() or "(bez naziva)"
         project = self.project_var.get().strip()
         today = reports.total_between(self.db, *timeutil.period_bounds("today"), now)
@@ -652,6 +681,11 @@ class Player(tk.Tk):
         if key != self._tray_key:
             self._tray_key = key
             self.tray.update(running is not None, tip)
+
+    def _achievement(self, hours: int):
+        """Blades: a full ring of light (an hour on the task) pops up an achievement."""
+        self.sounds.play("flip")
+        y2k.achievement(self, f"{hours}h fokusa  ·  {hours * 10}G")
 
     def _scramble(self, frames: int = 12):
         """Matrix: the digits jumble for a moment like a broken clock, then settle one by one."""

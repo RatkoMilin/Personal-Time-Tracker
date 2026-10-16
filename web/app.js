@@ -5,9 +5,12 @@
   const KEY = "ptt.v1";
   const SKINS = [["matrix", "Matrix"], ["pastel", "Pastel"], ["wood", "Orah"], ["cyber", "Samuraj"], ["cat", "Mačkasti"],
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
-                 ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["eink", "E-ink"]];
+                 ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["kinetic", "Kinetik"],
+                 ["blades", "Blades"], ["towers", "Kristalne kule"], ["atmos", "Atmos"], ["graffiti", "Grafiti"],
+                 ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
                         mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
+                        kinetic: "#0d0b1e", blades: "#e9ecef", towers: "#05070f", atmos: "#0f1f1c", graffiti: "#ffd23f",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
@@ -232,7 +235,7 @@
   let marqueeOffset = 0;
   // On the Kompakt (e-ink device) there is only the e-ink skin, whatever was saved.
   const skin = () => EINK_DEVICE ? "eink" : db.settings.skin;
-  const upper = s => (skin() === "matrix" || skin() === "cyber") ? s.toUpperCase() : s;
+  const upper = s => ["matrix", "cyber", "kinetic"].includes(skin()) ? s.toUpperCase() : s;
   const eink = () => skin() === "eink";
   // E-ink shows hours:minutes only, so the screen changes once a minute instead of every second.
   const dur = ms => eink() ? `${Math.floor(ms / 3600000)}:${pad(Math.floor(ms / 60000) % 60)}` : clock(ms);
@@ -499,6 +502,192 @@
       `<rect x="${f1(nx - lift - 1.6)}" y="${f1(ny - lift - 1.6)}" width="3.2" height="3.2" fill="#e8e0d0"/>`;
   }
 
+  // ------------------------------------------------------------------ the 2000s skins (as on the laptop)
+
+  const ptsAttr = list => list.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" ");
+
+  // Kinetik: a speedometer; the needle climbs with the task (top speed after 90 minutes), a lap every
+  // 15 minutes, and on pause the bike rolls out instead of stopping dead. Speed lines fly past the list.
+  const LAP = 15 * 60000, TOP_SPEED = 90 * 60000;
+  let speed = 0, spKey = "", spLaps = null;
+  function renderSpeedo(ms, st) {
+    const svg = $("speedo"), laps = Math.floor(ms / LAP);
+    if (spLaps !== null && st === "playing" && laps > spLaps) sound("flip");
+    spLaps = laps;
+    const target = st === "playing" ? 0.15 + 0.85 * Math.min(1, ms / TOP_SPEED) : 0;
+    speed += (target - speed) * (target > speed ? 0.55 : 0.22);
+    if (Math.abs(target - speed) < 0.003) speed = target;
+    const racing = st === "playing";
+    if (document.body.classList.contains("racing") !== racing) document.body.classList.toggle("racing", racing);
+    const key = `${Math.round(speed * 400)}|${st === "stopped" ? "" : laps}`;
+    if (key === spKey) return;
+    spKey = key;
+    const cx = 29, cy = 26.4, r = 23.5, at = deg => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)];
+    const arc = (from, to, attrs) => {
+      const [x0, y0] = at(from), [x1, y1] = at(to);
+      return `<path d="M${f1(x0)},${f1(y0)} A${r},${r} 0 ${from - to > 180 ? 1 : 0} 1 ${f1(x1)},${f1(y1)}" fill="none" stroke-width="4" ${attrs}/>`;
+    };
+    let body = `<defs><linearGradient id="spg" x1="0" x2="1"><stop offset="0" stop-color="#2ff3ff"/><stop offset="1" stop-color="#ff2fb3"/></linearGradient></defs>`;
+    body += arc(210, -30, 'stroke="#1c2340"');
+    if (speed > 0.005) body += arc(210, 210 - 240 * speed, 'stroke="url(#spg)"');
+    for (let k = 0; k <= 8; k++) {
+      const a = (210 - 30 * k) * Math.PI / 180, r0 = r - (k % 2 ? 3 : 5);
+      body += `<line x1="${f1(cx + r0 * Math.cos(a))}" y1="${f1(cy - r0 * Math.sin(a))}" x2="${f1(cx + (r - 1) * Math.cos(a))}" y2="${f1(cy - (r - 1) * Math.sin(a))}" stroke="#8fa0c8" stroke-width=".8"/>`;
+    }
+    const n = (210 - 240 * speed) * Math.PI / 180;
+    body += `<line x1="${cx}" y1="${cy}" x2="${f1(cx + (r - 4) * Math.cos(n))}" y2="${f1(cy - (r - 4) * Math.sin(n))}" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`;
+    body += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="#ff2fb3"/>`;
+    body += `<text x="${cx}" y="41" text-anchor="middle" font-size="7" font-weight="700" fill="#2ff3ff" font-family="monospace">${Math.round(speed * 320)}</text>`;
+    if (st !== "stopped") body += `<text x="2" y="7" font-size="7" font-weight="700" fill="#ff2fb3" font-family="monospace">L${laps + 1}</text>`;
+    svg.innerHTML = body;
+  }
+
+  // Blades: a ring of light around an orb, a quarter per 15 minutes; a full ring (an hour of the task)
+  // pops up an "Achievement unlocked" toast.
+  let ringKey = "", ringHours = null;
+  function achievementToast(text) {
+    document.querySelectorAll(".toast").forEach(t => t.remove());
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.innerHTML = `<i class="trophy"></i><b>Achievement unlocked</b><span></span>`;
+    t.querySelector("span").textContent = text;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3800);
+    return t;
+  }
+  function renderRing(ms, playing) {
+    const svg = $("ring"), hours = Math.floor(ms / 3600000), lit = Math.floor((ms % 3600000) / (15 * 60000));
+    if (ringHours !== null && playing && hours > ringHours) {
+      sound("flip");
+      achievementToast(`${hours}h fokusa  ·  ${hours * 10}G`);
+    }
+    ringHours = hours;
+    if (svg.classList.contains("running") !== playing) svg.classList.toggle("running", playing);
+    const key = `${lit}|${hours}|${ms > 0}`;
+    if (key === ringKey) return;
+    ringKey = key;
+    const cx = 22, cy = 22, r = 18, at = deg => [cx + r * Math.cos(deg * Math.PI / 180), cy - r * Math.sin(deg * Math.PI / 180)];
+    let body = "";
+    [180, 90, 0, 270].forEach((from, k) => {  // clockwise from the top left, like the controller
+      const [x0, y0] = at(from - 6), [x1, y1] = at(from - 84);
+      const cls = k < lit ? "q on" : k === lit ? "q next" : "q";
+      body += `<path class="${cls}" d="M${f1(x0)},${f1(y0)} A${r},${r} 0 0 1 ${f1(x1)},${f1(y1)}" fill="none" stroke-width="4"/>`;
+    });
+    const on = ms > 0, face = on ? "#7ed321" : "#b6bec5";
+    body += `<circle cx="${cx}" cy="${cy}" r="12" fill="${face}" stroke="${on ? "#3f7a0e" : "#8a939b"}"/>`;
+    body += `<ellipse cx="${cx}" cy="${cy - 5.5}" rx="8.5" ry="5" fill="#fff" fill-opacity=".5"/>`;
+    if (hours) body += `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">${hours}</text>`;
+    svg.innerHTML = body;
+  }
+
+  // Kristalne kule: a crystal tower for each of today's tasks, as tall as the time spent on it (full at 3 h).
+  const TOWER_FULL = 3 * 3600000;
+  let towersKey = "", towerLevel = null;
+  function taskGroups(now) {
+    const a = dayStart(new Date(now)), groups = new Map();
+    for (const e of entriesBetween(a, now + 1)) {
+      const key = JSON.stringify([e.description, e.projectId]);
+      groups.set(key, (groups.get(key) || 0) + overlap(e.start, e.end ?? now, a, now));
+    }
+    return groups;
+  }
+  function renderTowers(now, r) {
+    const svg = $("towers"), groups = taskGroups(now), keys = [...groups.keys()];
+    const activeKey = r ? JSON.stringify([r.description, r.projectId]) : null;
+    const level = activeKey ? Math.floor(groups.get(activeKey) / 3600000) : null;
+    if (towerLevel !== null && level !== null && level > towerLevel) sound("flip");
+    towerLevel = level;
+    const shown = keys.slice(-8), key = shown.map(k => `${k === activeKey ? "*" : ""}${Math.round(Math.min(1, groups.get(k) / TOWER_FULL) * 60)}`).join(",");
+    if (key === towersKey) return;
+    towersKey = key;
+    let body = [0, 1, 2, 3].map(k => `<line x1="0" x2="66" y1="${41 - k * 3}" y2="${41 - k * 3}" stroke="#22346e" stroke-opacity="${(0.6 - k * 0.14).toFixed(2)}"/>`).join("");
+    const step = 66 / 8, tw = step * 0.62, base = 41, room = 35;
+    shown.forEach((k, i) => {
+      const h = Math.min(1, groups.get(k) / TOWER_FULL), x = step * (i + 0.5) + (8 - shown.length) * step / 2;
+      const top = base - Math.max(3, h * room), active = k === activeKey;
+      const fill = active ? "#6f9bff" : `hsl(225, 60%, ${Math.round(28 + 30 * h)}%)`;
+      body += `<g class="tower${active ? " active" : ""}">` +
+        (active ? `<rect x="${f1(x - tw / 2 - 2)}" y="${f1(top - 2)}" width="${f1(tw + 4)}" height="${f1(base - top + 2)}" fill="#6f9bff" fill-opacity=".3"/>` : "") +
+        `<rect x="${f1(x - tw / 2)}" y="${f1(top)}" width="${f1(tw)}" height="${f1(base - top)}" fill="${fill}"/>` +
+        `<rect x="${f1(x - tw / 2)}" y="${f1(top)}" width="${f1(tw / 3)}" height="${f1(base - top)}" fill="#fff" fill-opacity=".3"/>` +
+        `<polygon points="${ptsAttr([[x - tw / 2, top], [x, top - tw * 0.45], [x + tw / 2, top]])}" fill="#cfe0ff" fill-opacity=".8"/>` +
+        (active ? `<path class="spark" d="M${f1(x - 2)},${f1(top - tw * 0.45 - 2)} h4 M${f1(x)},${f1(top - tw * 0.45 - 4)} v4" stroke="#cfe0ff"/>` : "") +
+        `</g>`;
+    });
+    svg.innerHTML = body;
+  }
+
+  // Atmos: 16 pads of a drum machine, one per 5 minutes of the task; a full phrase (80 minutes) grows
+  // leaves around the list. The playhead runs over the pads at 174 BPM while the timer runs.
+  const PAD = 5 * 60000, PHRASE = 16 * PAD;
+  let padsKey = "", padsPhrases = null;
+  function renderPads(ms, playing) {
+    const svg = $("pads"), phrases = Math.floor(ms / PHRASE), lit = Math.floor((ms % PHRASE) / PAD);
+    if (padsPhrases !== null && playing && phrases > padsPhrases) sound("flip");
+    padsPhrases = phrases;
+    if (svg.classList.contains("running") !== playing) svg.classList.toggle("running", playing);
+    if (String(lit) === padsKey) return;
+    padsKey = String(lit);
+    const size = 9, gap = 2, x0 = (44 - (size * 4 + gap * 3)) / 2;
+    let body = "";
+    for (let i = 0; i < 16; i++) {
+      const row = Math.floor(i / 4), col = i % 4, on = i < lit;
+      const fill = on ? `hsl(${Math.round(166 - 70 * i / 15)}, 75%, 55%)` : "#163a33";
+      body += `<rect class="pad" style="--i:${i}" x="${x0 + col * (size + gap)}" y="${x0 + row * (size + gap)}" width="${size}" height="${size}" rx="2" fill="${fill}"/>`;
+    }
+    svg.innerHTML = body;
+  }
+
+  // Around the list: jungle leaves (Atmos) or graffiti tags on the wall, one per hour worked today (Grafiti).
+  const TAG_COLORS = ["#ff3aa0", "#b6ff2e", "#3ad1ff", "#ff8a1f", "#a259ff", "#ffe600"];
+  let growthKey = "";
+  function growthSpots(w, h) {
+    const m = 19;
+    return [[m, h - m], [w - m * 1.2, h - m * 1.2], [w * 0.5, h - m], [m, h * 0.45], [w - m * 1.2, h * 0.45],
+            [w * 0.25, m], [w * 0.75, m], [w * 0.27, h - m], [w * 0.73, h - m]];
+  }
+  function vineSvg(x, y, size, k) {
+    const rnd = mulberry(k + 7), greens = ["#2f8f5b", "#3fae6c", "#1f6e4a", "#5ccf8a"];
+    let out = `<path d="M${f1(x)},${f1(y)} Q${f1(x + size * 0.3)},${f1(y - size * 0.35)} ${f1(x - size * 0.1)},${f1(y - size * 0.6)}" fill="none" stroke="#2a5a3a" stroke-width="1.2"/>`;
+    for (let i = 0; i < 3; i++) {
+      const angle = -160 + rnd() * 140 + i * 40, a = angle * Math.PI / 180, len = size * (0.85 + rnd() * 0.25);
+      const lx = x + Math.cos(a) * size * 0.3, ly = y + Math.sin(a) * size * 0.3;
+      out += `<g transform="translate(${f1(lx)} ${f1(ly)}) rotate(${f1(angle)})"><path d="M${f1(-len / 2)},0 Q0,${f1(-len * 0.3)} ${f1(len / 2)},0 Q0,${f1(len * 0.3)} ${f1(-len / 2)},0Z" fill="${greens[(k + i) % 4]}"/>` +
+        `<line x1="${f1(-len * 0.4)}" x2="${f1(len * 0.4)}" y1="0" y2="0" stroke="#7cc46a" stroke-width=".8"/></g>`;
+    }
+    return out;
+  }
+  function tagSvg(x, y, size, k) {
+    const rnd = mulberry(k + 3), color = TAG_COLORS[k % TAG_COLORS.length];
+    const pts = [[x - size * 0.6, y + size * 0.15]];
+    for (let i = 1; i < 5; i++) pts.push([x - size * 0.6 + size * 0.3 * i, y + (i % 2 ? -1 : 1) * size * (0.18 + rnd() * 0.14)]);
+    const [[ax, ay], [bx, by]] = pts.slice(-2), d = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / d, uy = (by - ay) / d;
+    const head = [[bx + ux * size * 0.3, by + uy * size * 0.3], [bx - uy * size * 0.22, by + ux * size * 0.22], [bx + uy * size * 0.22, by - ux * size * 0.22]];
+    const line = `M${pts.map(([px, py]) => `${f1(px)},${f1(py)}`).join(" L")}`, thick = Math.max(3, size * 0.2);
+    const [dx, dy] = pts[1];
+    let out = `<line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="#111" stroke-width="4" stroke-linecap="round"/>` +
+      `<line x1="${f1(dx)}" y1="${f1(dy)}" x2="${f1(dx)}" y2="${f1(dy + size * 0.45)}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>` +
+      `<path d="${line}" fill="none" stroke="#111" stroke-width="${f1(thick + 3)}" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<polygon points="${ptsAttr(head)}" fill="${color}" stroke="#111" stroke-width="1.5"/>` +
+      `<path d="${line}" fill="none" stroke="${color}" stroke-width="${f1(thick)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (k % 2) {
+      const r = size * 0.2, cx = x - size * 0.55, cy = y - size * 0.35;
+      out += `<polygon points="${ptsAttr(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }))}" fill="#fff" stroke="#111"/>`;
+    } else {
+      const cx = x - size * 0.5, cy = y - size * 0.4, c = size * 0.13;
+      out += `<polygon points="${ptsAttr([[cx - c * 1.5, cy + c], [cx - c * 1.5, cy - c * 0.5], [cx - c * 0.6, cy + c * 0.2], [cx, cy - c], [cx + c * 0.6, cy + c * 0.2], [cx + c * 1.5, cy - c * 0.5], [cx + c * 1.5, cy + c]])}" fill="#ffe600" stroke="#111"/>`;
+    }
+    return out;
+  }
+  function renderGrowth(kind, n) {
+    const svg = $("growth"), w = svg.clientWidth, h = svg.clientHeight;
+    const key = `${kind}|${n}|${w}|${h}`;
+    if (key === growthKey || !w) return;
+    growthKey = key;
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.innerHTML = growthSpots(w, h).slice(0, n).map(([x, y], k) => kind === "tags" ? tagSvg(x, y, 28, k) : vineSvg(x, y, 26, k)).join("");
+  }
+
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
   function bulletHole() {
     const btn = $("playBtn");
@@ -535,13 +724,20 @@
     piecesKey = "-";
     renderPieces([]);
     applyLamp();
-    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi"].includes(skin()) ? "round" : skin() === "cyber" ? "sharp" : "hex";
+    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi", "blades", "atmos", "graffiti"].includes(skin())
+      ? "round" : ["cyber", "kinetic"].includes(skin()) ? "sharp" : "hex";
     dandelionKey = "";
     hgKey = "";
     hgRounds = null;
     ttKey = "";
     ttSides = null;
-    document.body.classList.remove("raining");
+    spKey = ""; spLaps = null; speed = 0;
+    ringKey = ""; ringHours = null;
+    towersKey = ""; towerLevel = null;
+    padsKey = ""; padsPhrases = null;
+    growthKey = "";
+    $("growth").innerHTML = "";
+    document.body.classList.remove("raining", "racing");
     buildClock(style, eink() ? "88:88" : "88:88:88");
     playlistKey = "";
     buildDial();
@@ -652,6 +848,14 @@
       renderHourglass(st === "stopped" ? 0 : ms, st === "playing");
     }
     if (skin() === "lofi") renderTurntable(st === "stopped" ? 0 : ms, st);
+    if (skin() === "kinetic") renderSpeedo(st === "stopped" ? 0 : ms, st);
+    if (skin() === "blades") renderRing(st === "stopped" ? 0 : ms, st === "playing");
+    if (skin() === "towers") renderTowers(now, r);
+    if (skin() === "atmos") {
+      renderPads(st === "stopped" ? 0 : ms, st === "playing");
+      renderGrowth("jungle", st === "stopped" ? 0 : Math.floor(ms / PHRASE));
+    }
+    if (skin() === "graffiti") renderGrowth("tags", Math.min(9, Math.floor(today / 3600000)));
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
@@ -932,6 +1136,6 @@
   }
 
   window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY, dandelionState,
-                 blowDandelion };
+                 blowDandelion, achievementToast };
   init();
 })();

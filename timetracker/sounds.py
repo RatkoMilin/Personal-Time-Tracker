@@ -6,6 +6,11 @@ mondrian: plain clean beeps   egg: a "plop", like an egg or a pebble dropped int
 dandelion: wind and rustling grass   coffee: a revolver shot, espresso steam (PL), ice cubes, cup pings
 hourglass: pouring sand, desert wind, a bell "ding" when the glass turns over ("flip")
 lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop
+kinetic: a trance stab over a turbo, brakes, the engine dying, a pass-by for every lap ("flip")
+blades: soft glassy bloops and blade swishes, an achievement chime for every hour ("flip")
+towers: a deep boot swoosh with crystal shimmer, a chime when the running tower grows an hour ("flip")
+atmos: a jungle break at 174 BPM, filter sweeps, a reese bass, a snare roll and a pad per phrase ("flip")
+graffiti: the spray can's rattle and hiss, a record scratch on PL, a long spray for every new tag ("flip")
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -47,6 +52,8 @@ def tone(f0: float, f1: float, dur: float, wave_form: str = "sine", attack: floa
         phase += 2 * math.pi * f / RATE
         if wave_form == "square":
             v = 1.0 if math.sin(phase) >= 0 else -1.0
+        elif wave_form == "saw":
+            v = 2.0 * ((phase / (2 * math.pi)) % 1.0) - 1.0
         elif wave_form == "triangle":
             v = 2 / math.pi * math.asin(math.sin(phase))
         else:
@@ -267,13 +274,140 @@ def _pour(dur: float = 0.5, seed: int = 81) -> list[float]:
     return [a + 0.6 * b for a, b in zip(hiss, grains + [0.0] * len(hiss))]
 
 
+def _lowpass(samples: list[float], a: float) -> list[float]:
+    """One-pole lowpass: smaller a, darker sound."""
+    out, y = [], 0.0
+    for v in samples:
+        y += a * (v - y)
+        out.append(y)
+    return out
+
+
+def _supersaw(freqs: tuple[float, ...], dur: float, tau: float = 0.2, amp: float = 0.3) -> list[float]:
+    """A trance stab: three slightly detuned saw waves per note, darkened a little, dying away fast."""
+    layers = [tone(f * d, f * d, dur, "saw", attack=0.003, tau=tau, amp=amp) for f in freqs for d in (0.993, 1.0, 1.007)]
+    return _lowpass([sum(v) for v in zip(*layers)], 0.45)
+
+
+def _shimmer(start: float, dur: float, sparks: int, seed: int = 121) -> list[tuple[float, list[float]]]:
+    """Crystal sparkles: short high sine pings at random moments."""
+    rnd = random.Random(seed)
+    return [(start + rnd.uniform(0, dur), tone(f, f, 0.25, attack=0.003, tau=0.07, amp=rnd.uniform(0.15, 0.35)))
+            for f in (rnd.uniform(2200, 4200) for _ in range(sparks))]
+
+
+def _kick(amp: float = 1.0) -> list[float]:
+    return [a + b for a, b in zip(tone(150, 45, 0.22, attack=0.001, tau=0.07, amp=amp),
+                                  noise(0.22, tau=0.004, amp=0.3 * amp, seed=131, lowpass=(0.5, 0.5)))]
+
+
+def _snare(amp: float = 1.0, seed: int = 132) -> list[float]:
+    return [a + b for a, b in zip(tone(220, 180, 0.18, attack=0.001, tau=0.04, amp=0.5 * amp),
+                                  noise(0.18, tau=0.05, amp=amp, seed=seed, highpass=0.25))]
+
+
+def _hat(amp: float = 0.5, seed: int = 133) -> list[float]:
+    return noise(0.04, tau=0.01, amp=amp, seed=seed, highpass=0.6)
+
+
+def _reese(f0: float, f1: float, dur: float) -> list[float]:
+    """The jungle bass: two detuned saws beating against each other, dark."""
+    saws = [a + b for a, b in zip(tone(f0 * 0.99, f1 * 0.99, dur, "saw", attack=0.004, amp=0.5),
+                                  tone(f0 * 1.01, f1 * 1.01, dur, "saw", attack=0.004, amp=0.5))]
+    return _lowpass(saws, 0.12)
+
+
+def _rattle(seed: int = 151) -> list[float]:
+    """The ball in a spray can: a short bright clack."""
+    return [a + b for a, b in zip(tone(2800, 2500, 0.035, attack=0.001, tau=0.006),
+                                  noise(0.035, tau=0.004, amp=0.6, seed=seed, highpass=0.4))]
+
+
+def _spray(dur: float, seed: int = 152) -> list[float]:
+    """Spray paint: a bright hiss that starts at once and fades at the end."""
+    return noise(dur, amp=0.8, seed=seed, highpass=0.5, shape=lambda f: min(1.0, f / 0.04) * min(1.0, (1 - f) / 0.25))
+
+
+def _scratch(seed: int = 155) -> list[float]:
+    """A record scratch back and forth: wikka-wikka."""
+    out: list[float] = []
+    for k in range(2):
+        out += tone(260, 1100, 0.09, "saw", attack=0.002, amp=0.5) + tone(1100, 260, 0.09, "saw", attack=0.002, amp=0.5)
+    grit = noise(len(out) / RATE, amp=0.25, seed=seed, highpass=0.3)
+    return _lowpass([a + b for a, b in zip(out, grit)], 0.5)
+
+
 def render(skin: str, event: str) -> list[float]:
     kit = _kit(skin)
     return mix(kit.get(event) or kit["click"])  # effects a skin lacks (e.g. "pl") fall back to its click
 
 
 def _kit(skin: str) -> dict:
-    if skin == "lofi":
+    s16 = 60 / 174 / 4  # a sixteenth note at 174 BPM
+    if skin == "kinetic":
+        kit = {
+            "start": [(0, _supersaw((440.0, 554.4, 659.3), 0.55)), (0, tone(110, 880, 0.4, "saw", tau=0.2, amp=0.2)),
+                      (0.05, _swoosh(0.4, rising=True, seed=101))],                    # stab over the turbo
+            "pause": [(0, noise(0.32, amp=0.9, seed=102, lowpass=(0.5, 0.15), highpass=0.2,      # brakes
+                                shape=lambda f: (1 - f) * (0.7 + 0.3 * math.sin(f * 90)))),
+                      (0, tone(900, 500, 0.3, "saw", tau=0.15, amp=0.15))],
+            "stop": [(0, tone(600, 60, 0.6, "saw", tau=0.3, amp=0.5)),                          # the engine dies
+                     (0, noise(0.6, tau=0.2, amp=0.3, seed=103, lowpass=(0.2, 0.03)))],
+            "click": [(0, tone(2400, 2400, 0.03, "triangle", attack=0.001, tau=0.01, amp=0.6))],
+            "flip": [(0, _beep(1760, 0.06)), (0, tone(1200, 500, 0.45, "saw", attack=0.002, tau=0.25, amp=0.3)),
+                     (0.05, _swoosh(0.4, rising=False, seed=104))],                      # a lap: pass-by
+            "alert": [(0, _beep(1320, 0.1)), (0.15, _beep(1320, 0.1)), (0.3, _beep(1760, 0.3))],
+        }
+    elif skin == "blades":
+        kit = {
+            "start": [(0, tone(392, 392, 0.6, attack=0.005, tau=0.25, amp=0.6)), (0, _ping(1568, 0.5, 0.15)),
+                      (0.09, tone(587, 587, 0.5, attack=0.005, tau=0.22, amp=0.5)), (0.09, _ping(2349, 0.4, 0.12))],
+            "pause": [(0, tone(800, 1200, 0.08, attack=0.002, tau=0.03, amp=0.3)), (0, _swoosh(0.2, rising=True, seed=111))],
+            "stop": [(0, tone(587, 587, 0.3, attack=0.004, tau=0.12, amp=0.6)),
+                     (0.1, tone(392, 392, 0.4, attack=0.004, tau=0.15, amp=0.6))],
+            "click": [(0, tone(2600, 2600, 0.035, attack=0.001, tau=0.008, amp=0.6)),
+                      (0, tone(5200, 5200, 0.03, attack=0.001, tau=0.005, amp=0.2))],
+            "flip": [(0, tone(784, 784, 0.7, attack=0.004, tau=0.3, amp=0.5)), (0, _ping(1568, 0.6, 0.2)),  # achievement
+                     (0.12, tone(1175, 1175, 0.6, attack=0.004, tau=0.28, amp=0.45)), (0.12, _ping(2349, 0.5, 0.18)),
+                     (0.24, _ping(3136, 0.5, 0.18))],
+            "alert": [(0, _ping(1568, 0.4, 0.15)), (0.1, _ping(2349, 0.35, 0.12)), (0.4, _ping(1568, 0.4, 0.15)),
+                      (0.5, _ping(2349, 0.35, 0.12))],
+        }
+    elif skin == "towers":
+        kit = {
+            "start": [(0, tone(65, 98, 0.85, attack=0.01, tau=0.45)),                          # deep boot swoosh
+                      (0, noise(0.85, amp=0.35, seed=121, lowpass=(0.02, 0.12), shape=lambda f: min(1.0, f / 0.05) * (1 - f)))]
+                     + _shimmer(0.1, 0.6, 8, seed=122),
+            "pause": _shimmer(0, 0.3, 5, seed=123),
+            "stop": [(0, tone(98, 41, 0.7, attack=0.01, tau=0.35)), (0, noise(0.7, tau=0.3, amp=0.3, seed=124,
+                                                                              lowpass=(0.08, 0.02)))],
+            "click": [(0, tone(3500, 3500, 0.04, attack=0.001, tau=0.01, amp=0.7))],
+            "flip": [(0, _bell(2093, 0.8, 0.3))] + _shimmer(0.05, 0.6, 10, seed=125),
+            "alert": [(0, _bell(1568, 0.5, 0.2)), (0.25, _bell(2093, 0.6, 0.25))],
+        }
+    elif skin == "atmos":
+        kit = {
+            "start": [(0, _kick()), (s16, _hat()), (2 * s16, _snare()), (3 * s16, _hat(0.3, 134)),   # a jungle break
+                      (3.5 * s16, _snare(0.35, 135)), (4 * s16, _kick(0.8)), (5 * s16, _hat(0.5, 136)),
+                      (6 * s16, _snare(1.0, 137))],
+            "pause": [(0, noise(0.35, amp=1.0, seed=138, lowpass=(0.6, 0.02), shape=lambda f: 1 - f))],  # filter sweep
+            "stop": [(0, _kick()), (0, _reese(55, 41, 0.7))],
+            "click": [(0, _hat(0.6, 139))],
+            "flip": [(i * s16 / 2, _snare(0.4 + 0.08 * i, seed=140 + i)) for i in range(8)]       # roll into a pad
+                    + [(0.35, _keys((220.0, 261.6, 329.6), 0.6))],
+            "alert": [(0, _snare()), (2 * s16, _snare(1.0, 141)), (0.35, _keys((220.0, 329.6), 0.5))],
+        }
+    elif skin == "graffiti":
+        kit = {
+            "start": [(0, _rattle()), (0.09, _rattle(156)), (0.2, _spray(0.55))],
+            "pause": [(0, _spray(0.18, seed=153))],
+            "stop": [(0, _knock(1.8, 1.0, seed=154)), (0.06, _rattle(157))],                   # the cap goes back on
+            "click": [(0, _rattle(158))],
+            "pl": [(0, _scratch())],
+            "flip": [(0, _rattle()), (0.08, _rattle(156)), (0.16, _rattle(157)), (0.25, _spray(0.6, seed=159))],
+            "alert": [(0, _scratch(160)), (0.45, _rattle()), (0.53, _rattle(156))],
+        }
+    elif skin == "lofi":
         kit = {
             "start": [(0, noise(0.03, tau=0.008, amp=0.8, seed=92, lowpass=(0.4, 0.4))),   # needle drop
                       (0.03, _keys((261.6, 329.6, 392.0, 493.9)))] + _crackle(0.8, 6),

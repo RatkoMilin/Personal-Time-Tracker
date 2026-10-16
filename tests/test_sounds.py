@@ -5,7 +5,8 @@ import pytest
 
 from timetracker import sounds
 
-SKINS = ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi")
+SKINS = ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi",
+         "kinetic", "blades", "towers", "atmos", "graffiti")
 
 
 @pytest.mark.parametrize("skin", SKINS)
