@@ -743,6 +743,14 @@ def test_lazi_tofu_toss_and_corporeal_posture(app):
     app.task_var.set("Wok")
     app.play()  # PLAY tosses the wok
     assert app.scene.toss_frame > 0
+    wok = app.scene
+    wok.toss_frame = 0
+    wok.draw()  # resting: the food lies inside, the wok's front wall is drawn over it
+    tofu = [i for i in wok.find_all() if wok.type(i) == "polygon" and wok.itemcget(i, "fill") == scenes.TOFU_GOLDEN]
+    front = [i for i in wok.find_all() if wok.type(i) == "polygon" and wok.itemcget(i, "fill") == "#232428"]
+    assert len(tofu) == 6 and len(front) == 1 and max(tofu) < front[0]
+    rim_y = wok.h * 0.5
+    assert all(rim_y - wok.h * 0.15 < (wok.coords(i)[1] + wok.coords(i)[5]) / 2 < rim_y + wok.h * 0.15 for i in tofu)
     app.stop()
     app.db._exec("DELETE FROM entries")
     app.set_skin("corporeal")
@@ -791,13 +799,19 @@ def test_bowling_game(app):
     assert bowling.total([10] * 12) == 300 and bowling.marks([3, 7, 10, 0, 0])[:3] == ["3/", "X", "--"]
     assert bowling.scores([3, 7, 10, 4]) == [20, None] and bowling.game_over([9, 0] * 10)
     assert bowling.throw(0.99, 1.0, set(bowling.ALL_PINS), random.Random(1)) == set()  # the gutter
+    assert bowling.pin_aim(0.1, 0.0) == 0.1 and bowling.pin_aim(0.6, 0.8) == bowling.GUTTER_X  # off the side
+    # it went off the left edge halfway down: the spin can't bring it back from the gutter
+    assert bowling.ball_x(-0.8, -0.5, 1.0, hook=bowling.MAX_HOOK) == -bowling.GUTTER_X
+    assert 0 < bowling.ball_x(0.0, 0.0, 1.0, hook=0.15) < 0.2  # the spin curls it off a straight line
     app.settings.update({"bowling_rolls": [], "bowling_pins": [], "bowling_best": 0})
     app.set_skin("bowling")
     app.open_bowling()
     game = app.bowling_window
-    game.click()  # aim
-    game.click()  # power: the ball rolls
-    for _ in range(80):
+    game.click()  # the spot
+    game.click()  # the direction
+    game.click()  # the power: the ball rolls
+    assert game.state_ == game.ROLL and abs(game.hook) <= bowling.MAX_HOOK
+    for _ in range(150):
         game._step()
     assert len(app.settings["bowling_rolls"]) == 1
     assert app.titlebar.pieces[0] != ""  # the score sheet beside the title shows the first ball

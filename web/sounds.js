@@ -232,6 +232,56 @@
     for (const [d, g] of taps) { const k = Math.floor(d * RATE); for (let i = 0; i < samples.length; i++) out[i + k] += samples[i] * g; }
     return out;
   };
+  // the roda's four instruments for Vijača's bonus round, tuned to one chord (G major: G3, D3, B3, D5) so the
+  // mestre's phrases come out as little melodies (as on the laptop)
+  const RODA_NOTES = [196.0, 146.83, 246.94, 587.33];
+  function string(f, dur, decay = 0.996, bright = 0.6, seed = 240) {  // a plucked string (Karplus-Strong)
+    const rnd = mulberry32(seed), period = Math.max(2, Math.round(RATE / f)), buf = new Float32Array(period);
+    let y = 0;
+    for (let k = 0; k < period; k++) { y += bright * (rnd() * 2 - 1 - y); buf[k] = y; }
+    const n = Math.floor(dur * RATE), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const k = i % period, v = buf[k]; buf[k] = decay * 0.5 * (v + buf[(k + 1) % period]); out[i] = v; }
+    return out;
+  }
+  function resonate(samples, f0, f1, q = 4) {  // a band-pass gliding f0 -> f1: the gourd's "wah"
+    let low = 0, band = 0;
+    const n = samples.length, out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const g = 2 * Math.sin(Math.PI * f0 * Math.pow(f1 / f0, i / Math.max(1, n - 1)) / RATE);
+      const high = samples[i] - low - band / q;
+      band += g * high; low += g * band; out[i] = band;
+    }
+    return out;
+  }
+  function rodaBerimbau(f = RODA_NOTES[0], dur = 0.62) {  // the wire struck with the stick, the gourd swinging open
+    const wire = string(f, dur, 0.9975, 0.75, 241), wah = resonate(wire, 380, 1100, 3), hit = noise(0.012, { tau: 0.003, amp: 0.6, seed: 242, highpass: 0.3 });
+    const out = new Float32Array(wire.length);
+    for (let i = 0; i < out.length; i++) {
+      const t = i / RATE;
+      out[i] = (0.55 * wire[i] + 0.6 * wah[i]) * Math.exp(-t / 0.28) * Math.min(1, (dur - t) / 0.03) + (i < hit.length ? hit[i] : 0);
+    }
+    return out;
+  }
+  function rodaAtabaque(f = RODA_NOTES[1], dur = 0.55) {  // an open tone: the skin goes sharp when struck, then settles
+    const n = Math.floor(dur * RATE), head = new Float32Array(n);
+    let phase = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / RATE;
+      phase += 2 * Math.PI * f * (1 + 0.35 * Math.exp(-t / 0.012)) / RATE;
+      head[i] = Math.sin(phase) * Math.min(1, t / 0.001) * Math.exp(-t / 0.2) * Math.min(1, (dur - t) / 0.01);
+    }
+    return add(head, tone(f * 1.59, f * 1.57, dur, "sine", 0.001, 0.07, 0.35), noise(dur, { tau: 0.012, amp: 0.5, seed: 243, lowpass: [0.5, 0.2] }));
+  }
+  function rodaPandeiro(f = RODA_NOTES[2], dur = 0.5) {  // the thumb on the skin, the jingles rattling after it
+    const out = tone(f * 1.2, f, dur, "sine", 0.001, 0.13, 0.9), rnd = mulberry32(244);
+    for (let k = 0; k < 4; k++) {
+      const start = Math.floor((0.004 + k * 0.022 + rnd() * 0.008) * RATE), c = clink(5200 + rnd() * 1600, 245 + k, 0.32 - k * 0.05);
+      for (let i = 0; i < c.length && start + i < out.length; i++) out[start + i] += c[i];
+    }
+    return out;
+  }
+  const rodaAgogo = (f = RODA_NOTES[3], dur = 0.6) => add(...[[1, 1, 0.24], [2, 0.18, 0.12], [2.76, 0.42, 0.09], [5.4, 0.2, 0.035]]
+    .map(([r, a, t]) => tone(f * r, f * r, dur, "sine", 0.0008, t, a)), noise(dur, { tau: 0.002, amp: 0.5, seed: 246, highpass: 0.5 }));
   const step = (seed = 261, amp = 1) => reverb(add(tone(110, 70, 0.08, "sine", 0.002, 0.025, 0.8 * amp), noise(0.08, { tau: 0.02, amp: 0.5 * amp, seed, lowpass: [0.3, 0.1] })));
   const breath = (dur, seed = 262, out = true) => noise(dur, { amp: 0.7, seed, lowpass: out ? [0.18, 0.1] : [0.1, 0.2], shape: f => Math.min(1, f / 0.05) * Math.pow(1 - f, 1.5) });
 
@@ -262,10 +312,10 @@
     },
     jumprope: {
       jump: () => [[0, swoosh(0.12, true, 236)], [0.1, knock(2.4, 0.7, 237)]],
-      pad0: () => [[0, berimbau(196, 0.35)]],
-      pad1: () => [[0, tone(110, 62, 0.3, "sine", 0.002, 0.09)], [0, noise(0.1, { tau: 0.02, amp: 0.4, seed: 238, lowpass: [0.3, 0.1] })]],
-      pad2: () => jingles(3, 239),
-      pad3: () => [[0, agogo(880)]],
+      pad0: () => [[0, reverb(rodaBerimbau())]],  // the roda: berimbau, atabaque, pandeiro, agogô
+      pad1: () => [[0, reverb(rodaAtabaque())]],
+      pad2: () => [[0, reverb(rodaPandeiro())]],
+      pad3: () => [[0, reverb(rodaAgogo())]],
       start: () => [[0, tch()], [0.14, tch(234)], [0.28, berimbau(196)], [0.52, berimbau(220)]],
       pause: () => caxixi(),
       stop: () => [[0, berimbau(147, 0.6)]],

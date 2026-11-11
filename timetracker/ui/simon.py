@@ -19,6 +19,7 @@ BONUS_EVERY = 25  # jumps between two bonus rounds
 MINUTES_PER_PHRASE = 2
 MAX_MINUTES = 10
 START_LENGTH = 3
+TOQUE_MS = (340, 340, 680)  # the mestre's swing between notes: short, short, long, as a berimbau toque
 PADS = (("Berimbau", "#ffd400"), ("Atabaque", "#1f9d4a"), ("Pandeiro", "#1f4fbf"), ("Agogô", "#f2f2f2"))
 
 
@@ -82,7 +83,7 @@ class SimonRound(tk.Toplevel):
         return x0 + g, y0 + g, x0 + half - g, y0 + half - g
 
     def play_phrase(self) -> None:
-        """The mestre plays the phrase, a note every 450 ms, then it is your turn."""
+        """The mestre plays the phrase in the toque's swing (short, short, long), then it is your turn."""
         self.listening = False
         self.message = "Slušaj mestrea..."
 
@@ -96,7 +97,7 @@ class SimonRound(tk.Toplevel):
                 self.draw()
                 return
             self._flash(self.game.sequence[k])
-            self.after(450, note, k + 1)
+            self.after(TOQUE_MS[k % len(TOQUE_MS)], note, k + 1)
 
         note()
 
