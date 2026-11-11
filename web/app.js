@@ -916,7 +916,8 @@
   const ROPE_NAMES = ["Početnik", "More", "Zalazak", "Karneval", "Kopakabana", "Mestre", "Noć u Riju", "Zlato"];
   const ropeLevel = pts => ROPE_LEVELS.filter(t => pts >= t).length;
   const ropeNext = pts => ROPE_LEVELS.find(t => pts < t) || null;
-  const ropeValue = () => Math.max(1, Math.round(totalBetween(...periodBounds("today"), Date.now()) / 60000));
+  const bonusOn = () => Date.now() < (db.settings.ropeBonusUntil || 0);
+  const ropeValue = () => Math.max(1, Math.round(totalBetween(...periodBounds("today"), Date.now()) / 60000)) * (bonusOn() ? 2 : 1);
   let jumpFrame = 0, jumpGain = 0, ropeKey = "";
   function jumperSvg(u) {
     const pts = db.settings.ropePoints || 0, level = ropeLevel(pts), floor = 41, cx = 20;
@@ -941,6 +942,12 @@
     if (front) out += rope();
     out += `<text x="62" y="40" text-anchor="end" font-size="8" font-weight="700" font-family="monospace" class="value">+${ropeValue()}</text>`;
     if (u && jumpGain) out += `<text x="50" y="${f1(6 + 10 * (1 - u))}" text-anchor="middle" font-size="8" font-weight="700" font-family="monospace" class="gain">+${jumpGain}</text>`;
+    if (bonusOn()) out += `<text x="62" y="30" text-anchor="end" font-size="8" font-weight="700" font-family="monospace" class="gain">×2</text>`;
+    if (db.settings.ropeBonusReady) {  // the pandeiro calling for the bonus round
+      out += `<g class="bonus"><circle cx="55" cy="9" r="8.5" fill="var(--accent)" fill-opacity=".4"/><circle cx="55" cy="9" r="6.5" fill="#f2e6c8" stroke="#a0703c" stroke-width="1.5"/>` +
+        [0, 1, 2, 3, 4, 5].map(k => `<circle cx="${f1(55 + Math.cos(k * Math.PI / 3) * 6.5)}" cy="${f1(9 + Math.sin(k * Math.PI / 3) * 6.5)}" r="1.2" fill="#d9d9d9"/>`).join("") +
+        `<text x="55" y="11.5" text-anchor="middle" font-size="7" font-weight="700" fill="#a0703c">!</text></g>`;
+    }
     return out;
   }
   function renderRope() {
@@ -956,7 +963,7 @@
       $("piecesR").querySelector("b").textContent = nxt ? `${fmt(pts)} / ${fmt(nxt)}` : `${fmt(pts)} · max`;
     }
     if (jumpFrame) return;  // the jump draws itself
-    const key = `${level}|${ropeValue()}`;
+    const key = `${level}|${ropeValue()}|${db.settings.ropeBonusReady}|${bonusOn()}`;
     if (key === ropeKey && sceneKey === "rope") return;
     ropeKey = key; sceneKey = "rope";
     svg.setAttribute("viewBox", "0 0 64 44");
@@ -967,6 +974,8 @@
     const before = db.settings.ropePoints || 0;
     jumpGain = ropeValue();
     db.settings.ropePoints = before + jumpGain;
+    db.settings.ropeJumps = (db.settings.ropeJumps || 0) + 1;
+    if (db.settings.ropeJumps % 25 === 0) db.settings.ropeBonusReady = true;  // the mestre calls: a bonus round
     save();
     sound("jump");
     if (ropeLevel(db.settings.ropePoints) > ropeLevel(before)) { sound("flip"); confetti(); }
@@ -981,6 +990,54 @@
     };
     step();
     renderRope();
+  }
+
+  // Vijača's bonus round (as on the laptop): the mestre plays a phrase on four instruments, you play it back.
+  // Each phrase repeated right grows by a note and earns two minutes of double points (ten at most).
+  const simon = { seq: [], pos: 0, phrases: 0, over: false, listening: false };
+  const simonMinutes = () => Math.min(10, simon.phrases * 2);
+  function openSimon() {
+    db.settings.ropeBonusReady = false; save();
+    Object.assign(simon, { seq: [0, 1, 2].map(() => Math.floor(Math.random() * 4)), pos: 0, phrases: 0, over: false, listening: false });
+    ropeKey = "";
+    $("simonDlg").showModal();
+    setTimeout(simonPlay, 600);
+  }
+  function simonFlash(pad) {
+    const b = $("simonPads").children[pad];
+    b.classList.add("lit");
+    sound(`pad${pad}`);
+    setTimeout(() => b.classList.remove("lit"), 260);
+  }
+  function simonPlay() {
+    simon.listening = false;
+    $("simonMsg").textContent = "Slušaj mestrea...";
+    simon.seq.forEach((pad, k) => setTimeout(() => { if ($("simonDlg").open) simonFlash(pad); }, k * 450));
+    setTimeout(() => { simon.listening = true; $("simonMsg").textContent = "Tvoj red: ponovi"; }, simon.seq.length * 450);
+  }
+  function simonPress(pad) {
+    if (simon.over) { closeSimon(); return; }
+    if (!simon.listening) return;
+    simonFlash(pad);
+    if (pad !== simon.seq[simon.pos]) simon.over = true;
+    else if (++simon.pos === simon.seq.length) {
+      simon.phrases++; simon.pos = 0; simon.seq.push(Math.floor(Math.random() * 4));
+      if (simonMinutes() >= 10) simon.over = true;
+      else { simon.listening = false; $("simonMsg").textContent = `Tačno! ×2 još ${simonMinutes()} min`; setTimeout(simonPlay, 900); }
+    }
+    if (simon.over) {
+      simon.listening = false;
+      $("simonMsg").textContent = simonMinutes() ? `Bonus: ×2 poena ${simonMinutes()} min` : "Promašaj. Sledeći put!";
+      sound(simonMinutes() ? "flip" : "stop");
+    }
+  }
+  function closeSimon() {
+    if (simonMinutes()) db.settings.ropeBonusUntil = Math.max(Date.now(), db.settings.ropeBonusUntil || 0) + simonMinutes() * 60000;
+    simon.phrases = 0;
+    save();
+    $("simonDlg").close();
+    ropeKey = "";
+    render();
   }
 
   // ------------------------------------------------------------------ Kuglanje: the game (as on the laptop)
@@ -1564,12 +1621,15 @@
       commit();
       if (db.settings.showPlaylist && skin() === "pastel") bubbles();  // bubbles rising over the list
     }, "pl"));
-    $("scene").addEventListener("click", () => {
-      if (skin() === "jumprope") jumpRope();
+    $("scene").addEventListener("click", e => {
+      if (skin() === "jumprope" && e.target.closest(".bonus")) openSimon();
+      else if (skin() === "jumprope") jumpRope();
       else if (skin() === "tofu") tossWok();
       else if (skin() === "bowling") openBowling();
     });
     $("bowlLane").addEventListener("click", bowlClick);
+    [...$("simonPads").children].forEach((b, i) => b.addEventListener("click", () => simonPress(i)));
+    $("simonClose").addEventListener("click", closeSimon);
     $("bowlClose").addEventListener("click", () => { $("bowlDlg").close(); render(); });
     $("dandelion").addEventListener("click", e => {
       if (e.target.closest(".head")) blowDandelion();
@@ -1609,13 +1669,14 @@
   // Exposed for tests.
   // Android back button: close an open sheet first; returns true when it handled the press.
   function back() {
-    for (const id of ["entryDlg", "menuDlg", "bowlDlg"]) {
+    for (const id of ["entryDlg", "menuDlg", "bowlDlg", "simonDlg"]) {
       if ($(id).open) { $(id).close(); return true; }
     }
     return false;
   }
 
   window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY, dandelionState,
-                 blowDandelion, achievementToast, jumpRope, openBowling, bowlClick, bMarks, bScores };
+                 blowDandelion, achievementToast, jumpRope, openBowling, bowlClick, bMarks, bScores, openSimon, simonPress,
+                 get simon() { return simon; } };
   init();
 })();

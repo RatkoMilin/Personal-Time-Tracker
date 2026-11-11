@@ -19,7 +19,7 @@ from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .hourglass import Hourglass, rounds_done
 from .vinyl import Turntable
-from . import bowling, scenes, y2k
+from . import bowling, scenes, simon, y2k
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -47,6 +47,7 @@ class Player(tk.Tk):
         self._clock_text = ""
         self._dusk_phase: int | None = None
         self.bowling_window = None
+        self.simon_window = None
         self.reminder: IdleReminder | None = None
         self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
@@ -202,7 +203,7 @@ class Player(tk.Tk):
             elif T.clock_deco == "pads":  # Atmos: a pad per 5 minutes, leaves for every full phrase
                 gadget = self.pads = y2k.Pads(lcd, on_phrase=self._sound("flip"))
             elif T.clock_deco in scenes.SCENES:  # sushi belt, tulip, wok, roda, pins, blind, figure
-                extra = ({"on_jump": self._rope_jump} if T.clock_deco == "jumper" else
+                extra = ({"on_jump": self._rope_jump, "on_bonus": self.open_simon} if T.clock_deco == "jumper" else
                          {"on_click": self.open_bowling} if T.clock_deco == "pins" else {})
                 gadget = self.scene = scenes.SCENES[T.clock_deco](lcd, on_event=self._sound("flip"), **extra)
             if gadget is not None:
@@ -653,6 +654,8 @@ class Player(tk.Tk):
             self.titlebar.set_pieces([str(scenes.rope_level(points)), str(points), str(nxt or "")])
         if isinstance(self.scene, scenes.Jumper):
             self.scene.level = scenes.rope_level(self.settings["rope_points"])
+            self.scene.bonus_ready = bool(self.settings["rope_bonus_ready"])
+            self.scene.double = simon.bonus_active(self.settings["rope_bonus_until"], now)
             if int(now) % 15 == 0 or self.scene.value == 1:
                 self.scene.value = self._rope_value()
         if isinstance(self.scene, scenes.Figure):  # Korporealnost: sinks on pause, tires without a break
@@ -737,20 +740,39 @@ class Player(tk.Tk):
         a, b = timeutil.day_bounds(date.today())
         minutes = reports.total_between(self.db, a, b, now) / 60
         s = productivity.summarize(self.db, a, b)
-        return scenes.click_value(minutes, s.share(productivity.PRODUCTIVE) if s.total else 0.0)
+        value = scenes.click_value(minutes, s.share(productivity.PRODUCTIVE) if s.total else 0.0)
+        return value * 2 if simon.bonus_active(self.settings["rope_bonus_until"], now) else value
 
     def _rope_jump(self) -> int:
         """A click on the jumper: add the jump's points; at a new level the whole skin changes color."""
         value = self._rope_value()
         before = self.settings["rope_points"]
         after = before + value
-        self.settings.update({"rope_points": after})
+        jumps = self.settings["rope_jumps"] + 1
+        self.settings.update({"rope_points": after, "rope_jumps": jumps})
+        if jumps % simon.BONUS_EVERY == 0:  # the mestre calls: a bonus round is waiting
+            self.settings.update({"rope_bonus_ready": True})
         self.sounds.play("jump")
         if scenes.rope_level(after) > scenes.rope_level(before):
             self.sounds.play("flip")
             self.after(450, self._rope_level_up)  # let the jump finish first
         self._update_display()
         return value
+
+    def open_simon(self):
+        """The bonus round (one window at a time)."""
+        if self.simon_window is not None and self.simon_window.winfo_exists():
+            self.simon_window.lift()
+            return
+        self.settings.update({"rope_bonus_ready": False})
+        self.simon_window = simon.SimonRound(self, on_sound=self.sounds.play, on_done=self._simon_done)
+        self._update_display()
+
+    def _simon_done(self, minutes: int):
+        if minutes:  # double points for the jumps, added to any bonus still running
+            start = max(time.time(), self.settings["rope_bonus_until"])
+            self.settings.update({"rope_bonus_until": start + minutes * 60})
+        self._update_display()
 
     def _rope_level_up(self):
         if not self._quitting and skin.T.clock_deco == "jumper":

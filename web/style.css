@@ -928,3 +928,14 @@ body[data-skin="bowling"] .pieces { gap: 1px; }
 body[data-skin="bowling"] .titlebar, body[data-skin="jumprope"] .titlebar { padding-left: 30px; }
 body[data-skin="jumprope"] .rope-bar { width: 78px; }
 @keyframes ptt-steam { 0% { opacity: 0; transform: translateY(3px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-4px); } }
+
+/* Vijača's bonus round */
+body[data-skin="jumprope"] .scene .bonus { animation: ptt-blink 1s steps(2) infinite; }
+.simon-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.simon-pads .pad { height: 96px; border-radius: 14px; border: 2px solid; font: 700 14px var(--sans); cursor: pointer; opacity: .45; transition: opacity .08s; }
+.simon-pads .pad.lit { opacity: 1; box-shadow: 0 0 14px currentColor; }
+.simon-pads .p0 { background: #ffd400; border-color: #ffd400; color: #3a2a00; }
+.simon-pads .p1 { background: #1f9d4a; border-color: #1f9d4a; color: #eaffef; }
+.simon-pads .p2 { background: #1f4fbf; border-color: #1f4fbf; color: #e8f0ff; }
+.simon-pads .p3 { background: #f2f2f2; border-color: #f2f2f2; color: #333; }
+.simon-msg { text-align: center; font-weight: 700; color: var(--lcd-on); min-height: 1.2em; }

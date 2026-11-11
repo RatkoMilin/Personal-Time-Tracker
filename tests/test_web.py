@@ -361,6 +361,22 @@ def test_jump_rope_clicker_levels_up(page):
     page.click("#stopBtn")
 
 
+def test_jump_rope_bonus_round(page):
+    pick_skin(page, "jumprope")
+    page.evaluate("window.PTT.db.settings.ropeJumps = 24")
+    page.click("#scene")  # the 25th jump: the pandeiro calls
+    page.wait_for_selector("#scene .bonus")
+    page.click("#scene .bonus", force=True)
+    assert page.locator("#simonDlg").is_visible()
+    page.wait_for_function("window.PTT.simon.listening === true", timeout=5000)
+    for pad in page.evaluate("window.PTT.simon.seq"):
+        page.click(f"#simonPads .p{pad}")
+    page.wait_for_function("window.PTT.simon.phrases === 1")
+    page.click("#simonClose")  # two minutes of double points
+    assert page.evaluate("window.PTT.db.settings.ropeBonusUntil > Date.now() + 100000")
+    page.wait_for_function("document.querySelector('#scene').textContent.includes('×2')")
+
+
 def test_bowling_game_and_score_sheet(page):
     m = page.evaluate("window.PTT.bMarks([10, 7, 3, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 3, 7])")
     assert m == ["X", "7/", "9-", "--", "--", "--", "--", "--", "--", "X3/"]
@@ -432,8 +448,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v12')")
-    cached = page.evaluate("caches.open('ptt-v12').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v13')")
+    cached = page.evaluate("caches.open('ptt-v13').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

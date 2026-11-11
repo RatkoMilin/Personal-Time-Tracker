@@ -412,15 +412,23 @@ class Jumper(Scene):
 
     width, height = 64, 44
 
-    def __init__(self, master, on_event=None, on_jump=None):
+    def __init__(self, master, on_event=None, on_jump=None, on_bonus=None):
         self.jump_frame = 0
         self.level = 0
         self.value = 1
         self.gain = 0  # the "+N" floating up after a jump
+        self.bonus_ready = False  # a pandeiro waits top right: a click on it starts the bonus round
+        self.double = False  # the bonus is on: jumps count double
         super().__init__(master, on_event)
-        self.on_jump = on_jump
+        self.on_jump, self.on_bonus = on_jump, on_bonus
         self.configure(cursor="hand2")
-        self.bind("<Button-1>", lambda e: self.jump())
+        self.bind("<Button-1>", self._clicked)
+
+    def _clicked(self, event) -> None:
+        if self.bonus_ready and self.on_bonus and event.x > self.w - px(20) and event.y < px(20):
+            self.on_bonus()
+        else:
+            self.jump()
 
     def jump(self) -> None:
         start = self.jump_frame == 0
@@ -496,6 +504,18 @@ class Jumper(Scene):
             rope()
         font = skin.T.font("mono", 8, "bold")
         self.create_text(w - px(2), h - px(4), anchor="e", text=f"+{self.value}", fill=skin.T.lcd_dim, font=font)
+        if self.double:
+            self.create_text(w - px(2), h - px(15), anchor="e", text="×2", fill=skin.T.accent, font=font)
+        if self.bonus_ready:  # the pandeiro calling for the bonus round
+            bx, by, r = w - px(9), px(9), px(6.5)
+            self.create_oval(bx - r - px(2), by - r - px(2), bx + r + px(2), by + r + px(2), fill=blend(skin.T.lcd_bg, skin.T.accent, 0.4),
+                             outline="")
+            self.create_oval(bx - r, by - r, bx + r, by + r, fill="#f2e6c8", outline="#a0703c", width=max(1, px(1.5)))
+            for k in range(6):
+                a = k * math.pi / 3
+                self.create_oval(bx + math.cos(a) * r - px(1.2), by + math.sin(a) * r - px(1.2), bx + math.cos(a) * r + px(1.2),
+                                 by + math.sin(a) * r + px(1.2), fill="#d9d9d9", outline="")
+            self.create_text(bx, by, text="!", fill="#a0703c", font=skin.T.font("sans", 7, "bold"))
         if self.jump_frame and self.gain:  # the points just earned float up
             self.create_text(w - px(14), px(6) + px(10) * (1 - u), text=f"+{self.gain}", fill=skin.T.lcd_on, font=font)
 

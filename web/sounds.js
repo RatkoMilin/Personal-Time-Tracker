@@ -262,6 +262,10 @@
     },
     jumprope: {
       jump: () => [[0, swoosh(0.12, true, 236)], [0.1, knock(2.4, 0.7, 237)]],
+      pad0: () => [[0, berimbau(196, 0.35)]],
+      pad1: () => [[0, tone(110, 62, 0.3, "sine", 0.002, 0.09)], [0, noise(0.1, { tau: 0.02, amp: 0.4, seed: 238, lowpass: [0.3, 0.1] })]],
+      pad2: () => jingles(3, 239),
+      pad3: () => [[0, agogo(880)]],
       start: () => [[0, tch()], [0.14, tch(234)], [0.28, berimbau(196)], [0.52, berimbau(220)]],
       pause: () => caxixi(),
       stop: () => [[0, berimbau(147, 0.6)]],

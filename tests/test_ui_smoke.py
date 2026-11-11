@@ -804,3 +804,34 @@ def test_bowling_game(app):
     game.destroy()
     app.settings.update({"bowling_rolls": [], "bowling_pins": []})
     app.set_skin("matrix")
+
+
+def test_jump_rope_bonus_round(app):
+    import random
+
+    from timetracker.ui import scenes, simon
+
+    game = simon.SimonGame(random.Random(3))
+    first = list(game.sequence)
+    assert [game.press(p) for p in first] == ["ok", "ok", "phrase"] and game.minutes() == 2
+    assert len(game.sequence) == 4 and game.press((game.sequence[0] + 1) % 4) == "wrong" and game.over
+    app.settings.update({"rope_points": 0, "rope_jumps": simon.BONUS_EVERY - 1, "rope_bonus_ready": False,
+                         "rope_bonus_until": 0.0})
+    app.set_skin("jumprope")
+    base = app._rope_value()
+    app.scene.jump()  # the 25th jump: the pandeiro shows up
+    app._update_display()
+    assert app.settings["rope_bonus_ready"] and app.scene.bonus_ready
+    app.open_simon()
+    round_ = app.simon_window
+    assert not app.settings["rope_bonus_ready"]
+    for pad in round_.game.sequence[:]:
+        round_.game.press(pad)  # the phrase repeated right: two minutes of double points
+    round_.finish()
+    assert app.settings["rope_bonus_until"] > time.time() + 100
+    assert app._rope_value() == base * 2
+    app._update_display()
+    assert app.scene.double
+    app.settings.update({"rope_points": 0, "rope_jumps": 0, "rope_bonus_until": 0.0})
+    assert scenes.rope_level(0) == 0
+    app.set_skin("matrix")

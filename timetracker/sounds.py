@@ -15,7 +15,7 @@ sushi: chopsticks tapping, a little bell, plates clinking as they stack ("flip")
 tulips: light plucked notes and birdsong, a chime for every tulip planted ("flip")
 tofu: oil sizzling in the wok, the spatula, a wok clang, the toss ("flip")
 jumprope: the berimbau and the caxixi, the rope whipping round for a jump ("jump"), a pandeiro and berimbau
-  fanfare for every new level ("flip"), agogô bells
+  fanfare for every new level ("flip"), agogô bells, and the four instruments of the bonus round ("pad0".."pad3")
 bowling: the ball rolling ("roll"), pins crashing, a strike ("flip")
 window: a roller blind pulled up and let down, crickets at each turn of the sunset ("flip")
 corporeal: footsteps and a breath in a quiet gallery, its echo
@@ -487,6 +487,11 @@ def _kit(skin: str) -> dict:
     elif skin == "jumprope":
         kit = {
             "jump": [(0, _swoosh(0.12, rising=True, seed=236)), (0.1, _knock(2.4, 0.7, seed=237))],  # whip, landing
+            "pad0": [(0, _berimbau(196, 0.35))],                                                          # the roda
+            "pad1": [(0, tone(110, 62, 0.3, attack=0.002, tau=0.09)), (0, noise(0.1, tau=0.02, amp=0.4, seed=238,
+                                                                                lowpass=(0.3, 0.1)))],  # atabaque
+            "pad2": _jingles(3, seed=239),
+            "pad3": [(0, _agogo(880))],
             "start": [(0, _tch()), (0.14, _tch(234)), (0.28, _berimbau(196)), (0.52, _berimbau(220))],
             "pause": _caxixi(),
             "stop": [(0, _berimbau(147, 0.6))],
