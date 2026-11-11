@@ -208,10 +208,11 @@ body[data-skin="eink"] .skins .btn.active { outline: 3px solid #000; }
 
 /* ---------------------------------------------------------------- Mačkasti (cat) */
 body[data-skin="cat"] {
-  --body: #f4ecdf; --body-light: #fffaf2; --body-dark: #cfc4b2; --text: #3b3a3e; --accent: #6e6b72;
+  /* a grey cat lying in the grass: sage green, a little blue, a hint of yellow */
+  --body: #e3ecd6; --body-light: #f1f6ea; --body-dark: #c3d2b0; --text: #2f3a33; --accent: #3f6e8c;
   --lcd-bg: #3b3a3e; --lcd-on: #f8f1e4; --lcd-off: #47464b; --lcd-dim: #a8a299; --lcd-text: #f1e9da;
   --btn-face: #3b3a3e; --btn-light: #5a5960; --btn-dark: #1f1e22; --btn-glyph: #f8f1e4;
-  --sel-bg: #f1e9da; --sel-fg: #3b3a3e; --outline: #1f1e22;
+  --sel-bg: #3f6e8c; --sel-fg: #ffffff; --outline: #2f4a5a;
   --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
   --label-weight: 700; --label-style: normal; --upper: none; --radius: 14px;
 }
@@ -234,11 +235,11 @@ body[data-skin="cat"] .list > .inner {
   background-color: var(--lcd-bg);
   background-image:
     radial-gradient(ellipse 9px 6px at 14px 12px, #2a292d 95%, transparent 100%),
-    radial-gradient(ellipse 6px 5px at 70px 40px, #55535a 95%, transparent 100%),
+    radial-gradient(ellipse 6px 5px at 70px 40px, #5d7a4e 95%, transparent 100%),
     radial-gradient(ellipse 11px 7px at 120px 18px, #2f2e33 95%, transparent 100%),
-    radial-gradient(ellipse 5px 4px at 40px 70px, #e9e0d0 95%, transparent 100%),
+    radial-gradient(ellipse 5px 4px at 40px 70px, #3f6e8c 95%, transparent 100%),
     radial-gradient(ellipse 8px 6px at 150px 75px, #2a292d 95%, transparent 100%),
-    radial-gradient(ellipse 4px 3px at 98px 88px, #e9e0d0 95%, transparent 100%);
+    radial-gradient(ellipse 3px 2px at 98px 88px, #e8c547 95%, transparent 100%);
   background-size: 170px 100px;
 }
 body[data-skin="cat"] .controls .btn, body[data-skin="cat"] .pl-foot .btn, body[data-skin="cat"] .pl-head .btn {

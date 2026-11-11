@@ -203,15 +203,16 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         shape="chamfer", panel_outline="#5fd8ff", title_style="notch", segments="sharp", meter="sword",
     ),
     Theme(
-        key="cat", name="Mačkasti",
-        body="#f4ecdf", body_light="#fffaf2", body_dark="#cfc4b2", text="#3b3a3e", accent="#6e6b72",
+        key="cat", name="Mačkasti",  # a grey cat lying in the grass: sage green, a little blue, a hint of yellow
+        body="#e3ecd6", body_light="#f1f6ea", body_dark="#c3d2b0", text="#2f3a33", accent="#3f6e8c",
         lcd_bg="#3b3a3e", lcd_on="#f8f1e4", lcd_off="#47464b", lcd_dim="#a8a299", lcd_text="#f1e9da",
         btn_face="#3b3a3e", btn_light="#5a5960", btn_dark="#1f1e22", btn_glyph="#f8f1e4",
-        sel_bg="#f1e9da", sel_fg="#3b3a3e",
+        sel_bg="#3f6e8c", sel_fg="#ffffff",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
-        shape="round", radius=12, panel_outline="#1f1e22", title_style="ears", segments="round",
-        button="paw", pl_pattern="spots", meter="cat", meter_fill="#3b3a3e",
+        shape="round", radius=12, panel_outline="#2f4a5a", title_style="ears", segments="round",
+        button="paw", pl_pattern="spots", meter="cat", meter_fill="#5d7a4e",
+        spot_colors=("#2f3a33", "#5d7a4e", "#3f6e8c", "#2a292d", "#5d7a4e", "#e8c547"),
     ),
     Theme(
         key="setsuna", name="Setsuna",
