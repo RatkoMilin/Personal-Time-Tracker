@@ -756,7 +756,7 @@
   // ------------------------------------------------------------------ the scene skins (as on the laptop)
 
   const HOUR = 3600000, hoursOf = ms => Math.floor(Math.max(0, ms) / HOUR), inHour = ms => (Math.max(0, ms) % HOUR) / HOUR;
-  const TULIP_COLORS = ["#e0424f", "#f59ab5", "#f5c542", "#9b5fc0", "#f08a2e"];
+  const TULIP_COLORS = ["#ec9aa8", "#f4c2cf", "#f3dc9a", "#cdb4e6", "#f6bf9e"];  // soft pastels
   const DUSK = 90 * 60000, DUSK_STOPS = [[0, "#ffd27a"], [0.35, "#ffa04d"], [0.6, "#ff6f7d"], [0.8, "#a86bd6"], [0.95, "#3b3f8a"], [1, "#3b3f8a"]];
   const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
   const mixColor = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
@@ -772,7 +772,7 @@
   // When each scene's milestone is reached while the timer runs, it plays the skin's "flip" sound.
   const MILESTONE = { sushi: ms => Math.floor(ms / 600000), tulips: hoursOf, tofu: hoursOf, capoeira: ms => Math.floor(ms / 1800000),
                       bowling: hoursOf, window: duskPhase, corporeal: hoursOf };
-  const VIEW = { sushi: 62, tulips: 32, tofu: 58, capoeira: 60, bowling: 54, window: 44, corporeal: 36 };
+  const VIEW = { sushi: 62, tulips: 74, tofu: 58, capoeira: 60, bowling: 54, window: 44, corporeal: 36 };
   let sceneKey = "", sceneMark = null;
 
   const nigiri = (x, y, w, top = "#f08a5d") => {
@@ -782,9 +782,9 @@
   };
   function tulipSvg(x, base, height, color, open, leaves = true) {
     const top = base - height, r = height * 0.2, spread = 0.15 + 0.55 * open;
-    let out = `<line x1="${x}" y1="${base}" x2="${x}" y2="${f1(top + height * 0.12)}" stroke="#4f9a45" stroke-width="${f1(Math.max(1, height * 0.07))}" stroke-linecap="round"/>`;
-    if (leaves) for (const s of [-1, 1]) out += `<path d="M${x},${f1(base - height * 0.05)} Q${f1(x + s * height * 0.3)},${f1(base - height * 0.25)} ${f1(x + s * height * 0.26)},${f1(base - height * 0.55)} Q${f1(x + s * height * 0.08)},${f1(base - height * 0.3)} ${x},${f1(base - height * 0.05)}Z" fill="#5fae4f"/>`;
-    for (const s of [-1, 1]) out += `<path d="M${f1(x - s * r * 0.1)},${f1(top + r * 1.1)} Q${f1(x + s * r * 0.9)},${f1(top + r * 0.75)} ${f1(x + s * r * (0.5 + spread * 1.2))},${f1(top - r * 0.2 + r * spread * 0.6)} Q${f1(x + s * r * 0.15)},${f1(top + r * 0.2)} ${f1(x - s * r * 0.1)},${f1(top + r * 1.1)}Z" fill="${mixColor(color, "#000000", 0.12)}"/>`;
+    let out = `<line x1="${x}" y1="${base}" x2="${x}" y2="${f1(top + height * 0.12)}" stroke="#86b083" stroke-width="${f1(Math.max(1, height * 0.07))}" stroke-linecap="round"/>`;
+    if (leaves) for (const s of [-1, 1]) out += `<path d="M${x},${f1(base - height * 0.05)} Q${f1(x + s * height * 0.3)},${f1(base - height * 0.25)} ${f1(x + s * height * 0.26)},${f1(base - height * 0.55)} Q${f1(x + s * height * 0.08)},${f1(base - height * 0.3)} ${x},${f1(base - height * 0.05)}Z" fill="#9cc59a"/>`;
+    for (const s of [-1, 1]) out += `<path d="M${f1(x - s * r * 0.1)},${f1(top + r * 1.1)} Q${f1(x + s * r * 0.9)},${f1(top + r * 0.75)} ${f1(x + s * r * (0.5 + spread * 1.2))},${f1(top - r * 0.2 + r * spread * 0.6)} Q${f1(x + s * r * 0.15)},${f1(top + r * 0.2)} ${f1(x - s * r * 0.1)},${f1(top + r * 1.1)}Z" fill="${mixColor(color, "#7a5a6a", 0.12)}"/>`;
     return out + `<path d="M${f1(x - r * 0.55)},${f1(top + r * 1.05)} Q${f1(x - r * 0.6)},${f1(top - r * 0.1)} ${x},${f1(top - r * 0.35)} Q${f1(x + r * 0.6)},${f1(top - r * 0.1)} ${f1(x + r * 0.55)},${f1(top + r * 1.05)}Z" fill="${color}"/>`;
   }
   function chiliSvg(x, y, length, angle, color = "#b5231c") {
@@ -829,6 +829,7 @@
       let light = lightColor(st === "stopped" ? 0 : ms);
       if (!playing) light = mixColor(light, "#1a1424", 0.7);
       if (document.body.style.getPropertyValue("--light") !== light) document.body.style.setProperty("--light", light);
+      return;  // the list is the window: no scene next to the clock
     }
     const w = VIEW[sk], key = `${sk}|${st}|${Math.floor(ms / 60000)}`;
     if (key === sceneKey) return;
@@ -846,16 +847,17 @@
       const n = Math.floor(ms / 600000);
       for (let i = 0; i < Math.min(n, 9); i++) out += `<ellipse cx="15" cy="${f1(41 - i * 2.6 - 1)}" rx="11" ry="2" fill="${["#f4f1ea", "#c8323c", "#2f5d9a", "#d9a63a"][i % 4]}" stroke="#26262a" stroke-width=".5"/>`;
       if (n) out += `<text x="31" y="38" font-size="8" font-weight="700" fill="#ff8f63" font-family="monospace">×${n}</text>`;
-    } else if (sk === "tulips") {  // grows from the bulb over an hour, closes on pause
-      out += `<ellipse cx="16" cy="40" rx="14" ry="3.5" fill="#7a5236"/>`;
-      const p = inHour(ms), color = TULIP_COLORS[hoursOf(ms) % 5];
-      if (st === "stopped" || p < 0.08) {
-        out += `<ellipse cx="16" cy="37" rx="4" ry="3.5" fill="#c9a77c" stroke="#8a6a4a" stroke-width=".5"/>`;
-        if (st !== "stopped") out += `<line x1="16" y1="34" x2="16" y2="${f1(34 - 10 * p / 0.08)}" stroke="#5fae4f" stroke-width="2" stroke-linecap="round"/>`;
-      } else {
-        const height = 34 * (0.35 + 0.65 * Math.min(1, p / 0.6)), bud = Math.min(1, Math.max(0, (p - 0.3) / 0.3));
-        out += tulipSvg(16, 38, height, mixColor("#7fbf5a", color, bud), st === "paused" ? 0 : Math.max(0, (p - 0.6) / 0.4));
-      }
+    } else if (sk === "tulips") {  // a field: the buds open one by one over an hour, close on pause
+      out += `<rect x="0" y="23" width="74" height="21" fill="#e5efd9"/>` + [1, 2, 3, 4].map(k => `<line x1="0" x2="74" y1="${f1(23 + 21 * k / 5)}" y2="${f1(23 + 21 * k / 5)}" stroke="#d6e6c6"/>`).join("");
+      const rows = [[26.4, 8, 9], [33.4, 7, 12], [42, 6, 16]], total = 21;
+      const bloomed = st === "stopped" ? 0 : Math.floor(inHour(ms) * (total + 1)), palette = hoursOf(ms) % 5;
+      rows.forEach(([base, n, size], k) => {
+        for (let i = 0; i < n; i++) {
+          const x = 74 * (i + 0.5 + (n % 2 === 0 ? 0.25 : 0)) / (n + 0.5), order = (i * 7 + k * 3) % total;
+          out += order < bloomed ? tulipSvg(x, base, size, TULIP_COLORS[(palette + i + k) % 5], st === "paused" ? 0 : 0.9, size > 12)
+            : tulipSvg(x, base, size * 0.8, "#b5d3a2", 0, size > 12);
+        }
+      });
     } else if (sk === "tofu") {  // a cube every 5 minutes, browning; tossed and served every hour
       const n = Math.floor((Math.max(0, ms) % HOUR) / 300000), inH = Math.max(0, ms) % HOUR, rnd = mulberry(4);
       out += `<g class="steam">` + [0, 1, 2].map(k => `<path d="M${15 + k * 11},18 q2,-3 0,-6 q-2,-3 0,-6" fill="none" stroke="#fff" stroke-opacity=".35"/>`).join("") + `</g>`;
@@ -889,13 +891,6 @@
       const down = new Set(PIN_ORDER.slice(0, Math.floor((Math.max(0, ms) % HOUR) / 360000)));
       PIN_SPOTS.forEach(([dx, row], i) => { out += pinSvg(27 + dx * 7.5, 13 + row * 4.5, 10, down.has(i)); });
       out += `<g class="ball"><circle cx="27" cy="37" r="5" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="25.3" cy="34.8" rx="1.8" ry="1.2" fill="#6a4a9a"/></g>`;
-    } else if (sk === "window") {  // the blind: light through its holes, dim while it is let down
-      out += `<rect x="2" y="2" width="40" height="40" fill="#3a2f2a" stroke="#1c1512"/><rect x="4" y="4" width="36" height="36" fill="#5a4a40"/>`;
-      for (let r = 0; r < 7; r++) {
-        const y = 5 + r * 34 / 7;
-        out += `<line x1="4" y1="${f1(y)}" x2="40" y2="${f1(y)}" stroke="#3e322b" stroke-width=".6"/>`;
-        for (let c = 0; c < 6; c++) out += `<rect class="hole" x="${f1(7 + c * 6 - 1.2)}" y="${f1(y + 1.4)}" width="2.4" height="1.6"/>`;
-      }
     } else if (sk === "corporeal") {  // crouched against the white wall, standing after an hour of the task
       out += `<rect x="0" y="0" width="4" height="44" fill="#000" fill-opacity=".05"/><line x1="0" y1="42" x2="36" y2="42" stroke="#000" stroke-opacity=".18"/>` +
         figureSvg(st === "stopped" ? 0 : Math.min(1, ms / HOUR));

@@ -338,8 +338,9 @@ def test_scene_skins_follow_the_task(page):
     page.wait_for_function("document.querySelector('#scene').textContent.includes('×3')")
     assert page.locator("#scene.running .belt").count() == 1
     page.click("#stopBtn")
-    start_task(page, "tulips", 125)  # two full hours: two tulips beside the title
+    start_task(page, "tulips", 125)  # two full hours: two tulips beside the title, a field half in bloom
     page.wait_for_function("document.querySelectorAll('.titlebar .piece.tu').length === 2")
+    assert page.locator("#scene path").count() > 40
     page.click("#stopBtn")
     start_task(page, "tofu", 21)  # a tofu cube every 5 minutes
     page.wait_for_function("document.querySelectorAll('#scene .food rect[stroke]').length >= 4")
@@ -352,7 +353,8 @@ def test_scene_skins_follow_the_task(page):
     page.wait_for_function("document.querySelectorAll('.titlebar .piece.frame.x').length === 1")
     assert page.locator(".titlebar .piece.frame").count() == 10
     page.click("#stopBtn")
-    start_task(page, "window", 60)  # pink light at dusk, dimmed when the blind is let down
+    start_task(page, "window", 60)  # pink light at dusk in the list (the window), dimmed when the blind is let down
+    assert page.locator("#scene").is_hidden()
     page.wait_for_function("getComputedStyle(document.body).getPropertyValue('--light').trim() !== ''")
     lit = page.evaluate("getComputedStyle(document.body).getPropertyValue('--light').trim()")
     page.click("#pauseBtn")

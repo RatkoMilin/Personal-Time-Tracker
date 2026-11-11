@@ -700,7 +700,7 @@ def test_2000s_skins_gadgets(app):
 
 
 def test_scene_skins(app):
-    from timetracker.ui import scenes
+    from timetracker.ui import scenes, skin
 
     assert scenes.plates(29 * 60) == 2 and scenes.cubes(61 * 60) == 0 and scenes.cubes(26 * 60) == 5
     assert scenes.grade(61 * 60) == 2 and scenes.pins_down(37 * 60) == 6 and scenes.dusk_phase(60 * 60) == 2
@@ -711,7 +711,10 @@ def test_scene_skins(app):
     for key in ("sushi", "tulips", "tofu", "capoeira", "bowling", "window", "corporeal"):
         app.set_skin(key)
         events = []
-        app.scene.on_event = lambda: events.append(1)
+        if key == "window":  # no scene: the list is the window, the player plays the sunset's turns
+            app.sounds.play = lambda event, force=False: events.append(event) or True
+        else:
+            app.scene.on_event = lambda: events.append(1)
         app.task_var.set(key)
         app.play()
         _run_for(app, 59.9)
@@ -720,9 +723,12 @@ def test_scene_skins(app):
         if key in ("tulips", "bowling"):
             assert len(app.titlebar.pieces) == 1, key
         if key == "window":
-            assert app.pl_panel.tint == scenes.light_color(app.scene.seconds)
+            assert app.scene is None and "flip" in events
+            lit = app.pl_panel.tint
+            assert app.listbox.cget("bg") == skin.blend(skin.T.lcd_bg, lit, 0.14)  # the room takes the light's color
             app.pause()
             app._update_display()
-            assert app.pl_panel.tint != scenes.light_color(app.scene.seconds)  # the blind is down
+            assert app.pl_panel.tint != lit  # the blind is down
+            del app.sounds.play
         app.stop()
     app.set_skin("matrix")

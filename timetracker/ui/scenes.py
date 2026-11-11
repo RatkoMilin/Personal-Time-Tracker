@@ -1,15 +1,16 @@
 """Seven skins with a little scene next to the clock that follows the task's time.
 
 Suši: a conveyor belt runs while you work, and a plate lands on the stack every 10 minutes.
-Lale: a tulip grows from the bulb over an hour of the task and closes its petals on pause; every
-  full hour a tulip is planted beside the title.
+Lale: a field of tulips whose buds open one by one over an hour of the task and close on pause;
+  every full hour a tulip is planted beside the title.
 Lazi tofu: a tofu cube drops into the wok every 5 minutes and slowly turns golden; at the full hour
   the wok is tossed and a plate is served beside the title.
 Kapoera: a capoeirista sways in the ginga while the timer runs; every 30 minutes earns the next cord.
 Kuglanje: a pin falls every 6 minutes; at the full hour the ball rolls a strike, marked on the
   score sheet beside the title.
-Prozor: dusk through the holes of a roller blind; over 90 minutes the light goes from gold to orange,
-  pink, violet and night, and on pause the blind is let down.
+Prozor: the playlist is the window, dusk shining through the holes of its roller blind; over 90 minutes
+  the light goes from gold to orange, pink, violet and night, and on pause the blind is let down.
+  (No scene of its own: the player follows dusk_phase and tints the list.)
 Korporealnost: a figure crouches against the gallery wall and slowly rises over an hour of the task.
 
 Every scene takes set(seconds, state) on each tick and calls on_event when its milestone is reached
@@ -196,56 +197,60 @@ class SushiBelt(Scene):
 
 # ------------------------------------------------------------------ Lale
 
-TULIP_COLORS = ("#e0424f", "#f59ab5", "#f5c542", "#9b5fc0", "#f08a2e")
+TULIP_COLORS = ("#ec9aa8", "#f4c2cf", "#f3dc9a", "#cdb4e6", "#f6bf9e")  # soft pastels
+STEM, LEAF, BUD = "#86b083", "#9cc59a", "#b5d3a2"
 
 
 def draw_tulip(c: tk.Canvas, x: float, base: float, height: float, color: str, open_: float = 1.0,
                leaves: bool = True) -> None:
     """A tulip: stem, two leaves and a cup of three petals that opens with open_ (0 closed, 1 open)."""
     top = base - height
-    c.create_line(x, base, x, top + height * 0.12, fill="#4f9a45", width=max(1, height * 0.07), capstyle="round")
+    c.create_line(x, base, x, top + height * 0.12, fill=STEM, width=max(1, height * 0.07), capstyle="round")
     if leaves:
         for side in (-1, 1):
             c.create_polygon(x, base - height * 0.05, x + side * height * 0.2, base - height * 0.22,
                              x + side * height * 0.26, base - height * 0.55, x + side * height * 0.04, base - height * 0.3,
-                             fill="#5fae4f", outline="", smooth=True)
+                             fill=LEAF, outline="", smooth=True)
     r = height * 0.2
     spread = 0.15 + 0.55 * open_
     for side in (-1, 1):  # the outer petals lean out as the flower opens
         tip = (x + side * r * (0.5 + spread * 1.2), top - r * 0.2 + r * spread * 0.6)
         c.create_polygon(x - side * r * 0.1, top + r * 1.1, x + side * r * 0.9, top + r * 0.75, tip[0], tip[1],
-                         x + side * r * 0.15, top + r * 0.2, fill=blend(color, "#000000", 0.12), outline="",
+                         x + side * r * 0.15, top + r * 0.2, fill=blend(color, "#7a5a6a", 0.12), outline="",
                          smooth=True)
     c.create_polygon(x - r * 0.55, top + r * 1.05, x - r * 0.45, top + r * 0.1, x, top - r * 0.35,
                      x + r * 0.45, top + r * 0.1, x + r * 0.55, top + r * 1.05, fill=color, outline="", smooth=True)
     c.create_line(x - r * 0.15, top + r * 0.3, x - r * 0.2, top + r * 0.85, fill=blend(color, "#ffffff", 0.5))
 
 
-class Tulip(Scene):
-    """Grows from a bulb over an hour of the task; the petals close while the timer is paused."""
+class TulipField(Scene):
+    """A field of tulips: over an hour of the task the buds open one by one, row after row; on pause the
+    open ones close again."""
 
-    width, height = 32, 44
+    width, height = 74, 44
 
     def draw(self) -> None:
         self.delete("all")
         w, h = self.w, self.h
-        base = h - px(6)
-        self.create_oval(px(2), base - px(3), w - px(2), h - px(1), fill="#7a5236", outline="")  # soil
-        if self.state == "stopped" and self.seconds <= 0:
-            self.create_oval(w / 2 - px(4), base - px(5), w / 2 + px(4), base + px(2), fill="#c9a77c",
-                             outline="#8a6a4a")  # the bulb, waiting
-            return
-        p = hour_progress(self.seconds)
-        color = TULIP_COLORS[hours(self.seconds) % len(TULIP_COLORS)]
-        if p < 0.08:  # a sprout pushing out of the bulb
-            self.create_oval(w / 2 - px(4), base - px(5), w / 2 + px(4), base + px(2), fill="#c9a77c", outline="")
-            self.create_line(w / 2, base - px(4), w / 2, base - px(4) - px(10) * p / 0.08, fill="#5fae4f",
-                             width=max(1, px(2)), capstyle="round")
-            return
-        height = (h - px(10)) * (0.35 + 0.65 * min(1.0, p / 0.6))
-        bud = min(1.0, max(0.0, (p - 0.3) / 0.3))  # green bud turning into the flower's color
-        open_ = 0.0 if self.state == "paused" else max(0.0, (p - 0.6) / 0.4)
-        draw_tulip(self, w / 2, base, height, blend("#7fbf5a", color, bud), open_)
+        self.create_rectangle(0, h * 0.52, w, h, fill="#e5efd9", outline="")  # the field
+        for k in range(4):  # furrows running away from us
+            y = h * 0.52 + (h * 0.48) * (k + 1) / 5
+            self.create_line(0, y, w, y, fill="#d6e6c6")
+        rows = ((h * 0.6, 8, px(9)), (h * 0.76, 7, px(12)), (h - px(2), 6, px(16)))  # back, middle, front
+        total = sum(n for _, n, _ in rows)
+        bloomed = 0 if self.state == "stopped" else int(hour_progress(self.seconds) * (total + 1))
+        palette = hours(self.seconds) % len(TULIP_COLORS)
+        k = 0
+        for base, n, size in rows:
+            for i in range(n):
+                x = w * (i + 0.5 + (0.25 if n % 2 == 0 else 0)) / (n + 0.5)
+                order = (i * 7 + k * 3) % total  # the field fills in a scattered order, not left to right
+                color = TULIP_COLORS[(palette + i + k) % len(TULIP_COLORS)]
+                if order < bloomed:
+                    draw_tulip(self, x, base, size, color, 0.0 if self.state == "paused" else 0.9, leaves=size > px(12))
+                else:
+                    draw_tulip(self, x, base, size * 0.8, BUD, 0.0, leaves=size > px(12))
+            k += 1
 
 
 # ------------------------------------------------------------------ Lazi tofu
@@ -453,36 +458,6 @@ class Pins(Scene):
         self.create_oval(w / 2 - r * 0.5, by - r * 0.7, w / 2 + r * 0.1, by - r * 0.25, fill="#6a4a9a", outline="")
 
 
-# ------------------------------------------------------------------ Prozor
-
-class Blind(Scene):
-    """A window with a roller blind; light shines through its holes, gold to night over 90 minutes."""
-
-    width, height = 44, 44
-
-    def milestone(self, seconds: float) -> int:
-        return int(max(0.0, seconds) // DUSK) * 5 + dusk_phase(seconds)
-
-    def draw(self) -> None:
-        self.delete("all")
-        w, h = self.w, self.h
-        light = light_color(self.seconds)
-        dim = self.state != "playing"  # paused or stopped: the blind is let down, little light gets in
-        self.create_rectangle(px(2), px(2), w - px(2), h - px(2), fill="#3a2f2a", outline="#1c1512")
-        slat = "#5a4a40"
-        self.create_rectangle(px(4), px(4), w - px(4), h - px(4), fill=slat, outline="")
-        rows = 7
-        for r in range(rows):
-            y = px(5) + r * (h - px(10)) / rows
-            self.create_line(px(4), y, w - px(4), y, fill="#3e322b")
-            for c in range(6):
-                x = px(7) + c * (w - px(14)) / 5
-                glow = blend(slat, light, 0.25 if dim else 1.0)
-                self.create_rectangle(x - px(1.2), y + px(1.4), x + px(1.2), y + px(3), fill=glow, outline="")
-        if not dim:  # a soft glow of the light on the sill
-            self.create_line(px(4), h - px(4), w - px(4), h - px(4), fill=blend(slat, light, 0.6), width=max(1, px(2)))
-
-
 # ------------------------------------------------------------------ Korporealnost
 
 # The figure's joints in a 36 x 44 box (side view, facing the wall on the left): head, neck, hip, knee,
@@ -535,5 +510,5 @@ class Figure(Scene):
         draw_figure(self, 0, 0, w, h, rise(self.seconds) if self.state != "stopped" else 0.0)
 
 
-SCENES = {"sushi": SushiBelt, "tulip": Tulip, "wok": Wok, "roda": Roda, "pins": Pins, "blind": Blind,
+SCENES = {"sushi": SushiBelt, "tulip": TulipField, "wok": Wok, "roda": Roda, "pins": Pins,
           "figure": Figure}

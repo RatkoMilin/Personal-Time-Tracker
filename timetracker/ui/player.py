@@ -45,6 +45,7 @@ class Player(tk.Tk):
         self._tray_key = None
         self._scramble_left = 0
         self._clock_text = ""
+        self._dusk_phase: int | None = None
         self.reminder: IdleReminder | None = None
         self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
@@ -96,6 +97,7 @@ class Player(tk.Tk):
 
     def _build_ui(self):
         T = skin.use(self, self._skin_key())
+        self._dusk_phase = None
         self.sounds.prepare(T.dark_variant or T.key)
         self.ui = tk.Frame(self, bg=T.body)
         self.ui.pack(fill="both", expand=True)
@@ -637,12 +639,20 @@ class Player(tk.Tk):
             n = scenes.hours(secs) if state != self.STOPPED else 0
             self.titlebar.set_pieces([str(i) for i in range(min(n, 12))] if T.title_style == "tulips"
                                      else ["x"] * min(n, 10))
-        if T.pl_pattern == "blinds":  # Prozor: the sunset's light; dim while the blind is down
-            light = scenes.light_color(secs if state != self.STOPPED else 0)
+        if T.pl_pattern == "blinds":  # Prozor: the list is the window; the sunset shines in, dim while the blind is down
+            shown = secs if state != self.STOPPED else 0
+            phase = scenes.dusk_phase(shown)
+            if state == self.PLAYING and self._dusk_phase is not None and phase > self._dusk_phase:
+                self.sounds.play("flip")  # crickets: the light has turned
+            self._dusk_phase = phase
+            light = scenes.light_color(shown)
             if state != self.PLAYING:
                 light = skin.blend(light, T.lcd_bg, 0.7)
+            room = skin.blend(T.lcd_bg, light, 0.14)
             self.titlebar.set_pieces([light])
-            self.pl_panel.set_tint(light)
+            if light != self.pl_panel.tint:
+                self.pl_panel.set_tint(light, room)
+                self.listbox.configure(bg=room)
         if self.ring is not None:
             self.ring.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
         if self.pads is not None:

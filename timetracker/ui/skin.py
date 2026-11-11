@@ -319,27 +319,27 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
     # ---------------------------------------------------------------- scenes (timetracker/ui/scenes.py)
     Theme(
         key="sushi", name="Suši",
-        # rice paper, a hinoki board for the list, nori, salmon and red lacquer
-        body="#f3ead9", body_light="#fffaf0", body_dark="#d9c7a6", text="#2b1a12", accent="#c8323c",
-        lcd_bg="#1b241f", lcd_on="#ff8f63", lcd_off="#26332c", lcd_dim="#6b8a76", lcd_text="#f4efe4",
-        btn_face="#c8323c", btn_light="#e0605f", btn_dark="#8a1f26", btn_glyph="#fffaf0",
-        sel_bg="#f08a5d", sel_fg="#1b241f",
+        # rice and salmon: rice white everywhere, salmon pink-orange for what is lit, a bamboo mat for the list
+        body="#fbf6ee", body_light="#ffffff", body_dark="#ecdcc8", text="#3a2f2a", accent="#f07a52",
+        lcd_bg="#fffaf3", lcd_on="#f07a52", lcd_off="#f6e9df", lcd_dim="#d9b8a5", lcd_text="#5a4038",
+        btn_face="#f4845f", btn_light="#ffb79b", btn_dark="#d9603d", btn_glyph="#3a2f2a",
+        sel_bg="#ffc4ad", sel_fg="#3a2f2a",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
-        shape="round", radius=10, panel_outline="#b89c6e", title_style="sushi", segments="round",
-        button="circle", clock_deco="sushi", pl_pattern="makisu", meter="nigiri",
-        list_bg="#e9d4a8", list_fg="#3b2416", list_run="#c8323c",
+        shape="round", radius=10, panel_outline="#f1c7b4", title_style="sushi", segments="round",
+        button="nigiri", clock_deco="sushi", pl_pattern="makisu", meter="nigiri",
+        list_bg="#fffaf3", list_fg="#4a3a33", list_run="#e8603c",
     ),
     Theme(
         key="tulips", name="Lale",
-        # spring: cream, tulip red, pink and yellow, a pale sky
-        body="#fff6f2", body_light="#ffffff", body_dark="#f2d8d2", text="#4a3a3a", accent="#e0424f",
-        lcd_bg="#eef6fb", lcd_on="#d93a4a", lcd_off="#e1ebf1", lcd_dim="#9ab3c2", lcd_text="#3d4a56",
-        btn_face="#f59ab5", btn_light="#ffd0de", btn_dark="#d06a8a", btn_glyph="#ffffff",
-        sel_bg="#f5c542", sel_fg="#3a2a10",
+        # a soft spring morning over a tulip field: cream, powder pink, butter, lilac, sage
+        body="#fdf8f4", body_light="#ffffff", body_dark="#efe2dc", text="#6a5a5e", accent="#e9a3b4",
+        lcd_bg="#f4f8fa", lcd_on="#d98a9c", lcd_off="#e9eff2", lcd_dim="#b8c6cf", lcd_text="#6a6f78",
+        btn_face="#f6d3dc", btn_light="#fbe8ed", btn_dark="#e4b3c0", btn_glyph="#8a5a68",
+        sel_bg="#f6e3a8", sel_fg="#5a4a2a",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="normal", upper=False,
-        shape="round", radius=14, panel_outline="#f2c4cf", title_style="tulips", segments="round",
+        shape="round", radius=14, panel_outline="#f1dce2", title_style="tulips", segments="round",
         clock_deco="tulip", pl_pattern="field", meter="tulips",
     ),
     Theme(
@@ -390,15 +390,15 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="normal", upper=False,
         shape="round", radius=6, panel_outline="#4a3c5a", title_style="slats", segments="round",
-        clock_deco="blind", pl_pattern="blinds", meter="light",
+        pl_pattern="blinds", meter="light",
     ),
     Theme(
         key="corporeal", name="Korporealnost",
-        # a white gallery: white walls, warm grey floor, skin
-        body="#f2f1ee", body_light="#ffffff", body_dark="#d9d6d0", text="#3a3532", accent="#c99a7c",
-        lcd_bg="#fbfaf8", lcd_on="#3a3330", lcd_off="#efede9", lcd_dim="#b5b0aa", lcd_text="#4a4440",
-        btn_face="#ffffff", btn_light="#ffffff", btn_dark="#d9d6d0", btn_glyph="#5a524c",
-        sel_bg="#e8c1a0", sel_fg="#3a3330",
+        # an empty gallery in flat cold light: grey walls, grey floor, only the skin has any warmth
+        body="#e4e4e2", body_light="#f0f0ee", body_dark="#c6c6c3", text="#4a4a4a", accent="#9a9fa6",
+        lcd_bg="#ececea", lcd_on="#4a4a4a", lcd_off="#e0e0de", lcd_dim="#a6a6a4", lcd_text="#555555",
+        btn_face="#f2f2f0", btn_light="#f2f2f0", btn_dark="#c6c6c3", btn_glyph="#6a6a6a",
+        sel_bg="#c9ccd1", sel_fg="#3a3a3a",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI Light", "DejaVu Sans"),
         label_size=9, label_weight="normal", upper=False,
         shape="plinth", title_style="gallery", segments="round", button="plinth", clock_deco="figure",
@@ -592,7 +592,8 @@ class Panel(tk.Frame):
         self.moving = False  # rain / speed streaks running around the playlist while the timer runs
         self.growth = 0  # jungle leaves / graffiti tags drawn around the playlist
         self.tint = ""  # Prozor: the color of the light coming through the blind
-        margin = px(26) if pattern in ("jungle", "tags") else px(18) if pattern == "oasis" else px(9) if pattern else 0
+        margin = (px(26) if pattern in ("jungle", "tags") else px(18) if pattern in ("oasis", "blinds") else
+                  px(9) if pattern else 0)
         pad = (px(pad) + (px(T.radius / 3) if T.shape in ("round", "toon") else px(2)) + margin
                + (px(T.border) if T.shape == "block" else 0) + (px(T.border) + px(4) if T.shape == "toon" else 0)
                + (px(3) if T.shape == "plinth" else 0)
@@ -705,10 +706,13 @@ class Panel(tk.Frame):
             self.growth = n
             self._redraw()
 
-    def set_tint(self, color: str) -> None:
-        """Prozor: the light through the blind changes color as the sun sets."""
+    def set_tint(self, color: str, room: str | None = None) -> None:
+        """Prozor: the light through the blind changes color as the sun sets, and tints the room (the list)."""
         if color != self.tint:
             self.tint = color
+            if room:
+                self.bg = room
+                self.inner.configure(bg=room)
             self._redraw()
 
     def _growth_spots(self, w: int, h: int) -> list[tuple[float, float]]:
@@ -765,18 +769,21 @@ class Panel(tk.Frame):
                 x = w * (k + 1) / 6
                 c.create_polygon(x - px(3), h - px(2), x + px(3), h - px(2), x, h - px(7), fill="#7a4a20", outline="")
             return
-        if self.pattern == "blinds":  # rows of little holes letting the evening light in
+        if self.pattern == "blinds":  # the list is a window: the blind's slats, the sunset shining through its holes
             light = self.tint or T.accent
-            for r, y in enumerate(range(px(2), h - px(2), max(3, px(5)))):
-                c.create_line(0, y + px(4), w, y + px(4), fill=blend(self.bg, "#000000", 0.25))
-                for x in range(px(3) + (r % 2) * px(3), w - px(2), max(4, px(6))):
-                    c.create_rectangle(x, y + px(1), x + px(2), y + px(2.5), fill=light, outline="")
+            slat = "#4a3c40"
+            c.create_rectangle(px(2), px(2), w - px(2), h - px(2), fill=slat, outline="#1c1512", width=max(1, px(2)))
+            for r, y in enumerate(range(px(4), h - px(4), max(4, px(7)))):
+                c.create_line(px(3), y + px(6), w - px(3), y + px(6), fill="#2e2428")
+                for x in range(px(5) + (r % 2) * px(4), w - px(4), max(5, px(8))):
+                    c.create_rectangle(x, y + px(1.5), x + px(2.6), y + px(3.6), fill=light, outline="")
             return
         if self.pattern == "field":  # tulip fields seen from above: stripes of color between green rows
-            colors = ("#e0424f", "#f5c542", "#f59ab5", "#9b5fc0", "#f08a2e")
+            from .scenes import TULIP_COLORS as colors
+
             step = max(4, px(7))
             for k, x in enumerate(range(-h, w, step)):
-                color = blend(self.bg, colors[k % len(colors)] if k % 2 == 0 else "#7fbf5a", 0.45)
+                color = blend(self.bg, colors[k % len(colors)] if k % 2 == 0 else "#9cc59a", 0.3)
                 c.create_line(x, h, x + h, 0, fill=color, width=max(2, px(3.5)))
             return
         # Deterministic, so the pattern does not jump around when the window redraws.
@@ -1270,9 +1277,12 @@ class SkinButton(tk.Canvas):
             w, h = w + px(6), h + px(6)
         if self.kind == "plinth":
             w, h = w + px(5), h + px(4)
+        if self.kind == "nigiri":
+            w, h = w + px(6), h + px(6)
         # The glyph sits on the paw's big pad, lower than the middle; on a cartoon button, off its shadow.
         shadowed = self.kind in ("toon", "plinth")
-        self.glyph_cy = h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if shadowed else h / 2
+        self.glyph_cy = (h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if shadowed else
+                         h * 0.64 if self.kind == "nigiri" else h / 2)
         self.glyph_cx = (w - px(3)) / 2 if shadowed else w / 2
         self.shift = px(3) if shadowed else 1  # how far the glyph moves when pressed
         self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else
@@ -1352,6 +1362,13 @@ class SkinButton(tk.Canvas):
             for fx, fy in holes:
                 r = w * 0.055
                 self.create_oval(w * fx - r, h * fy - r, w * fx + r, h * fy + r, fill="#0d0618", outline="", tags="face")
+        elif self.kind == "nigiri":  # a block of rice with a slice of salmon over the top, its fat in white stripes
+            rice = "#efe2d2" if pressed else "#fffaf3"
+            round_rect(self, 1, 1, w - 2, h - 2, px(7), fill=rice, outline="#e3d2bf", tags="face")
+            top = h * 0.36
+            round_rect(self, 0, 0, w - 1, top, px(6), fill=T.btn_dark if pressed else T.btn_face, outline="", tags="face")
+            for x in range(px(6), int(w) - px(2), px(9)):
+                self.create_line(x, px(2), x + px(4), top - px(2), fill=T.btn_light, width=max(1, px(1.6)), tags="face")
         elif self.kind == "plinth":  # a small white plinth with a soft shadow; pressed, it sinks into it
             s = px(3)
             off = s if pressed else 0
@@ -2318,12 +2335,8 @@ def _title_draw(bar: "TitleBar", style: str, w: int, h: int, x0: float, y0: floa
                 bar.create_line(a, y, b, y, fill=T.body_light)
                 for x in range(int(a) + px(2), int(b) - px(2), max(4, px(7))):
                     bar.create_rectangle(x, y + px(1), x + px(2), y + px(2.4), fill=light, outline="")
-    elif style == "gallery":  # a museum wall label on the right
-        lx = w - px(84)
-        if lx > x1 + px(8):
-            bar.create_rectangle(lx, px(5), lx + px(78), h - px(5), fill="#ffffff", outline=blend(T.body, "#000000", 0.08))
-            bar.create_text(lx + px(5), h / 2, anchor="w", text="silikon, kosa, vreme", fill="#8a837c",
-                            font=T.font("sans", 7))
+    elif style == "gallery":  # nothing but the title on the bare wall
+        pass
 
 
 class Tooltip:
