@@ -344,6 +344,9 @@ def test_scene_skins_follow_the_task(page):
     page.click("#stopBtn")
     start_task(page, "tofu", 21)  # PLAY tosses the wok
     assert page.locator("#scene.toss .wok").count() == 1
+    # the food lies inside the wok: drawn after the opening and before the front wall
+    order = page.evaluate("[...document.querySelectorAll('#scene .wok > *')].map(e => e.tagName + (e.classList.contains('f') ? '.f' : ''))")
+    assert order.index("ellipse") < order.index("g.f") and max(i for i, t in enumerate(order) if t == "g.f") < len(order) - 2
     page.click("#stopBtn")
 
 
@@ -384,8 +387,10 @@ def test_bowling_game_and_score_sheet(page):
     pick_skin(page, "bowling")
     page.click("#scene")
     assert page.locator("#bowlDlg").is_visible()
-    page.click("#bowlLane")  # aim
-    page.click("#bowlLane")  # power: the ball rolls
+    page.click("#bowlLane")  # the spot
+    page.click("#bowlLane")  # the direction: the arrow swings
+    assert page.locator("#bowlLane .arrow").count() == 1
+    page.click("#bowlLane")  # the power: the ball rolls
     page.wait_for_function("(window.PTT.db.settings.bowlingRolls || []).length === 1", timeout=5000)
     page.click("#bowlClose")
     page.wait_for_function("document.querySelectorAll('.titlebar .piece.frame').length === 10")
@@ -448,8 +453,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v13')")
-    cached = page.evaluate("caches.open('ptt-v13').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v14')")
+    cached = page.evaluate("caches.open('ptt-v14').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

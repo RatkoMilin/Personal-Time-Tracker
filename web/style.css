@@ -793,8 +793,8 @@ body[data-skin="tofu"] .scene .wok { transform-box: view-box; transform-origin: 
 body[data-skin="tofu"] .scene.toss .wok { animation: ptt-wok .8s ease-in-out; }
 @keyframes ptt-wok { 25% { transform: translateY(-6px) rotate(-12deg); } 50% { transform: translateY(-4px) rotate(0deg); } 75% { transform: translateY(-2px) rotate(9deg); } }
 body[data-skin="tofu"] .scene .f { transform-box: fill-box; transform-origin: center; }
-body[data-skin="tofu"] .scene.toss .f { animation: ptt-fly .8s ease-in-out; }
-@keyframes ptt-fly { 50% { transform: translateY(var(--h)) rotate(var(--s)); } 100% { transform: translateY(0) rotate(calc(var(--s) * 2)); } }
+body[data-skin="tofu"] .scene.toss .f { animation: ptt-fly .68s ease-in-out backwards; }
+@keyframes ptt-fly { 50% { transform: translate(var(--x), var(--h)) rotate(calc(var(--s) / 2)); } 100% { transform: translate(0, 0) rotate(var(--s)); } }
 body[data-skin="tofu"] .scene .steam { opacity: 0; }
 body[data-skin="tofu"] .scene.running .steam { animation: ptt-steam 1.4s ease-out infinite; }
 body[data-skin="tofu"] .clock { filter: drop-shadow(0 0 4px rgba(255, 74, 58, .7)); }

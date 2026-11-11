@@ -40,7 +40,7 @@ from . import platform_win
 
 RATE = 22050
 EVENTS = ("start", "pause", "stop", "click", "alert")
-VERSION = 2  # bump when the synthesis changes so cached files are regenerated
+VERSION = 3  # bump when the synthesis changes so cached files are regenerated
 
 
 # ---------------------------------------------------------------- building blocks
@@ -426,6 +426,86 @@ def _crickets(seed: int = 252) -> list[tuple[float, list[float]]]:
     return [(t, tone(4300, 4300, 0.09, attack=0.004, amp=0.4)) for t in (0, 0.12, 0.3, 0.42)]
 
 
+# The roda's four instruments for Vijača's bonus round, tuned to one chord (D3, G3, B3, D5: G major) so whatever
+# phrase the mestre plays comes out as a little melody.
+RODA_NOTES = (196.0, 146.83, 246.94, 587.33)  # berimbau G3, atabaque D3, pandeiro B3, agogô D5
+
+
+def _string(f: float, dur: float, decay: float = 0.996, bright: float = 0.6, seed: int = 240) -> list[float]:
+    """A plucked string (Karplus-Strong): a burst of noise circulating in a delay line one period long."""
+    rnd = random.Random(seed)
+    period = max(2, int(round(RATE / f)))
+    buf, y = [], 0.0
+    for _ in range(period):  # the pluck: brighter noise, a sharper attack
+        y += bright * (rnd.uniform(-1, 1) - y)
+        buf.append(y)
+    out = []
+    for i in range(int(dur * RATE)):
+        k = i % period
+        v = buf[k]
+        buf[k] = decay * 0.5 * (v + buf[(k + 1) % period])
+        out.append(v)
+    return out
+
+
+def _resonate(samples: list[float], f0: float, f1: float, q: float = 4.0) -> list[float]:
+    """A resonant band-pass whose centre glides f0 -> f1: the berimbau's gourd opening against the belly ("wah")."""
+    low = band = 0.0
+    n = len(samples)
+    out = []
+    for i, x in enumerate(samples):
+        fc = f0 * (f1 / f0) ** (i / max(1, n - 1))
+        g = 2 * math.sin(math.pi * fc / RATE)
+        high = x - low - band / q
+        band += g * high
+        low += g * band
+        out.append(band)
+    return out
+
+
+def _roda_berimbau(f: float = RODA_NOTES[0], dur: float = 0.62) -> list[float]:
+    """The berimbau, played open: the stick hits the steel wire, the gourd swings open. A natural plucked string."""
+    wire = _string(f, dur, decay=0.9975, bright=0.75, seed=241)
+    wah = _resonate(wire, 380, 1100, q=3.0)
+    hit = noise(0.012, tau=0.003, amp=0.6, seed=242, highpass=0.3)
+    body = [0.55 * w + 0.6 * v for w, v in zip(wire, wah)]
+    env = [math.exp(-(i / RATE) / 0.28) * min(1.0, (dur - i / RATE) / 0.03) for i in range(len(body))]
+    return [b * e + (hit[i] if i < len(hit) else 0.0) for i, (b, e) in enumerate(zip(body, env))]
+
+
+def _roda_atabaque(f: float = RODA_NOTES[1], dur: float = 0.55) -> list[float]:
+    """The atabaque: an open tone with the palm, the skin's pitch settling as it rings, a slap of the hand on top."""
+    head, phase = [], 0.0
+    for i in range(int(dur * RATE)):  # struck hard the skin goes sharp, then settles on its note
+        t = i / RATE
+        phase += 2 * math.pi * f * (1 + 0.35 * math.exp(-t / 0.012)) / RATE
+        head.append(math.sin(phase) * min(1.0, t / 0.001) * math.exp(-t / 0.2) * min(1.0, (dur - t) / 0.01))
+    mode = tone(f * 1.59, f * 1.57, dur, attack=0.001, tau=0.07, amp=0.35)  # the skin's second mode
+    slap = noise(dur, tau=0.012, amp=0.5, seed=243, lowpass=(0.5, 0.2))
+    return [a + b + c for a, b, c in zip(head, mode, slap)]
+
+
+def _roda_pandeiro(f: float = RODA_NOTES[2], dur: float = 0.5) -> list[float]:
+    """The pandeiro: the thumb's tone on the skin, and the jingles (platinelas) shaking after it."""
+    thumb = tone(f * 1.2, f, dur, attack=0.001, tau=0.13, amp=0.9)
+    out = list(thumb)
+    rnd = random.Random(244)
+    for k in range(4):  # the jingles, a pair hitting and rattling
+        start = int((0.004 + k * 0.022 + rnd.uniform(0, 0.008)) * RATE)
+        for i, v in enumerate(_clink(rnd.uniform(5200, 6800), 245 + k, 0.32 - k * 0.05)):
+            if start + i < len(out):
+                out[start + i] += v
+    return out
+
+
+def _roda_agogo(f: float = RODA_NOTES[3], dur: float = 0.6) -> list[float]:
+    """The agogô: a hand-forged bell struck with a stick, with a bell's out-of-tune overtones."""
+    parts = [tone(f * r, f * r, dur, attack=0.0008, tau=t, amp=a)
+             for r, a, t in ((1.0, 1.0, 0.24), (2.0, 0.18, 0.12), (2.76, 0.42, 0.09), (5.4, 0.2, 0.035))]
+    tap = noise(dur, tau=0.002, amp=0.5, seed=246, highpass=0.5)
+    return [sum(v) for v in zip(*parts, tap)]
+
+
 def _reverb(samples: list[float], taps=((0.05, 0.35), (0.11, 0.22), (0.19, 0.12))) -> list[float]:
     """A quiet room: a few soft echoes of the sound."""
     out = samples + [0.0] * int(taps[-1][0] * RATE)
@@ -487,11 +567,10 @@ def _kit(skin: str) -> dict:
     elif skin == "jumprope":
         kit = {
             "jump": [(0, _swoosh(0.12, rising=True, seed=236)), (0.1, _knock(2.4, 0.7, seed=237))],  # whip, landing
-            "pad0": [(0, _berimbau(196, 0.35))],                                                          # the roda
-            "pad1": [(0, tone(110, 62, 0.3, attack=0.002, tau=0.09)), (0, noise(0.1, tau=0.02, amp=0.4, seed=238,
-                                                                                lowpass=(0.3, 0.1)))],  # atabaque
-            "pad2": _jingles(3, seed=239),
-            "pad3": [(0, _agogo(880))],
+            "pad0": [(0, _reverb(_roda_berimbau()))],  # the roda: berimbau, atabaque, pandeiro, agogô
+            "pad1": [(0, _reverb(_roda_atabaque()))],
+            "pad2": [(0, _reverb(_roda_pandeiro()))],
+            "pad3": [(0, _reverb(_roda_agogo()))],
             "start": [(0, _tch()), (0.14, _tch(234)), (0.28, _berimbau(196)), (0.52, _berimbau(220))],
             "pause": _caxixi(),
             "stop": [(0, _berimbau(147, 0.6))],

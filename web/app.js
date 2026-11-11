@@ -872,12 +872,22 @@
       out += `<g class="steam">` + [0, 1, 2].map(k => `<path d="M${15 + k * 9},17 q2,-3 0,-6 q-2,-3 0,-6" fill="none" stroke="#fff" stroke-opacity=".3"/>`).join("") + `</g>`;
       out += `<rect x="8" y="41" width="34" height="2" fill="#3a3d44"/><g class="wok">`;
       out += `<line x1="45" y1="22" x2="57" y2="17" stroke="#5a3b26" stroke-width="3.5" stroke-linecap="round"/>`;
-      out += `<path d="M4,22 A21,13 0 0 0 46,22 Z" fill="#232428" stroke="#0c0c0e"/><line x1="4" y1="22" x2="46" y2="22" stroke="#6a6e78" stroke-width="1.5"/>`;
-      const food = [[10, 26, "t", 16, 200], [17, 27, "t", 20, -160], [24, 26, "t", 14, 240], [31, 25, "t", 18, -220], [14, 22, "t", 22, 140],
-                    [26, 21, "t", 25, -120], [20, 23, "c", 20, 180], [33, 21, "c", 16, -240], [9, 21, "s", 24, 300], [29, 24, "s", 26, -320]];
-      out += food.map(([x, y, kind, hgt, spin]) => `<g class="f" style="--h:-${hgt}px;--s:${spin}deg">` + (kind === "t"
-        ? `<rect x="${x - 2.8}" y="${y - 2.8}" width="5.6" height="5.6" fill="#e0a84a" stroke="#8a5a22" stroke-width=".5"/>`
-        : kind === "c" ? chiliSvg(x - 4, y, 9, -15, "#c8231a") : `<circle cx="${x}" cy="${y}" r="1.8" fill="none" stroke="#6fbf4a" stroke-width="1.1"/>`) + `</g>`).join("");
+      // seen from a little above: the dark inside of the opening, the food, then the front wall over it
+      out += `<ellipse cx="25" cy="22" rx="21" ry="4" fill="#121216" stroke="#6a6e78" stroke-width="1.2"/>`;
+      // [across -1..1, depth 0 front..1 back, size, kind, flight height, whole turns]: as on the laptop
+      const food = [[-0.5, 0.3, 0.16, "t", 1.0, 1], [-0.18, 0.15, 0.17, "t", 1.25, -1], [0.18, 0.2, 0.16, "t", 0.9, 2],
+                    [0.5, 0.35, 0.15, "t", 1.15, -2], [-0.3, 0.75, 0.15, "t", 1.4, 1], [0.08, 0.8, 0.16, "t", 1.6, -1],
+                    [-0.02, 0.45, 0.3, "c", 1.3, 1], [0.34, 0.7, 0.26, "c", 1.0, -2], [-0.6, 0.7, 0.1, "s", 1.5, 2],
+                    [0.3, 0.1, 0.1, "s", 1.7, -2]].map((f, i) => [...f, i]).sort((p, q) => q[1] - p[1]);
+      out += food.map(([dx, back, size, kind, high, spin, i]) => {
+        const x = 25 + dx * 16.8, y = 22 + 4 * (0.55 - back * 1.1), sz = size * 21;
+        return `<g class="f" style="--x:${f1(dx * 4.2)}px;--h:-${f1(9 * high)}px;--s:${360 * spin}deg;animation-delay:${0.024 * (i % 5)}s">` + (kind === "t"
+          ? `<rect x="${f1(x - sz / 2)}" y="${f1(y - sz / 2)}" width="${f1(sz)}" height="${f1(sz)}" fill="#e0a84a" stroke="#8a5a22" stroke-width=".5"/>`
+          : kind === "c" ? chiliSvg(x - sz / 2, y, sz, -15, "#c8231a")
+          : `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(sz / 2)}" fill="none" stroke="#6fbf4a" stroke-width="1.1"/>`) + `</g>`;
+      }).join("");
+      out += `<path d="M4,22 A21,4 0 0 0 46,22 A21,13 0 0 1 4,22 Z" fill="#232428" stroke="#0c0c0e"/>`;
+      out += `<path d="M4,22 A21,4 0 0 0 46,22" fill="none" stroke="#6a6e78" stroke-width="1.5"/>`;
       out += `</g>`;
     } else if (sk === "bowling") {  // a pin falls every 6 minutes, a strike every full hour
       out += `<polygon points="16,2 38,2 52,43 2,43" fill="#e3b878"/>` + [1, 2, 3, 4, 5].map(k => `<line x1="${f1(16 + 22 * k / 6)}" y1="2" x2="${f1(2 + 50 * k / 6)}" y2="43" stroke="#cf9e5c" stroke-width=".5"/>`).join("");
@@ -1012,8 +1022,10 @@
   function simonPlay() {
     simon.listening = false;
     $("simonMsg").textContent = "Slušaj mestrea...";
-    simon.seq.forEach((pad, k) => setTimeout(() => { if ($("simonDlg").open) simonFlash(pad); }, k * 450));
-    setTimeout(() => { simon.listening = true; $("simonMsg").textContent = "Tvoj red: ponovi"; }, simon.seq.length * 450);
+    // the mestre's swing, short short long, as a berimbau toque
+    const at = simon.seq.map((_, k) => simon.seq.slice(0, k).reduce((t, _p, j) => t + [340, 340, 680][j % 3], 0));
+    simon.seq.forEach((pad, k) => setTimeout(() => { if ($("simonDlg").open) simonFlash(pad); }, at[k]));
+    setTimeout(() => { simon.listening = true; $("simonMsg").textContent = "Tvoj red: ponovi"; }, at[at.length - 1] + 450);
   }
   function simonPress(pad) {
     if (simon.over) { closeSimon(); return; }
@@ -1099,9 +1111,20 @@
     return out;
   }
   const bTotal = rolls => { const done = bScores(rolls).filter(v => v !== null); return done.length ? done[done.length - 1] : 0; };
+  // the throw, as on the laptop: slide the ball to a spot, swing the arrow, then the power; the ball rolls with a
+  // little random spin (it curls), and past an edge of the lane it drops into the gutter
+  const SPREAD = 1.2, GUTTER_X = 1.12, MAX_HOOK = 0.18;
+  function bBallX(spot, angle, y, hook = 0) {
+    const steps = Math.max(1, Math.floor(y * 40));
+    for (let k = 1; k <= steps; k++) {
+      const v = y * k / steps, x = spot + angle * SPREAD * v + hook * v * v;
+      if (Math.abs(x) > 1) return Math.sign(x) * GUTTER_X;
+    }
+    return spot + angle * SPREAD * y + hook * y * y;
+  }
   function bThrow(aim, power, standing) {
     if (Math.abs(aim) > 0.95 || !standing.size) return new Set();
-    const x = aim * 2;
+    const x = aim * 2.5;
     if (standing.size === 10 && Math.abs(aim) > 0.08 && Math.abs(aim) < 0.3 && power > 0.6 && Math.random() < 0.25 + 0.35 * power) return new Set(standing);
     const hit = new Set([...standing].filter(i => Math.abs(PIN_SPOTS[i][0] - x) < 0.55 + 0.3 * power)), chain = 0.35 + 0.5 * power;
     for (const row of [3, 2, 1, 0]) {
@@ -1115,7 +1138,24 @@
     }
     return hit;
   }
-  const game = { phase: "aim", t: 0, aim: 0, power: 0, ball: 0, standing: new Set(ALL_PINS), knocked: new Set(), message: "", timer: null };
+  // a pin standing on (x, base), leaning by angle degrees (90: lying on its right side), greying as it lies
+  const PIN_PROFILE = [[0, -1], [0.13, -0.98], [0.17, -0.88], [0.12, -0.72], [0.1, -0.64], [0.2, -0.5], [0.26, -0.3], [0.22, -0.08], [0.14, 0]];
+  function tiltPinSvg(x, base, h, angle) {
+    const a = angle * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    const at = (u, v) => [x + (u * ca - v * sa) * h, base + (u * sa + v * ca) * h];
+    const pts = [...PIN_PROFILE.map(([u, v]) => at(u, v)), ...[...PIN_PROFILE].reverse().map(([u, v]) => at(-u, v))];
+    const mid = (p, q) => `${f1((p[0] + q[0]) / 2)},${f1((p[1] + q[1]) / 2)}`;
+    let d = `M${mid(pts[0], pts[1])}`;  // a smooth closed curve through the midpoints, like Tk's smooth polygons
+    for (let i = 1; i <= pts.length; i++) { const p = pts[i % pts.length], q = pts[(i + 1) % pts.length]; d += ` Q${f1(p[0])},${f1(p[1])} ${mid(p, q)}`; }
+    const lie = Math.min(1, Math.abs(angle) / 90);
+    let out = `<path d="${d}Z" fill="${mixColor("#fbfaf6", "#cfc9bf", lie)}" stroke="#9a958e" stroke-width=".5"/>`;
+    for (const [v0, v1, hw] of [[-0.7, -0.665, 0.11], [-0.635, -0.6, 0.13]]) {
+      out += `<polygon points="${[at(-hw, v0), at(hw, v0), at(hw, v1), at(-hw, v1)].map(p => `${f1(p[0])},${f1(p[1])}`).join(" ")}" fill="#d6343b"/>`;
+    }
+    return out;
+  }
+  const game = { phase: "spot", t: 0, spot: 0, aim: 0, power: 0, ball: 0, hook: 0, spin: 0, turn: 0, standing: new Set(ALL_PINS),
+                 knocked: new Set(), falls: {}, message: "", timer: null };
   function bowlRolls() { return (db.settings.bowlingRolls || []).filter(r => Number.isInteger(r)); }
   function openBowling() {
     const rolls = bowlRolls();
@@ -1124,28 +1164,39 @@
       const fs = bFrames(rolls), n = 10 - fs[fs.length - 1].slice(-1)[0], saved = (db.settings.bowlingPins || []).filter(i => i >= 0 && i < 10);
       game.standing = new Set(saved.length === n ? saved : ALL_PINS.slice(0, n));
     }
-    game.phase = bOver(rolls) ? "done" : "aim";
-    game.knocked = new Set(); game.message = ""; game.t = 0;
+    game.phase = bOver(rolls) ? "done" : "spot";
+    game.knocked = new Set(); game.falls = {}; game.message = ""; game.t = 0;
     $("bowlDlg").showModal();
     clearInterval(game.timer);
-    game.timer = setInterval(bowlStep, 30);
+    game.timer = setInterval(bowlStep, 16);
     drawBowl();
   }
   function bowlClick() {
-    if (game.phase === "aim") { game.phase = "power"; game.t = 0; }
-    else if (game.phase === "power") { game.phase = "roll"; game.ball = 0; sound("roll"); }
-    else if (game.phase === "done") {
+    if (game.phase === "spot") { game.phase = "aim"; game.t = 0; }
+    else if (game.phase === "aim") { game.phase = "power"; game.t = 0; }
+    else if (game.phase === "power") {
+      game.phase = "roll"; game.ball = 0;
+      game.hook = (Math.random() * 2 - 1) * MAX_HOOK;  // a bit of random spin
+      game.spin = Math.sign(game.hook || 1) * (0.15 + Math.random() * 0.2);
+      sound("roll");
+    } else if (game.phase === "done") {
       db.settings.bowlingRolls = []; db.settings.bowlingPins = []; save();
-      game.standing = new Set(ALL_PINS); game.message = ""; game.phase = "aim";
+      game.standing = new Set(ALL_PINS); game.message = ""; game.phase = "spot";
     }
   }
   function bowlFinish() {
-    const rolls = bowlRolls(), fresh = !bOpen(rolls);
-    game.knocked = bThrow(game.aim, game.power, game.standing);
+    const rolls = bowlRolls(), fresh = !bOpen(rolls), aim = bBallX(game.spot, game.aim, 1, game.hook);
+    game.knocked = bThrow(aim, game.power, game.standing);
+    game.falls = {};
+    game.knocked.forEach(i => {  // the pins nearest the ball go first, the rest follow, falling away from it
+      const [dx, row] = PIN_SPOTS[i];
+      game.falls[i] = [(3 - row) * 5 + Math.floor(Math.random() * 6), dx > aim * 2.5 + (Math.random() * 0.8 - 0.4) ? 1 : -1, 0.3 + Math.random() * 0.7];
+    });
     rolls.push(game.knocked.size);
     game.knocked.forEach(i => game.standing.delete(i));
-    game.message = fresh && game.knocked.size === 10 ? "STRIKE!" : !fresh && !game.standing.size ? "SPARE!" : game.knocked.size ? String(game.knocked.size) : "Promašaj";
-    sound(game.message.endsWith("!") ? "flip" : game.knocked.size ? "stop" : "pause");
+    game.message = fresh && game.knocked.size === 10 ? "STRIKE!" : !fresh && !game.standing.size ? "SPARE!"
+      : Math.abs(aim) > 0.95 ? "Kanal!" : game.knocked.size ? String(game.knocked.size) : "Promašaj";
+    sound(["STRIKE!", "SPARE!"].includes(game.message) ? "flip" : game.knocked.size ? "stop" : "pause");
     if (!bOpen(rolls)) game.standing = new Set(ALL_PINS);
     if (bOver(rolls)) {
       const score = bTotal(rolls);
@@ -1160,19 +1211,28 @@
   function bowlStep() {
     if (!$("bowlDlg").open) { clearInterval(game.timer); return; }
     game.t++;
-    if (game.phase === "aim") game.aim = Math.sin(game.t * 0.09) * 0.98;
-    else if (game.phase === "power") game.power = (1 - Math.cos(game.t * 0.12)) / 2;
-    else if (game.phase === "roll") { game.ball += 0.035 + 0.035 * game.power; if (game.ball >= 1) bowlFinish(); }
-    else if (game.phase === "result" && game.t > 28) {
-      game.phase = bOver(bowlRolls()) ? "done" : "aim";
-      game.knocked = new Set();
-      if (game.phase === "aim") game.message = "";
+    if (game.phase === "spot") game.spot = Math.sin(game.t * 0.035) * 0.85;
+    else if (game.phase === "aim") game.aim = Math.sin(game.t * 0.055);
+    else if (game.phase === "power") game.power = (1 - Math.cos(game.t * 0.065)) / 2;
+    else if (game.phase === "roll") { game.ball += 0.014 + 0.016 * game.power; game.turn += game.spin; if (game.ball >= 1) bowlFinish(); }
+    else if (game.phase === "result") {
+      game.ball += 0.014 + 0.016 * game.power; game.turn += game.spin;  // on through the pins and off the end
+      if (game.t > 95) {
+        game.phase = bOver(bowlRolls()) ? "done" : "spot";
+        game.knocked = new Set(); game.falls = {};
+        if (game.phase === "spot") game.message = "";
+      }
     }
     drawBowl();
   }
+  function pinFall(i) {  // how far knocked pin i has toppled: 0 standing .. 1 lying
+    if (game.phase !== "result" || !game.falls[i]) return game.knocked.has(i) ? 1 : 0;
+    const p = Math.max(0, Math.min(1, (game.t - game.falls[i][0]) / 14));
+    return 1 - (1 - p) ** 2;
+  }
   function drawBowl() {
-    const W = 240, H = 380, top = 70, bottom = H - 16, lx0 = W * 0.18, lx1 = W * 0.82, rolls = bowlRolls();
-    let out = `<rect width="${W}" height="${H}" fill="#0a0a0a"/><rect x="${lx0 - 10}" y="${top}" width="${lx1 - lx0 + 20}" height="${bottom - top}" fill="#2a2a30"/>` +
+    const W = 240, H = 380, top = 70, bottom = H - 16, lx0 = W * 0.18, lx1 = W * 0.82, half = (lx1 - lx0) / 2, run = bottom - top - 60, rolls = bowlRolls();
+    let out = `<rect width="${W}" height="${H}" fill="#0a0a0a"/><rect x="${lx0 - 14}" y="${top}" width="${lx1 - lx0 + 28}" height="${bottom - top}" fill="#2a2a30"/>` +
       `<rect x="${lx0}" y="${top}" width="${lx1 - lx0}" height="${bottom - top}" fill="#e3b878"/>`;
     for (let k = 1; k < 12; k++) out += `<line x1="${f1(lx0 + (lx1 - lx0) * k / 12)}" x2="${f1(lx0 + (lx1 - lx0) * k / 12)}" y1="${top}" y2="${bottom}" stroke="#d9ab68"/>`;
     for (let k = 0; k < 7; k++) { const x = lx0 + (lx1 - lx0) * (k + 1) / 8, y = bottom - 70 - Math.abs(k - 3) * 6;
@@ -1185,17 +1245,29 @@
       if (ss[k] != null) out += `<text x="${f1(x + fw / 2)}" y="34" text-anchor="middle" class="bs">${ss[k]}</text>`;
     }
     out += `<text x="${W / 2}" y="56" text-anchor="middle" class="bi">ukupno ${bTotal(rolls)}   ·   rekord ${db.settings.bowlingBest || 0}</text>`;
-    PIN_SPOTS.forEach(([dx, row], i) => { if (game.standing.has(i) || game.knocked.has(i)) out += pinSvg(W / 2 + dx * 22, top + 28 + row * 16, 26, game.knocked.has(i)); });
-    const bx = W / 2 + game.aim * (lx1 - lx0) / 2, by = game.phase === "roll" ? bottom - 14 - (bottom - top - 60) * game.ball : bottom - 14;
-    if (["aim", "power", "roll"].includes(game.phase)) {
-      out += `<circle cx="${f1(bx)}" cy="${f1(by)}" r="11" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="${f1(bx - 3)}" cy="${f1(by - 5)}" rx="3.5" ry="2.4" fill="#6a4a9a"/>` +
-        [[0.25, -0.2], [0.45, 0], [0.2, 0.15]].map(([fx, fy]) => `<circle cx="${f1(bx + fx * 11)}" cy="${f1(by + fy * 11)}" r="1.6" fill="#0d0618"/>`).join("");
+    // the ball, under the pins once it reaches them; its finger holes turn with the spin
+    const rolling = ["roll", "result"].includes(game.phase), y = rolling ? game.ball : 0;
+    const across = bBallX(game.spot, game.phase === "spot" ? 0 : game.aim, y, rolling ? game.hook : 0);
+    const bx = W / 2 + across * half, by = bottom - 14 - run * y, r = Math.abs(across) > 1 ? 8 : 11;
+    if (game.phase !== "done" && by > top + r) {
+      out += `<g class="ball"><circle cx="${f1(bx)}" cy="${f1(by)}" r="${r}" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="${f1(bx - r * 0.25)}" cy="${f1(by - r * 0.47)}" rx="${f1(r * 0.3)}" ry="${f1(r * 0.22)}" fill="#6a4a9a"/>` +
+        [[-0.5, 0.42], [0, 0.5], [0.55, 0.4]].map(([fa, fd]) => `<circle cx="${f1(bx + Math.cos(game.turn + fa) * fd * r)}" cy="${f1(by + Math.sin(game.turn + fa) * fd * r)}" r="${f1(r * 0.15)}" fill="#0d0618"/>`).join("") + `</g>`;
     }
-    if (game.phase === "aim") out += `<line x1="${f1(bx)}" y1="${f1(by - 15)}" x2="${f1(bx)}" y2="${f1(by - 48)}" stroke="#ff4f9a" stroke-width="3"/><polygon points="${f1(bx - 6)},${f1(by - 44)} ${f1(bx + 6)},${f1(by - 44)} ${f1(bx)},${f1(by - 56)}" fill="#ff4f9a"/>`;
+    PIN_SPOTS.forEach(([dx, row], i) => {
+      if (!game.standing.has(i) && !game.knocked.has(i)) return;
+      const f = pinFall(i), [, side, slide] = game.falls[i] || [0, 1, 0.5];
+      out += tiltPinSvg(W / 2 + dx * 30 + side * f * slide * 8, top + 28 + row * 16, 26, side * f * 90);
+    });
+    if (game.phase === "spot") out += [-1, 1].map(d => `<polygon points="${f1(bx + d * (r + 4))},${f1(by - 5)} ${f1(bx + d * (r + 4))},${f1(by + 5)} ${f1(bx + d * (r + 11))},${f1(by)}" fill="#ff4f9a"/>`).join("");
+    if (game.phase === "aim" || game.phase === "power") {  // the arrow swings left and right: the ball follows its line
+      const dx = game.aim * SPREAD * half, dy = -run, n = Math.hypot(dx, dy), ux = dx / n, uy = dy / n, tipX = bx + ux * 58, tipY = by + uy * 58;
+      out += `<line class="arrow" x1="${f1(bx + ux * (r + 4))}" y1="${f1(by + uy * (r + 4))}" x2="${f1(bx + ux * 48)}" y2="${f1(by + uy * 48)}" stroke="#ff4f9a" stroke-width="3"/>` +
+        `<polygon points="${f1(tipX)},${f1(tipY)} ${f1(bx + ux * 46 - uy * 6)},${f1(by + uy * 46 + ux * 6)} ${f1(bx + ux * 46 + uy * 6)},${f1(by + uy * 46 - ux * 6)}" fill="#ff4f9a"/>`;
+    }
     if (game.phase === "power") { const px = lx1 + 14, h = 110 * game.power;
       out += `<rect x="${px}" y="${bottom - 110}" width="9" height="110" fill="none" stroke="#2ad1c9"/><rect x="${px + 1}" y="${f1(bottom - h)}" width="7" height="${f1(h)}" fill="${mixColor("#2ad1c9", "#ff4f9a", game.power)}"/>`; }
-    if (game.message) out += `<text x="${W / 2}" y="${top + 150}" text-anchor="middle" class="bmsg">${game.message}</text>`;
-    const hint = { aim: "dodir: smer", power: "dodir: snaga", done: "dodir: nova igra" }[game.phase];
+    if (game.message && (game.phase !== "result" || game.t > 30)) out += `<text x="${W / 2}" y="${top + 150}" text-anchor="middle" class="bmsg">${game.message}</text>`;
+    const hint = { spot: "dodir: mesto", aim: "dodir: smer", power: "dodir: snaga", done: "dodir: nova igra" }[game.phase];
     if (hint) out += `<text x="${W / 2}" y="${H - 4}" text-anchor="middle" class="bi">${hint}</text>`;
     $("bowlLane").innerHTML = out;
   }

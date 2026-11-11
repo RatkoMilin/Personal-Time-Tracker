@@ -290,10 +290,12 @@ def _rot(points, angle: float, cx: float, cy: float) -> list[float]:
 
 
 # What is in the wok: (x offset, y offset from the bottom, size, kind, how high it flies, spin), in units of the wok.
-WOK_FOOD = ((-0.45, 0.05, 0.16, "tofu", 1.0, 1.4), (-0.15, 0.0, 0.17, "tofu", 1.25, -1.1), (0.15, 0.02, 0.16, "tofu", 0.9, 1.7),
-            (0.42, 0.08, 0.15, "tofu", 1.15, -1.5), (-0.28, 0.22, 0.15, "tofu", 1.4, 0.9), (0.05, 0.25, 0.16, "tofu", 1.6, -0.8),
-            (-0.05, 0.12, 0.3, "chili", 1.3, 1.2), (0.32, 0.25, 0.26, "chili", 1.0, -1.6), (-0.5, 0.25, 0.1, "scallion", 1.5, 2.0),
-            (0.25, 0.1, 0.1, "scallion", 1.7, -2.2))
+# the food in the wok: (x across the opening -1..1, depth into it 0 front..1 back, size, kind, how high it flies,
+# turns in the toss); whole turns, so every piece lands the way it lay
+WOK_FOOD = ((-0.5, 0.3, 0.16, "tofu", 1.0, 1), (-0.18, 0.15, 0.17, "tofu", 1.25, -1), (0.18, 0.2, 0.16, "tofu", 0.9, 2),
+            (0.5, 0.35, 0.15, "tofu", 1.15, -2), (-0.3, 0.75, 0.15, "tofu", 1.4, 1), (0.08, 0.8, 0.16, "tofu", 1.6, -1),
+            (-0.02, 0.45, 0.3, "chili", 1.3, 1), (0.34, 0.7, 0.26, "chili", 1.0, -2), (-0.6, 0.7, 0.1, "scallion", 1.5, 2),
+            (0.3, 0.1, 0.1, "scallion", 1.7, -2))
 TOSS_FRAMES = 22
 
 
@@ -352,23 +354,28 @@ class Wok(Scene):
                 for i in range(6):
                     pts += [x0 + math.sin((i + self.frame * 0.6 + k * 2) * 0.9) * px(2), rim - px(2) - i * px(3)]
                 self.create_line(pts, fill=blend(skin.T.lcd_bg, "#ffffff", 0.3), smooth=True)
-        # the wok swings forward and up, tilting, and comes back
+        # the wok swings forward and up, tilting, and comes back. Seen from a little above: the dark inside of
+        # the opening, then the food, then the front wall over it, so the food sits in the wok, not on it.
         lift = math.sin(math.pi * u) * px(6) if tossing else 0
         tilt = math.sin(2 * math.pi * u) * 14 if tossing else 0
         wy = rim - lift
-        bowl = [(cx - rx * math.cos(a), wy + depth * math.sin(a)) for a in (math.pi * k / 16 for k in range(17))]
+        ry = depth * 0.3  # the opening, an ellipse
+        steps = [math.pi * k / 16 for k in range(17)]
+        front_lip = [(cx - rx * math.cos(a), wy + ry * math.sin(a)) for a in steps]  # left to right, the near edge
+        bowl = [(cx + rx * math.cos(a), wy + depth * math.sin(a)) for a in steps]  # right to left, underneath
+        opening = front_lip + [(cx + rx * math.cos(a), wy - ry * math.sin(a)) for a in steps]
         self.create_line(_rot([(cx + rx * 0.9, wy + px(1)), (w - px(1), wy - px(4))], tilt, cx, wy),
                          fill="#5a3b26", width=max(2, px(3.5)), capstyle="round")  # the handle
-        self.create_polygon(_rot(bowl, tilt, cx, wy), fill="#232428", outline="#0c0c0e")
-        self.create_line(_rot([(cx - rx, wy), (cx + rx, wy)], tilt, cx, wy), fill="#6a6e78", width=max(1, px(1.5)))
-        self.create_line(_rot([(cx - rx * 0.6, wy + depth * 0.55), (cx + rx * 0.1, wy + depth * 0.8)], tilt, cx, wy),
-                         fill="#3a3c44")  # a dull shine on the steel
-        # the food: resting in the wok, or flying and turning
-        for dx, dy, size, kind, high, spin in WOK_FOOD:
-            fly = math.sin(math.pi * u) * px(16) * high if tossing else 0
-            x = cx + dx * rx + (math.sin(math.pi * u) * dx * px(4) if tossing else 0)
-            y = wy + depth * 0.55 - dy * depth - fly
-            turn = u * 360 * spin if tossing else 0
+        self.create_polygon(_rot(opening, tilt, cx, wy), fill="#121216", outline="#6a6e78", width=max(1, px(1.2)))
+        # the food: lying in the wok and riding with it, or flying and turning, and falling back in
+        for i, (dx, back, size, kind, high, spin) in sorted(enumerate(WOK_FOOD), key=lambda f: -f[1][1]):
+            v = min(1.0, max(0.0, (u - 0.03 * (i % 5)) / 0.85)) if tossing else 0.0
+            arc = math.sin(math.pi * v)
+            lx = cx + dx * rx * 0.8 * (1 + arc * 0.25)  # they spread a little in the air
+            ly = wy + ry * (0.55 - back * 1.1)
+            (x, y) = _rot([(lx, ly)], tilt, cx, wy)
+            y -= arc * px(9) * high
+            turn = v * 360 * spin
             sz = size * rx
             if kind == "tofu":
                 sq = [(x - sz / 2, y - sz / 2), (x + sz / 2, y - sz / 2), (x + sz / 2, y + sz / 2), (x - sz / 2, y + sz / 2)]
@@ -378,6 +385,10 @@ class Wok(Scene):
             else:
                 ring = sz / 2
                 self.create_oval(x - ring, y - ring, x + ring, y + ring, outline="#6fbf4a", width=max(1, px(1.2)))
+        self.create_polygon(_rot(front_lip + bowl, tilt, cx, wy), fill="#232428", outline="#0c0c0e")
+        self.create_line(_rot(front_lip, tilt, cx, wy), fill="#6a6e78", width=max(1, px(1.5)))
+        self.create_line(_rot([(cx - rx * 0.6, wy + depth * 0.55), (cx + rx * 0.1, wy + depth * 0.8)], tilt, cx, wy),
+                         fill="#3a3c44")  # a dull shine on the steel
         if self.toss_frame:
             self.toss_frame -= 1
 
