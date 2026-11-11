@@ -773,16 +773,16 @@ body[data-skin="tulips"] .field input { color-scheme: light; }
 body[data-skin="tulips"] .btn { border: 1px solid var(--btn-dark); border-radius: var(--radius); font-weight: 400; color: #fff; }
 body[data-skin="tulips"] .btn:active { background: var(--btn-dark); }
 
-/* ---------------------------------------------------------------- Lazi tofu: wok hei in chili oil */
+/* ---------------------------------------------------------------- Lazi tofu: a night market stall with wok hei */
 body[data-skin="tofu"] {
-  --body: #3a0d0a; --body-light: #5a1712; --body-dark: #1e0605; --text: #ffe2d2; --accent: #ff3b1f;
-  --lcd-bg: #170504; --lcd-on: #ff4a2a; --lcd-off: #2e0c09; --lcd-dim: #94402c; --lcd-text: #ffd9c4;
-  --btn-face: #d8261a; --btn-light: #ff5a3c; --btn-dark: #8a120c; --btn-glyph: #fff0e0; --sel-bg: #ff3b1f; --sel-fg: #170504; --outline: #8a120c;
+  --body: #0f1328; --body-light: #232a4d; --body-dark: #070914; --text: #ffe6d6; --accent: #ff3b4a;
+  --lcd-bg: #0a0d1c; --lcd-on: #ff4a3a; --lcd-off: #1c1a2e; --lcd-dim: #7a4a5a; --lcd-text: #9ff5ee;
+  --btn-face: #d8261a; --btn-light: #ff5a3c; --btn-dark: #8a120c; --btn-glyph: #fff0e0; --sel-bg: #2ee6d6; --sel-fg: #0a0d1c; --outline: #2ee6d6;
   --sans: "Segoe UI", system-ui, -apple-system, sans-serif; --label-weight: 700; --label-style: normal; --upper: none; --radius: 4px;
-  background: linear-gradient(to bottom, #45100c, #3a0d0a 50%, #2a0907);
+  background: radial-gradient(ellipse at 50% 0%, #1d2450, #0f1328 55%, #090b18);
 }
-body[data-skin="tofu"] .title::before, body[data-skin="tofu"] .title::after { content: ""; width: 54px; height: 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 16'%3E%3Cg transform='rotate(10 12 8)'%3E%3Cpath d='M3,5 Q12,4 22,8 Q12,11 3,11Z' fill='%23d8261a' stroke='%236e140f' stroke-width='.5'/%3E%3Cline x1='3' y1='8' x2='0.5' y2='8' stroke='%234f7a2e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cg transform='translate(20 -2)'%3E%3Cg transform='rotate(-25 12 8)'%3E%3Cpath d='M3,5 Q12,4 22,8 Q12,11 3,11Z' fill='%23a8150e' stroke='%236e140f' stroke-width='.5'/%3E%3Cline x1='3' y1='8' x2='0.5' y2='8' stroke='%234f7a2e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(38 1)'%3E%3Cg transform='rotate(15 12 8)'%3E%3Cpath d='M3,5 Q12,4 22,8 Q12,11 3,11Z' fill='%23ff3b1f' stroke='%236e140f' stroke-width='.5'/%3E%3Cline x1='3' y1='8' x2='0.5' y2='8' stroke='%234f7a2e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3Ccircle cx='18' cy='13' r='1.3' fill='%235a2a14'/%3E%3Ccircle cx='36' cy='12' r='1.3' fill='%235a2a14'/%3E%3C/svg%3E") center / contain no-repeat; }
-body[data-skin="tofu"] .title::after { transform: scaleX(-1); }
+body[data-skin="tofu"] .title::before, body[data-skin="tofu"] .title::after { content: ""; width: 54px; height: 24px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 24'%3E%3Cpath d='M0,3 Q27,9 54,3' fill='none' stroke='%233a3550'/%3E%3Cellipse cx='9' cy='13.5' rx='8' ry='9' fill='%23ff3b4a' opacity='.25'/%3E%3Cellipse cx='9' cy='13.5' rx='5' ry='6.5' fill='%23e8262f' stroke='%239a1018' stroke-width='.6'/%3E%3Cline x1='5.5' y1='13.5' x2='12.5' y2='13.5' stroke='%23ff8a6a' stroke-width='.6'/%3E%3Crect x='6.5' y='6.5' width='5' height='1.5' fill='%23f2c94c'/%3E%3Crect x='6.5' y='19.0' width='5' height='1.5' fill='%23f2c94c'/%3E%3Cellipse cx='27' cy='15.0' rx='8' ry='9' fill='%23ff3b4a' opacity='.25'/%3E%3Cellipse cx='27' cy='15.0' rx='5' ry='6.5' fill='%23e8262f' stroke='%239a1018' stroke-width='.6'/%3E%3Cline x1='23.5' y1='15.0' x2='30.5' y2='15.0' stroke='%23ff8a6a' stroke-width='.6'/%3E%3Crect x='24.5' y='8.0' width='5' height='1.5' fill='%23f2c94c'/%3E%3Crect x='24.5' y='20.5' width='5' height='1.5' fill='%23f2c94c'/%3E%3Cellipse cx='45' cy='13.5' rx='8' ry='9' fill='%23ff3b4a' opacity='.25'/%3E%3Cellipse cx='45' cy='13.5' rx='5' ry='6.5' fill='%23e8262f' stroke='%239a1018' stroke-width='.6'/%3E%3Cline x1='41.5' y1='13.5' x2='48.5' y2='13.5' stroke='%23ff8a6a' stroke-width='.6'/%3E%3Crect x='42.5' y='6.5' width='5' height='1.5' fill='%23f2c94c'/%3E%3Crect x='42.5' y='19.0' width='5' height='1.5' fill='%23f2c94c'/%3E%3C/svg%3E") center / contain no-repeat; }
+body[data-skin="tofu"] .title { text-shadow: 0 0 6px rgba(255, 59, 74, .6); }
 body[data-skin="tofu"] .scene { cursor: pointer; }
 body[data-skin="tofu"] .scene .tongue { fill: #e8321e; transform-box: fill-box; transform-origin: bottom; transform: scaleY(0); transition: transform .3s, fill .2s; }
 body[data-skin="tofu"] .scene.running .tongue { transform: scaleY(1); animation: ptt-flicker .25s steps(2) infinite alternate; }
@@ -794,10 +794,13 @@ body[data-skin="tofu"] .scene.toss .wok { animation: ptt-wok .8s ease-in-out; }
 body[data-skin="tofu"] .scene .f { transform-box: fill-box; transform-origin: center; }
 body[data-skin="tofu"] .scene.toss .f { animation: ptt-fly .8s ease-in-out; }
 @keyframes ptt-fly { 50% { transform: translateY(var(--h)) rotate(var(--s)); } 100% { transform: translateY(0) rotate(calc(var(--s) * 2)); } }
-body[data-skin="tofu"] .clock { filter: drop-shadow(0 0 3px rgba(255, 74, 42, .55)); }
-body[data-skin="tofu"] .panel { border: 1px solid var(--outline); border-radius: var(--radius); }
+body[data-skin="tofu"] .scene .steam { opacity: 0; }
+body[data-skin="tofu"] .scene.running .steam { animation: ptt-steam 1.4s ease-out infinite; }
+body[data-skin="tofu"] .clock { filter: drop-shadow(0 0 4px rgba(255, 74, 58, .7)); }
+body[data-skin="tofu"] .marquee, body[data-skin="tofu"] .info { text-shadow: 0 0 5px rgba(46, 230, 214, .5); }
+body[data-skin="tofu"] .panel { border: 1px solid var(--outline); border-radius: var(--radius); box-shadow: 0 0 6px rgba(46, 230, 214, .35); }
 body[data-skin="tofu"] .panel > .inner { border-radius: calc(var(--radius) - 1px); }
-body[data-skin="tofu"] .panel.list { padding: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cg transform='rotate(30 12 8)'%3E%3Cpath d='M3,5 Q12,4 22,8 Q12,11 3,11Z' fill='%23d8261a' stroke='%236e140f' stroke-width='.5'/%3E%3Cline x1='3' y1='8' x2='0.5' y2='8' stroke='%234f7a2e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cg transform='translate(30 34)'%3E%3Cg transform='rotate(-60 12 8)'%3E%3Cpath d='M3,5 Q12,4 22,8 Q12,11 3,11Z' fill='%23a8150e' stroke='%236e140f' stroke-width='.5'/%3E%3Cline x1='3' y1='8' x2='0.5' y2='8' stroke='%234f7a2e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3Ccircle cx='46' cy='12' r='2.4' fill='none' stroke='%236fbf4a' stroke-width='1.2'/%3E%3Ccircle cx='12' cy='46' r='1.4' fill='%235a2a14'/%3E%3Ccircle cx='52' cy='50' r='1.4' fill='%235a2a14'/%3E%3Ccircle cx='40' cy='8' r='1.2' fill='%235a2a14'/%3E%3C/svg%3E") 0 0 / 60px 60px, var(--lcd-bg); }
+body[data-skin="tofu"] .panel.list { padding: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 33 11'%3E%3Ccircle cx='5.5' cy='5.5' r='3' fill='%23ffcf6b' opacity='.3'/%3E%3Ccircle cx='5.5' cy='5.5' r='1.5' fill='%23ffcf6b'/%3E%3Ccircle cx='16.5' cy='5.5' r='3' fill='%23ff3b4a' opacity='.3'/%3E%3Ccircle cx='16.5' cy='5.5' r='1.5' fill='%23ff3b4a'/%3E%3Ccircle cx='27.5' cy='5.5' r='3' fill='%232ee6d6' opacity='.3'/%3E%3Ccircle cx='27.5' cy='5.5' r='1.5' fill='%232ee6d6'/%3E%3C/svg%3E") 0 0 / 33px 11px repeat-x, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 33 11'%3E%3Ccircle cx='5.5' cy='5.5' r='3' fill='%23ffcf6b' opacity='.3'/%3E%3Ccircle cx='5.5' cy='5.5' r='1.5' fill='%23ffcf6b'/%3E%3Ccircle cx='16.5' cy='5.5' r='3' fill='%23ff3b4a' opacity='.3'/%3E%3Ccircle cx='16.5' cy='5.5' r='1.5' fill='%23ff3b4a'/%3E%3Ccircle cx='27.5' cy='5.5' r='3' fill='%232ee6d6' opacity='.3'/%3E%3Ccircle cx='27.5' cy='5.5' r='1.5' fill='%232ee6d6'/%3E%3C/svg%3E") 0 100% / 33px 11px repeat-x, var(--lcd-bg); }
 body[data-skin="tofu"] .btn { border: 2px solid #5e0c08; border-top-color: #ff5a3c; border-radius: 0; background: var(--btn-face); color: var(--btn-glyph); }
 body[data-skin="tofu"] .btn.glyph { width: 46px; min-width: 46px; height: 46px; padding: 0; }
 body[data-skin="tofu"] .btn.small.glyph { width: 36px; min-width: 36px; height: 36px; }
@@ -923,3 +926,4 @@ body[data-skin="bowling"] .piece.frame { width: 11px; height: 14px; line-height:
 body[data-skin="bowling"] .pieces { gap: 1px; }
 body[data-skin="bowling"] .titlebar, body[data-skin="jumprope"] .titlebar { padding-left: 30px; }
 body[data-skin="jumprope"] .rope-bar { width: 78px; }
+@keyframes ptt-steam { 0% { opacity: 0; transform: translateY(3px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-4px); } }

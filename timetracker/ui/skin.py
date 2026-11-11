@@ -391,15 +391,15 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
     ),
     Theme(
         key="tofu", name="Lazi tofu",
-        # wok hei in chili oil: deep chili red and soot, red-hot flame, dried chilies and Sichuan pepper everywhere
-        body="#3a0d0a", body_light="#5a1712", body_dark="#1e0605", text="#ffe2d2", accent="#ff3b1f",
-        lcd_bg="#170504", lcd_on="#ff4a2a", lcd_off="#2e0c09", lcd_dim="#94402c", lcd_text="#ffd9c4",
+        # a night market stall with wok hei: navy night, red lanterns, teal neon, string lights, chili-red squares
+        body="#0f1328", body_light="#232a4d", body_dark="#070914", text="#ffe6d6", accent="#ff3b4a",
+        lcd_bg="#0a0d1c", lcd_on="#ff4a3a", lcd_off="#1c1a2e", lcd_dim="#7a4a5a", lcd_text="#9ff5ee",
         btn_face="#d8261a", btn_light="#ff5a3c", btn_dark="#8a120c", btn_glyph="#fff0e0",
-        sel_bg="#ff3b1f", sel_fg="#170504",
+        sel_bg="#2ee6d6", sel_fg="#0a0d1c",
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
-        shape="round", radius=4, panel_outline="#8a120c", title_style="peppers", segments="sharp",
-        button="square", clock_deco="wok", pl_pattern="chilies", meter="chili",
+        shape="round", radius=4, panel_outline="#2ee6d6", title_style="market", segments="sharp",
+        button="square", clock_deco="wok", pl_pattern="market", meter="chili",
     ),
     *ROPE_THEMES,
     Theme(
@@ -871,6 +871,20 @@ class Panel(tk.Frame):
                 else:
                     r = px(1.3)
                     c.create_oval(x - r, y - r, x + r, y + r, fill="#4a2a1a", outline="")
+        elif self.pattern == "market":  # string lights around the stall, and a few dried chilies on the counter
+            from .scenes import draw_chili
+
+            step = max(6, px(11))
+            k = 0
+            for x in range(px(5), w - px(4), step):
+                for y in (px(4), h - px(5)):
+                    color = ("#ffcf6b", "#ff3b4a", "#2ee6d6")[k % 3]
+                    c.create_oval(x - px(2.6), y - px(2.6), x + px(2.6), y + px(2.6), fill=blend(self.bg, color, 0.3), outline="")
+                    c.create_oval(x - px(1.3), y - px(1.3), x + px(1.3), y + px(1.3), fill=color, outline="")
+                    k += 1
+            for x, y in spots[::4]:
+                if px(10) < y < h - px(10):
+                    draw_chili(c, x - px(4), y, px(9), rnd.uniform(0, 360), "#d8261a")
         elif self.pattern == "rhombus":  # little yellow diamonds with a blue middle
             for x, y in spots[::2]:
                 r = px(rnd.uniform(3, 4.5))
@@ -2117,7 +2131,7 @@ class TitleBar(tk.Canvas):
     def __init__(self, master, title: str, on_menu=None):
         self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
                   "coffee": px(26), "dunes": px(22), "lofi": px(22), "speed": px(20), "blades": px(24), "fog": px(20),
-                  "canopy": px(30), "tags": px(28), "sushi": px(24), "tulips": px(26), "peppers": px(24),
+                  "canopy": px(30), "tags": px(28), "sushi": px(24), "tulips": px(26), "market": px(26),
                   "rope": px(24), "frames": px(24), "slats": px(22), "gallery": px(30)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
@@ -2247,7 +2261,7 @@ class TitleBar(tk.Canvas):
                 y, r = rnd.uniform(px(3), h - px(3)), rnd.uniform(0.7, 1.6) * S
                 self.create_oval(x - r, y - r, x + r, y + r, fill=blend(T.body, T.lcd_on, rnd.uniform(0.3, 0.9)),
                                  outline="")
-        elif style in ("sushi", "tulips", "peppers", "rope", "frames", "slats", "gallery"):
+        elif style in ("sushi", "tulips", "market", "rope", "frames", "slats", "gallery"):
             self._scene_title(style, w, h, x0, y0, x1, y1, left)
         elif style == "lofi":  # a crescent moon on the left, a warm desk lamp on the right
             mx, my, r = x0 - px(18), h / 2, px(6)
@@ -2329,17 +2343,26 @@ def _title_draw(bar: "TitleBar", style: str, w: int, h: int, x0: float, y0: floa
             if px(6) < x < w - px(6):
                 scenes.draw_tulip(bar, x, h - px(2), px(20), scenes.TULIP_COLORS[int(kind) % len(scenes.TULIP_COLORS)],
                                   0.9, leaves=False)
-    elif style == "peppers":  # dried chilies and Sichuan peppercorns heaped on both sides of the title
-        rnd = random.Random(17)
-        for a, b in ((left + px(4), x0 - px(8)), (x1 + px(8), w - px(8))):
-            x = a
-            while x < b - px(10):
-                scenes.draw_chili(bar, x, h / 2 + rnd.uniform(-px(4), px(4)), px(rnd.uniform(10, 14)), rnd.uniform(-40, 40),
-                                  rnd.choice(("#d8261a", "#a8150e", "#ff3b1f")))
-                pc = x + px(rnd.uniform(6, 10))
-                r = px(1.3)
-                bar.create_oval(pc - r, h / 2 + px(5) - r, pc + r, h / 2 + px(5) + r, fill="#5a2a14", outline="")
-                x += px(rnd.uniform(15, 22))
+    elif style == "market":  # red paper lanterns on a sagging string over the stall, a chili at each end
+        for a, b in ((left + px(2), x0 - px(8)), (x1 + px(8), w - px(4))):
+            if b - a < px(20):
+                continue
+            sag = px(4)
+            bar.create_line([(a + (b - a) * k / 12, px(3) + sag * math.sin(math.pi * k / 12)) for k in range(13)],
+                            fill="#3a3550", smooth=True)
+            n = max(1, int((b - a) // px(18)))
+            for k in range(n):
+                cx = a + (b - a) * (k + 0.5) / n
+                top = px(3) + sag * math.sin(math.pi * (cx - a) / (b - a))
+                lw, lh = px(9), px(12)
+                cy = top + px(2) + lh / 2
+                for g, t in ((px(4), 0.25), (px(2), 0.5)):  # the warm glow
+                    bar.create_oval(cx - lw / 2 - g, cy - lh / 2 - g, cx + lw / 2 + g, cy + lh / 2 + g,
+                                    fill=blend(T.body, "#ff3b4a", t), outline="")
+                bar.create_oval(cx - lw / 2, cy - lh / 2, cx + lw / 2, cy + lh / 2, fill="#e8262f", outline="#9a1018")
+                bar.create_line(cx - lw * 0.35, cy, cx + lw * 0.35, cy, fill="#ff8a6a")
+                for y in (cy - lh / 2, cy + lh / 2 - px(1.5)):
+                    bar.create_rectangle(cx - lw * 0.25, y, cx + lw * 0.25, y + px(1.5), fill="#f2c94c", outline="")
     elif style == "rope":  # the level on the left; on the right how far it is to the next one
         level, points, nxt = (pieces + ["0", "0", ""])[:3]
         font = T.font("mono", 8, "bold")

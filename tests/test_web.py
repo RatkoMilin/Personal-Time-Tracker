@@ -432,8 +432,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v11')")
-    cached = page.evaluate("caches.open('ptt-v11').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v12')")
+    cached = page.evaluate("caches.open('ptt-v12').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

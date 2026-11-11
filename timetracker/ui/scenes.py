@@ -298,7 +298,7 @@ TOSS_FRAMES = 22
 
 
 class Wok(Scene):
-    """Wok hei: a black wok over a red-hot flame. Pressing PLAY (or clicking the wok) tosses it: the wok
+    """Wok hei at a night market stall: a black wok over a red-hot flame, steaming while the timer runs. Pressing PLAY (or clicking the wok) tosses it: the wok
     swings up, the tofu, chilies and scallions fly and turn in the air and land back, and the flame flares."""
 
     width, height = 58, 44
@@ -345,6 +345,13 @@ class Wok(Scene):
                 inner = "#ffe08a" if tossing else "#ffb347"
                 self.create_polygon(fx - px(2), by, fx, by - tall, fx + px(2), by, fill=outer, outline="", smooth=True)
                 self.create_polygon(fx - px(0.8), by, fx, by - tall * 0.5, fx + px(0.8), by, fill=inner, outline="")
+        if self.state == "playing" and not tossing:  # steam rising off the wok into the night air
+            for k in range(3):
+                x0 = cx - rx * 0.45 + k * rx * 0.45
+                pts = []
+                for i in range(6):
+                    pts += [x0 + math.sin((i + self.frame * 0.6 + k * 2) * 0.9) * px(2), rim - px(2) - i * px(3)]
+                self.create_line(pts, fill=blend(skin.T.lcd_bg, "#ffffff", 0.3), smooth=True)
         # the wok swings forward and up, tilting, and comes back
         lift = math.sin(math.pi * u) * px(6) if tossing else 0
         tilt = math.sin(2 * math.pi * u) * 14 if tossing else 0

@@ -869,6 +869,7 @@
     } else if (sk === "tofu") {  // wok hei: PLAY (or a tap) tosses the wok, the food flies and turns
       out += `<g class="flame">` + [0, 1, 2, 3, 4, 5, 6].map(k => { const x = 9 + k * 5.4, t = 6 + (k % 3) * 1.5;
         return `<path d="M${f1(x - 2)},41 Q${f1(x)},${f1(41 - t * 1.3)} ${f1(x)},${f1(41 - t)} Q${f1(x)},${f1(41 - t * 1.3)} ${f1(x + 2)},41Z" class="tongue"/>`; }).join("") + `</g>`;
+      out += `<g class="steam">` + [0, 1, 2].map(k => `<path d="M${15 + k * 9},17 q2,-3 0,-6 q-2,-3 0,-6" fill="none" stroke="#fff" stroke-opacity=".3"/>`).join("") + `</g>`;
       out += `<rect x="8" y="41" width="34" height="2" fill="#3a3d44"/><g class="wok">`;
       out += `<line x1="45" y1="22" x2="57" y2="17" stroke="#5a3b26" stroke-width="3.5" stroke-linecap="round"/>`;
       out += `<path d="M4,22 A21,13 0 0 0 46,22 Z" fill="#232428" stroke="#0c0c0e"/><line x1="4" y1="22" x2="46" y2="22" stroke="#6a6e78" stroke-width="1.5"/>`;
