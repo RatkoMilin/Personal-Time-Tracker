@@ -316,6 +316,94 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         shape="toon", radius=12, border=3, panel_outline="#111111", title_style="tags", segments="round",
         button="toon", pl_pattern="tags", meter="spray",
     ),
+    # ---------------------------------------------------------------- scenes (timetracker/ui/scenes.py)
+    Theme(
+        key="sushi", name="Suši",
+        # rice paper, a hinoki board for the list, nori, salmon and red lacquer
+        body="#f3ead9", body_light="#fffaf0", body_dark="#d9c7a6", text="#2b1a12", accent="#c8323c",
+        lcd_bg="#1b241f", lcd_on="#ff8f63", lcd_off="#26332c", lcd_dim="#6b8a76", lcd_text="#f4efe4",
+        btn_face="#c8323c", btn_light="#e0605f", btn_dark="#8a1f26", btn_glyph="#fffaf0",
+        sel_bg="#f08a5d", sel_fg="#1b241f",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=10, panel_outline="#b89c6e", title_style="sushi", segments="round",
+        button="circle", clock_deco="sushi", pl_pattern="makisu", meter="nigiri",
+        list_bg="#e9d4a8", list_fg="#3b2416", list_run="#c8323c",
+    ),
+    Theme(
+        key="tulips", name="Lale",
+        # spring: cream, tulip red, pink and yellow, a pale sky
+        body="#fff6f2", body_light="#ffffff", body_dark="#f2d8d2", text="#4a3a3a", accent="#e0424f",
+        lcd_bg="#eef6fb", lcd_on="#d93a4a", lcd_off="#e1ebf1", lcd_dim="#9ab3c2", lcd_text="#3d4a56",
+        btn_face="#f59ab5", btn_light="#ffd0de", btn_dark="#d06a8a", btn_glyph="#ffffff",
+        sel_bg="#f5c542", sel_fg="#3a2a10",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=14, panel_outline="#f2c4cf", title_style="tulips", segments="round",
+        clock_deco="tulip", pl_pattern="field", meter="tulips",
+    ),
+    Theme(
+        key="tofu", name="Lazi tofu",
+        # the table and the white plate, a black wok, dried chilies, scallions and golden tofu
+        body="#f7efe4", body_light="#fffaf2", body_dark="#e3d3bd", text="#3a2a1e", accent="#b5231c",
+        lcd_bg="#1a1512", lcd_on="#ff5a36", lcd_off="#2a1f1a", lcd_dim="#8a6a4a", lcd_text="#f3e3c3",
+        btn_face="#b5231c", btn_light="#d9493b", btn_dark="#7a140f", btn_glyph="#fff3dc",
+        sel_bg="#5fae3e", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=12, panel_outline="#d9c4a6", title_style="tofu", segments="round",
+        button="circle", clock_deco="wok", pl_pattern="chilies", meter="chili",
+        list_bg="#ffffff", list_fg="#3a2a1e", list_run="#b5231c",
+    ),
+    Theme(
+        key="capoeira", name="Kapoera",
+        # Brazil: deep green, yellow, blue, the wood of the berimbau
+        body="#0e5a32", body_light="#1f7a48", body_dark="#073a20", text="#fff6c2", accent="#ffd400",
+        lcd_bg="#062b18", lcd_on="#ffd400", lcd_off="#0f3f25", lcd_dim="#6aa37f", lcd_text="#f2f7e8",
+        btn_face="#ffd400", btn_light="#ffe866", btn_dark="#b89800", btn_glyph="#073a20",
+        sel_bg="#1f4fbf", sel_fg="#ffffff",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=10, panel_outline="#ffd400", title_style="berimbau", segments="round",
+        button="circle", clock_deco="roda", pl_pattern="rhombus", meter="cord",
+    ),
+    Theme(
+        key="bowling", name="Kuglanje",
+        # a retro alley at night: navy, neon pink and teal, an amber score monitor, maple lanes
+        body="#1a1d3a", body_light="#2c3060", body_dark="#0c0e20", text="#ffe9d2", accent="#ff4f9a",
+        lcd_bg="#0a0a0a", lcd_on="#ffb000", lcd_off="#1f1a0a", lcd_dim="#8a6a20", lcd_text="#ffe2a8",
+        btn_face="#3b1f5e", btn_light="#6a4a9a", btn_dark="#1d0f30", btn_glyph="#ffffff",
+        sel_bg="#2ad1c9", sel_fg="#0a0a0a",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="bold", upper=False,
+        shape="round", radius=8, panel_outline="#2ad1c9", title_style="frames", segments="hex",
+        button="ball", clock_deco="pins", pl_pattern="lane", meter="pins",
+        list_bg="#f0d3a0", list_fg="#3a2410", list_run="#c2185b",
+    ),
+    Theme(
+        key="window", name="Prozor",
+        # a room at dusk: dark violet walls, the light of the sunset coming through the blind
+        body="#241c2e", body_light="#3a2f48", body_dark="#140f1a", text="#f3d9c4", accent="#ffa04d",
+        lcd_bg="#1a1424", lcd_on="#ffc27a", lcd_off="#2a2236", lcd_dim="#8a7090", lcd_text="#f0d6c0",
+        btn_face="#3a2f48", btn_light="#54456a", btn_dark="#1c1626", btn_glyph="#ffc27a",
+        sel_bg="#ff8a5c", sel_fg="#1a1424",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="round", radius=6, panel_outline="#4a3c5a", title_style="slats", segments="round",
+        clock_deco="blind", pl_pattern="blinds", meter="light",
+    ),
+    Theme(
+        key="corporeal", name="Korporealnost",
+        # a white gallery: white walls, warm grey floor, skin
+        body="#f2f1ee", body_light="#ffffff", body_dark="#d9d6d0", text="#3a3532", accent="#c99a7c",
+        lcd_bg="#fbfaf8", lcd_on="#3a3330", lcd_off="#efede9", lcd_dim="#b5b0aa", lcd_text="#4a4440",
+        btn_face="#ffffff", btn_light="#ffffff", btn_dark="#d9d6d0", btn_glyph="#5a524c",
+        sel_bg="#e8c1a0", sel_fg="#3a3330",
+        mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI Light", "DejaVu Sans"),
+        label_size=9, label_weight="normal", upper=False,
+        shape="plinth", title_style="gallery", segments="round", button="plinth", clock_deco="figure",
+        meter="skin",
+    ),
 )}
 
 MONDRIAN_RED, MONDRIAN_BLUE, MONDRIAN_YELLOW = "#dd0100", "#225095", "#fac901"
@@ -503,9 +591,11 @@ class Panel(tk.Frame):
         self.level = 0.0  # oasis: how productive (0..1); the palms around the playlist follow it
         self.moving = False  # rain / speed streaks running around the playlist while the timer runs
         self.growth = 0  # jungle leaves / graffiti tags drawn around the playlist
+        self.tint = ""  # Prozor: the color of the light coming through the blind
         margin = px(26) if pattern in ("jungle", "tags") else px(18) if pattern == "oasis" else px(9) if pattern else 0
         pad = (px(pad) + (px(T.radius / 3) if T.shape in ("round", "toon") else px(2)) + margin
                + (px(T.border) if T.shape == "block" else 0) + (px(T.border) + px(4) if T.shape == "toon" else 0)
+               + (px(3) if T.shape == "plinth" else 0)
                + px(2) * len(T.layers))
         if plain:
             pad = px(2)
@@ -546,6 +636,10 @@ class Panel(tk.Frame):
                 x, y = rnd.choice(((rnd.uniform(px(12), w - px(16)), b / 2), (rnd.uniform(px(12), w - px(16)), h - s - b / 2),
                                    (b / 2, rnd.uniform(px(10), h - px(14))), (w - s - b / 2, rnd.uniform(px(10), h - px(14)))))
                 draw_splat(c, x, y, px(rnd.uniform(2.5, 4)), rnd.choice(TAG_COLORS), rnd.randrange(1000))
+        elif T.shape == "plinth":  # Korporealnost: a white plinth with a soft shadow, no frame
+            s = px(3)
+            c.create_rectangle(s, s, w - 1, h - 1, fill=blend(T.body, "#000000", 0.1), outline="")
+            c.create_rectangle(0, 0, w - 1 - s, h - 1 - s, fill=self.bg, outline=blend(T.body, "#000000", 0.06))
         elif T.shape == "block":  # Mondrian: a flat color field inside a thick black line
             b = px(T.border)
             c.create_rectangle(b / 2, b / 2, w - b / 2, h - b / 2, fill=self.bg, outline="#111111", width=b)
@@ -611,6 +705,12 @@ class Panel(tk.Frame):
             self.growth = n
             self._redraw()
 
+    def set_tint(self, color: str) -> None:
+        """Prozor: the light through the blind changes color as the sun sets."""
+        if color != self.tint:
+            self.tint = color
+            self._redraw()
+
     def _growth_spots(self, w: int, h: int) -> list[tuple[float, float]]:
         """Places in the wide margin, in the order things appear there."""
         m = px(19)  # the middle of the margin band
@@ -652,6 +752,33 @@ class Panel(tk.Frame):
                 else:
                     draw_tag(c, x, y, px(28), k)
             return
+        if self.pattern == "makisu":  # a bamboo rolling mat: slats and the string holding them
+            for k, x in enumerate(range(0, w, max(3, px(4)))):
+                c.create_rectangle(x, 0, x + px(4), h, fill=("#d9c48e", "#cdb67c")[k % 2], outline="#b89c6e")
+            for y in (px(4), h - px(5)):
+                c.create_line(0, y, w, y, fill="#7a6a4a")
+            return
+        if self.pattern == "lane":  # maple boards and the aiming arrows
+            for k, y in enumerate(range(0, h, max(3, px(5)))):
+                c.create_rectangle(0, y, w, y + px(5), fill=("#e3b878", "#d9ab68")[k % 2], outline="")
+            for k in range(5):
+                x = w * (k + 1) / 6
+                c.create_polygon(x - px(3), h - px(2), x + px(3), h - px(2), x, h - px(7), fill="#7a4a20", outline="")
+            return
+        if self.pattern == "blinds":  # rows of little holes letting the evening light in
+            light = self.tint or T.accent
+            for r, y in enumerate(range(px(2), h - px(2), max(3, px(5)))):
+                c.create_line(0, y + px(4), w, y + px(4), fill=blend(self.bg, "#000000", 0.25))
+                for x in range(px(3) + (r % 2) * px(3), w - px(2), max(4, px(6))):
+                    c.create_rectangle(x, y + px(1), x + px(2), y + px(2.5), fill=light, outline="")
+            return
+        if self.pattern == "field":  # tulip fields seen from above: stripes of color between green rows
+            colors = ("#e0424f", "#f5c542", "#f59ab5", "#9b5fc0", "#f08a2e")
+            step = max(4, px(7))
+            for k, x in enumerate(range(-h, w, step)):
+                color = blend(self.bg, colors[k % len(colors)] if k % 2 == 0 else "#7fbf5a", 0.45)
+                c.create_line(x, h, x + h, 0, fill=color, width=max(2, px(3.5)))
+            return
         # Deterministic, so the pattern does not jump around when the window redraws.
         rnd = random.Random(w * 7919 + h)
         m = px(10)  # the decorated margin (the inner frame covers the middle)
@@ -689,6 +816,24 @@ class Panel(tk.Frame):
                 r = rnd.uniform(0.6, 1.4) * S
                 c.create_oval(x - r, y - r, x + r, y + r, fill=blend(self.bg, T.lcd_on, rnd.uniform(0.25, 0.8)),
                               outline="")
+        elif self.pattern == "chilies":  # dried chilies, scallion rings and Sichuan peppercorns on the plate
+            from .scenes import draw_chili
+
+            for k, (x, y) in enumerate(spots):
+                kind = k % 3
+                if kind == 0:
+                    draw_chili(c, x, y, px(rnd.uniform(9, 13)), rnd.uniform(0, 360), rnd.choice(("#b5231c", "#8e1a14")))
+                elif kind == 1:
+                    r = px(2.6)
+                    c.create_oval(x - r, y - r, x + r, y + r, outline="#5fae3e", width=max(1, px(1.4)))
+                else:
+                    r = px(1.3)
+                    c.create_oval(x - r, y - r, x + r, y + r, fill="#4a2a1a", outline="")
+        elif self.pattern == "rhombus":  # little yellow diamonds with a blue middle
+            for x, y in spots[::2]:
+                r = px(rnd.uniform(3, 4.5))
+                c.create_polygon(x - r * 1.4, y, x, y - r, x + r * 1.4, y, x, y + r, fill="#ffd400", outline="")
+                c.create_oval(x - r * 0.45, y - r * 0.45, x + r * 0.45, y + r * 0.45, fill="#1f4fbf", outline="")
         elif self.pattern == "bubbles":  # barely visible
             for x, y in spots[::3]:
                 r = rnd.uniform(px(2), px(4))
@@ -1115,7 +1260,7 @@ class SkinButton(tk.Canvas):
                 w = max(w + px(6), h)
             else:
                 w = h = max(w, h) + px(10)
-        if self.kind in ("circle", "orb"):
+        if self.kind in ("circle", "orb", "ball"):
             if text:
                 h = h + px(4)
                 w = max(w + px(6), h)
@@ -1123,10 +1268,13 @@ class SkinButton(tk.Canvas):
                 w = h = max(w, h) + px(6)
         if self.kind in ("block", "toon"):
             w, h = w + px(6), h + px(6)
+        if self.kind == "plinth":
+            w, h = w + px(5), h + px(4)
         # The glyph sits on the paw's big pad, lower than the middle; on a cartoon button, off its shadow.
-        self.glyph_cy = h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if self.kind == "toon" else h / 2
-        self.glyph_cx = (w - px(3)) / 2 if self.kind == "toon" else w / 2
-        self.shift = px(3) if self.kind == "toon" else 1  # how far the glyph moves when pressed
+        shadowed = self.kind in ("toon", "plinth")
+        self.glyph_cy = h * 0.68 if self.kind == "paw" else (h - px(3)) / 2 if shadowed else h / 2
+        self.glyph_cx = (w - px(3)) / 2 if shadowed else w / 2
+        self.shift = px(3) if shadowed else 1  # how far the glyph moves when pressed
         self.fill, self.glyph_color = (block_colors(glyph) if self.kind == "block" else
                                        toon_colors(glyph, text) if self.kind == "toon" else (T.btn_face, T.btn_glyph))
         self.tilt = random.Random(f"{glyph}{text}").uniform(-4, 4) if self.kind == "toon" else 0.0
@@ -1188,6 +1336,28 @@ class SkinButton(tk.Canvas):
                               width=b, tags="face")
             for item in (shadow, face):  # a little crooked, like it was stuck on the wall
                 rotate_item(self, item, self.tilt, w / 2, h / 2)
+        elif self.kind == "ball":  # a bowling ball: glossy, with three finger holes
+            if w == h:
+                self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline=T.btn_dark, tags="face")
+                if not pressed:
+                    self.create_oval(w * 0.16, h * 0.1, w * 0.56, h * 0.42, fill=blend(T.btn_face, "#ffffff", 0.3),
+                                     outline="", tags="face")
+                holes = ((0.7, 0.24), (0.84, 0.38), (0.66, 0.44))
+            else:
+                round_rect(self, 1, 1, w - 2, h - 2, (h - 3) / 2, fill=fill, outline=T.btn_dark, tags="face")
+                if not pressed:
+                    round_rect(self, px(5), px(2.5), w - px(5), h * 0.46, h * 0.2, fill=blend(T.btn_face, "#ffffff", 0.25),
+                               outline="", tags="face")
+                holes = ()
+            for fx, fy in holes:
+                r = w * 0.055
+                self.create_oval(w * fx - r, h * fy - r, w * fx + r, h * fy + r, fill="#0d0618", outline="", tags="face")
+        elif self.kind == "plinth":  # a small white plinth with a soft shadow; pressed, it sinks into it
+            s = px(3)
+            off = s if pressed else 0
+            self.create_rectangle(s, s, w - 1, h - 1, fill=blend(T.body, "#000000", 0.12), outline="", tags="face")
+            self.create_rectangle(off, off, w - 1 - s + off, h - 1 - s + off, fill=T.btn_face,
+                                  outline=blend(T.body, "#000000", 0.08), tags="face")
         elif self.kind == "circle":
             if w == h:
                 self.create_oval(1, 1, w - 2, h - 2, fill=fill, outline="", tags="face")
@@ -1427,6 +1597,8 @@ class ProductivityMeter(tk.Canvas):
             self._crystal(x0, x1, h / 2, prod)
         elif style == "spray":
             self._spray(x0, x1, h / 2, prod)
+        elif style in ("nigiri", "tulips", "chili", "cord", "pins", "light", "skin"):
+            getattr(self, "_" + style)(x0, x1, h / 2, prod)
         else:
             cy = text_y
             self._bar(x0, x1, cy, prod, neutral, dist)
@@ -1693,6 +1865,70 @@ class ProductivityMeter(tk.Canvas):
             self.create_line(x, cy, x, cy + px(5) + rnd.uniform(0, px(5)), fill="#ff3aa0", width=px(2),
                              capstyle="round")
 
+    def _row(self, x0: float, x1: float, step: float, prod: float) -> list[tuple[float, bool]]:
+        """Evenly spaced spots along the meter, the first share of them lit."""
+        n = max(1, int((x1 - x0) // step))
+        lit = round(n * prod)
+        return [(x0 + step * (i + 0.5), i < lit) for i in range(n)]
+
+    def _nigiri(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Suši: a row of nigiri; productive ones got their salmon, the rest are plain rice."""
+        from .scenes import draw_nigiri
+
+        for x, lit in self._row(x0, x1, px(17), prod):
+            draw_nigiri(self, x, cy + px(3), px(13), "#f08a5d" if lit else None)
+
+    def _tulips(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Lale: a row of tulips; productive ones are in bloom, the rest closed green buds."""
+        from .scenes import TULIP_COLORS, draw_tulip
+
+        for i, (x, lit) in enumerate(self._row(x0, x1, px(12), prod)):
+            draw_tulip(self, x, cy + px(10), px(19), TULIP_COLORS[i % len(TULIP_COLORS)] if lit else "#7fbf5a",
+                       0.8 if lit else 0.0, leaves=False)
+
+    def _chili(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Lazi tofu: how hot the day is, a row of chilies, red for the productive share."""
+        from .scenes import draw_chili
+
+        for x, lit in self._row(x0, x1, px(13), prod):
+            draw_chili(self, x - px(5), cy - px(2), px(12), 20, "#c8231a" if lit else "#b9d39a")
+
+    def _cord(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Kapoera: a braided cord, colored green to yellow to blue as far as the productive share goes."""
+        spots = self._row(x0, x1, px(9), prod)
+        for i, (x, lit) in enumerate(spots):
+            t = i / max(1, len(spots) - 1)
+            color = (blend("#1f9d4a", "#ffd400", t * 2) if t < 0.5 else blend("#ffd400", "#1f4fbf", t * 2 - 1)) if lit \
+                else "#e8dcc0"
+            y = cy + (px(1.5) if i % 2 else -px(1.5))
+            self.create_oval(x - px(5.5), y - px(3.5), x + px(5.5), y + px(3.5), fill=color, outline="#2a1a10")
+
+    def _pins(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Kuglanje: pins standing for the productive share, knocked over for the rest."""
+        from .scenes import draw_pin
+
+        for x, lit in self._row(x0, x1, px(10), prod):
+            draw_pin(self, x, cy + px(8), px(16), down=not lit)
+
+    def _light(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Prozor: holes in the blind; the productive share lets the sunset in."""
+        spots = self._row(x0, x1, px(7), prod)
+        for i, (x, lit) in enumerate(spots):
+            color = blend("#ffd27a", "#ff6f7d", i / max(1, len(spots) - 1)) if lit else "#3a2f48"
+            for y in (cy - px(4), cy + px(2)):
+                self.create_rectangle(x - px(2), y, x + px(2), y + px(2.5), fill=color, outline="")
+
+    def _skin(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """Korporealnost: a bar of skin with a couple of faint veins, as long as the productive share."""
+        r = px(5)
+        round_rect(self, x0, cy - r, x1, cy + r, r, fill=T.lcd_off, outline=T.body_dark)
+        xp = x0 + (x1 - x0) * prod
+        if xp - x0 > r:
+            round_rect(self, x0, cy - r, xp, cy + r, r, fill="#e8c1a0", outline="#c99a7c")
+            for k, dy in enumerate((-1.5, 2)):
+                pts = [(x0 + r + (xp - x0 - 2 * r) * i / 10, cy + px(dy) + math.sin(i * 1.3 + k) * px(1)) for i in range(11)]
+                self.create_line(pts, fill=blend("#e8c1a0", "#7f97b0", 0.35), smooth=True)
+
     COFFEE_TEXT = "How is possible?"
 
     def _coffee(self, x0: float, x1: float, cy: float, prod: float) -> None:
@@ -1828,12 +2064,16 @@ class TitleBar(tk.Canvas):
     def __init__(self, master, title: str, on_menu=None):
         self.h = {"ears": px(44), "mondrian": px(28), "oranges": px(22), "egg": px(22), "dandelion": px(22),
                   "coffee": px(26), "dunes": px(22), "lofi": px(22), "speed": px(20), "blades": px(24), "fog": px(20),
-                  "canopy": px(30), "tags": px(28)}.get(T.title_style, px(18))
+                  "canopy": px(30), "tags": px(28), "sushi": px(24), "tulips": px(26), "tofu": px(24),
+                  "berimbau": px(24), "frames": px(24), "slats": px(22), "gallery": px(30)}.get(T.title_style, px(18))
         super().__init__(master, height=self.h, bg=T.body, highlightthickness=0)
         self.title = title
         self.on_menu = on_menu
         self.pieces: list[str] = []  # Setsuna: orange pieces earned by the running timer
         self.bind("<Configure>", lambda e: self.draw())
+
+    def _scene_title(self, style, w, h, x0, y0, x1, y1, left) -> None:
+        _title_draw(self, style, w, h, x0, y0, x1, y1, left)
 
     def set_pieces(self, pieces: list[str]) -> None:
         if pieces != self.pieces:
@@ -1954,6 +2194,8 @@ class TitleBar(tk.Canvas):
                 y, r = rnd.uniform(px(3), h - px(3)), rnd.uniform(0.7, 1.6) * S
                 self.create_oval(x - r, y - r, x + r, y + r, fill=blend(T.body, T.lcd_on, rnd.uniform(0.3, 0.9)),
                                  outline="")
+        elif style in ("sushi", "tulips", "tofu", "berimbau", "frames", "slats", "gallery"):
+            self._scene_title(style, w, h, x0, y0, x1, y1, left)
         elif style == "lofi":  # a crescent moon on the left, a warm desk lamp on the right
             mx, my, r = x0 - px(18), h / 2, px(6)
             self.create_oval(mx - r, my - r, mx + r, my + r, fill="#f6e3b4", outline="")
@@ -2012,6 +2254,76 @@ class TitleBar(tk.Canvas):
                                    width=max(1, px(2)))
             for item in (box, bar):
                 self.tag_bind(item, "<Button-1>", lambda e: self.on_menu(e))
+
+
+def _title_draw(bar: "TitleBar", style: str, w: int, h: int, x0: float, y0: float, x1: float, y1: float,
+                left: float) -> None:
+    """The title decorations of the scene skins (see scenes.py)."""
+    from . import scenes
+
+    pieces = bar.pieces
+    if style == "sushi":  # chopsticks and a maki on the left, a nigiri on the right
+        cx = x0 - px(20)
+        for dy in (-px(2), px(2)):
+            bar.create_line(cx - px(12), h / 2 + dy - px(4), cx + px(10), h / 2 + dy + px(3), fill="#7a4a28",
+                            width=max(1, px(1.6)), capstyle="round")
+        scenes.draw_maki(bar, cx - px(16), h / 2 + px(2), px(6))
+        scenes.draw_nigiri(bar, x1 + px(20), h / 2 + px(3), px(16))
+    elif style == "tulips":  # a tulip planted for every full hour of the task, alternating sides
+        for i, kind in enumerate(pieces):
+            k = i // 2 + 1
+            x = x0 - k * px(13) + px(3) if i % 2 == 0 else x1 + k * px(13) - px(3)
+            if px(6) < x < w - px(6):
+                scenes.draw_tulip(bar, x, h - px(2), px(20), scenes.TULIP_COLORS[int(kind) % len(scenes.TULIP_COLORS)],
+                                  0.9, leaves=False)
+    elif style == "tofu":  # a dried chili on each side, then a plate served for every full hour
+        scenes.draw_chili(bar, x0 - px(18), h / 2 + px(1), px(12), 10)
+        scenes.draw_chili(bar, x1 + px(7), h / 2 - px(1), px(12), -10)
+        for i, _ in enumerate(pieces):
+            k = i // 2 + 1
+            x = x0 - px(22) - k * px(18) + px(4) if i % 2 == 0 else x1 + px(22) + k * px(18) - px(4)
+            if px(10) < x < w - px(10):
+                cy = h / 2 + px(2)
+                bar.create_oval(x - px(8), cy - px(4), x + px(8), cy + px(4), fill="#ffffff", outline="#cfc2ad")
+                for dx in (-3, 0, 3):
+                    bar.create_rectangle(x + px(dx) - px(1.5), cy - px(3), x + px(dx) + px(1.5), cy, fill=scenes.TOFU_GOLDEN,
+                                         outline="")
+                bar.create_line(x - px(4), cy + px(1), x + px(4), cy + px(1), fill="#b5231c", width=max(1, px(1.5)))
+    elif style == "berimbau":  # a berimbau on the left, a pandeiro on the right
+        bx = x0 - px(22)
+        bar.create_arc(bx - px(6), px(2), bx + px(10), h - px(2), start=100, extent=160, style="arc", outline="#a0703c",
+                       width=max(2, px(2)))
+        bar.create_line(bx - px(1), px(3), bx - px(1), h - px(3), fill="#e8dcc0")
+        bar.create_oval(bx - px(8), h - px(10), bx + px(2), h - px(1), fill="#c9a26a", outline="#7a5a30")
+        px_ = x1 + px(18)
+        r = px(7)
+        bar.create_oval(px_ - r, h / 2 - r, px_ + r, h / 2 + r, fill="#f2e6c8", outline="#a0703c", width=max(1, px(2)))
+        for k in range(6):
+            a = k * math.pi / 3
+            bar.create_oval(px_ + math.cos(a) * r - px(1.5), h / 2 + math.sin(a) * r - px(1.5),
+                            px_ + math.cos(a) * r + px(1.5), h / 2 + math.sin(a) * r + px(1.5), fill="#d9d9d9", outline="")
+    elif style == "frames":  # the score sheet: ten frames, an X for every strike (every full hour)
+        size = px(13)
+        for k in range(10):
+            x = x0 - px(10) - (5 - k) * size if k < 5 else x1 + px(10) + (k - 5) * size
+            bar.create_rectangle(x, px(3), x + size, h - px(3), outline="#2ad1c9")
+            bar.create_rectangle(x + size * 0.5, px(3), x + size, px(3) + size * 0.5, outline="#2ad1c9")
+            if k < len(pieces):
+                bar.create_text(x + size * 0.75, px(3) + size * 0.27, text="X", fill="#ff4f9a",
+                                font=T.font("sans", 6, "bold"))
+    elif style == "slats":  # the blind's slats on both sides, with the evening light between them
+        light = pieces[0] if pieces else T.accent
+        for y in range(px(3), h - px(2), max(3, px(4))):
+            for a, b in ((left, x0 - px(8)), (x1 + px(8), w - px(6))):
+                bar.create_line(a, y, b, y, fill=T.body_light)
+                for x in range(int(a) + px(2), int(b) - px(2), max(4, px(7))):
+                    bar.create_rectangle(x, y + px(1), x + px(2), y + px(2.4), fill=light, outline="")
+    elif style == "gallery":  # a museum wall label on the right
+        lx = w - px(84)
+        if lx > x1 + px(8):
+            bar.create_rectangle(lx, px(5), lx + px(78), h - px(5), fill="#ffffff", outline=blend(T.body, "#000000", 0.08))
+            bar.create_text(lx + px(5), h / 2, anchor="w", text="silikon, kosa, vreme", fill="#8a837c",
+                            font=T.font("sans", 7))
 
 
 class Tooltip:

@@ -7,10 +7,13 @@
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
                  ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["kinetic", "Kinetik"],
                  ["blades", "Blades"], ["towers", "Kristalne kule"], ["atmos", "Atmos"], ["graffiti", "Grafiti"],
-                 ["eink", "E-ink"]];
+                 ["sushi", "Suši"], ["tulips", "Lale"], ["tofu", "Lazi tofu"], ["capoeira", "Kapoera"],
+                 ["bowling", "Kuglanje"], ["window", "Prozor"], ["corporeal", "Korporealnost"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
                         mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
                         kinetic: "#0d0b1e", blades: "#e9ecef", towers: "#05070f", atmos: "#0f1f1c", graffiti: "#ffd23f",
+                        sushi: "#f3ead9", tulips: "#fff6f2", tofu: "#f7efe4", capoeira: "#0e5a32", bowling: "#1a1d3a",
+                        window: "#241c2e", corporeal: "#f2f1ee",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
   const EINK_DEVICE = new URLSearchParams(location.search).get("device") === "eink";
@@ -750,6 +753,165 @@
       growthSpots(w, h).slice(0, n).map(([x, y], k) => kind === "tags" ? tagSvg(x, y, 28, k) : vineSvg(x, y, 26, k)).join("");
   }
 
+  // ------------------------------------------------------------------ the scene skins (as on the laptop)
+
+  const HOUR = 3600000, hoursOf = ms => Math.floor(Math.max(0, ms) / HOUR), inHour = ms => (Math.max(0, ms) % HOUR) / HOUR;
+  const TULIP_COLORS = ["#e0424f", "#f59ab5", "#f5c542", "#9b5fc0", "#f08a2e"];
+  const DUSK = 90 * 60000, DUSK_STOPS = [[0, "#ffd27a"], [0.35, "#ffa04d"], [0.6, "#ff6f7d"], [0.8, "#a86bd6"], [0.95, "#3b3f8a"], [1, "#3b3f8a"]];
+  const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const mixColor = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
+  function lightColor(ms) {
+    const f = (Math.max(0, ms) % DUSK) / DUSK;
+    for (let i = 0; i < DUSK_STOPS.length - 1; i++) {
+      const [a, c1] = DUSK_STOPS[i], [b, c2] = DUSK_STOPS[i + 1];
+      if (f >= a && f <= b) return mixColor(c1, c2, (f - a) / Math.max(1e-9, b - a));
+    }
+    return DUSK_STOPS[DUSK_STOPS.length - 1][1];
+  }
+  const duskPhase = ms => { const f = (Math.max(0, ms) % DUSK) / DUSK; return Math.floor(Math.max(0, ms) / DUSK) * 5 + DUSK_STOPS.slice(1, 5).filter(([a]) => f >= a).length; };
+  // When each scene's milestone is reached while the timer runs, it plays the skin's "flip" sound.
+  const MILESTONE = { sushi: ms => Math.floor(ms / 600000), tulips: hoursOf, tofu: hoursOf, capoeira: ms => Math.floor(ms / 1800000),
+                      bowling: hoursOf, window: duskPhase, corporeal: hoursOf };
+  const VIEW = { sushi: 62, tulips: 32, tofu: 58, capoeira: 60, bowling: 54, window: 44, corporeal: 36 };
+  let sceneKey = "", sceneMark = null;
+
+  const nigiri = (x, y, w, top = "#f08a5d") => {
+    const h = w * 0.42;
+    return `<rect x="${f1(x - w / 2)}" y="${f1(y - h / 2)}" width="${f1(w)}" height="${f1(h)}" rx="${f1(h / 2)}" fill="#fbf7ef" stroke="#d8d0c0" stroke-width=".5"/>` +
+      (top ? `<rect x="${f1(x - w * 0.56)}" y="${f1(y - h * 0.95)}" width="${f1(w * 1.12)}" height="${f1(h * 0.8)}" rx="${f1(h * 0.4)}" fill="${top}"/>` : "");
+  };
+  function tulipSvg(x, base, height, color, open, leaves = true) {
+    const top = base - height, r = height * 0.2, spread = 0.15 + 0.55 * open;
+    let out = `<line x1="${x}" y1="${base}" x2="${x}" y2="${f1(top + height * 0.12)}" stroke="#4f9a45" stroke-width="${f1(Math.max(1, height * 0.07))}" stroke-linecap="round"/>`;
+    if (leaves) for (const s of [-1, 1]) out += `<path d="M${x},${f1(base - height * 0.05)} Q${f1(x + s * height * 0.3)},${f1(base - height * 0.25)} ${f1(x + s * height * 0.26)},${f1(base - height * 0.55)} Q${f1(x + s * height * 0.08)},${f1(base - height * 0.3)} ${x},${f1(base - height * 0.05)}Z" fill="#5fae4f"/>`;
+    for (const s of [-1, 1]) out += `<path d="M${f1(x - s * r * 0.1)},${f1(top + r * 1.1)} Q${f1(x + s * r * 0.9)},${f1(top + r * 0.75)} ${f1(x + s * r * (0.5 + spread * 1.2))},${f1(top - r * 0.2 + r * spread * 0.6)} Q${f1(x + s * r * 0.15)},${f1(top + r * 0.2)} ${f1(x - s * r * 0.1)},${f1(top + r * 1.1)}Z" fill="${mixColor(color, "#000000", 0.12)}"/>`;
+    return out + `<path d="M${f1(x - r * 0.55)},${f1(top + r * 1.05)} Q${f1(x - r * 0.6)},${f1(top - r * 0.1)} ${x},${f1(top - r * 0.35)} Q${f1(x + r * 0.6)},${f1(top - r * 0.1)} ${f1(x + r * 0.55)},${f1(top + r * 1.05)}Z" fill="${color}"/>`;
+  }
+  function chiliSvg(x, y, length, angle, color = "#b5231c") {
+    return `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${angle})"><path d="M0,${f1(-length * 0.18)} Q${f1(length * 0.5)},${f1(-length * 0.2)} ${f1(length)},0 Q${f1(length * 0.5)},${f1(length * 0.16)} 0,${f1(length * 0.18)}Z" fill="${color}" stroke="${mixColor(color, "#000000", 0.35)}" stroke-width=".5"/>` +
+      `<line x1="0" y1="0" x2="${f1(-length * 0.15)}" y2="0" stroke="#4f7a2e" stroke-width="${f1(length * 0.15)}" stroke-linecap="round"/></g>`;
+  }
+  const CORDS = [["#e8dcc0"], ["#1f9d4a"], ["#1f9d4a", "#ffd400"], ["#ffd400"], ["#ffd400", "#1f4fbf"], ["#1f4fbf"], ["#1f9d4a", "#1f4fbf"], ["#ffd400", "#ffffff"], ["#1f4fbf", "#ffffff"]];
+  const PIN_ORDER = [9, 7, 8, 4, 5, 6, 0, 1, 2, 3], PIN_SPOTS = [[-1.5, 0], [-0.5, 0], [0.5, 0], [1.5, 0], [-1, 1], [0, 1], [1, 1], [-0.5, 2], [0.5, 2], [0, 3]];
+  function pinSvg(x, base, h, down) {
+    const w = h * 0.36;
+    if (down) return `<ellipse cx="${f1(x)}" cy="${f1(base - w * 0.27)}" rx="${f1(h * 0.32)}" ry="${f1(w * 0.27)}" fill="#b9b4ac" stroke="#7a756e" stroke-width=".4"/>`;
+    return `<ellipse cx="${f1(x)}" cy="${f1(base - h * 0.31)}" rx="${f1(w / 2)}" ry="${f1(h * 0.31)}" fill="#fbfaf6" stroke="#9a958e" stroke-width=".4"/>` +
+      `<ellipse cx="${f1(x)}" cy="${f1(base - h * 0.81)}" rx="${f1(w * 0.3)}" ry="${f1(h * 0.19)}" fill="#fbfaf6" stroke="#9a958e" stroke-width=".4"/>` +
+      `<rect x="${f1(x - w * 0.24)}" y="${f1(base - h * 0.7)}" width="${f1(w * 0.48)}" height="${f1(h * 0.1)}" fill="#d6343b"/>`;
+  }
+  const POSES = [[[9, 24], [14, 25], [22, 36], [11, 31], [17, 41], [17, 19], [10, 20]], [[13, 13], [15, 18], [18, 28], [12, 40], [24, 41], [13, 24], [12, 30]],
+                 [[15, 7], [16, 12], [18, 24], [17, 32], [18, 41], [17, 18], [17, 24]], [[18, 6], [18, 11], [18, 24], [18, 33], [18, 41], [18, 17], [18, 23]]];
+  function figureSvg(t) {
+    t = Math.max(0, Math.min(1, t)) * (POSES.length - 1);
+    const i = Math.min(Math.floor(t), POSES.length - 2), f = t - i;
+    const [head, neck, hip, knee, foot, elbow, hand] = POSES[i].map(([x, y], k) => [x + (POSES[i + 1][k][0] - x) * f, y + (POSES[i + 1][k][1] - y) * f]);
+    const P = pts => pts.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" "), mid = [(hip[0] * 2 + knee[0]) / 3, (hip[1] * 2 + knee[1]) / 3];
+    return `<ellipse cx="${f1(foot[0])}" cy="42.3" rx="6" ry="0.8" fill="#000" fill-opacity=".12"/>` +
+      `<polyline points="${P([hip, knee, foot])}" fill="none" stroke="#c99a7c" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<line x1="${f1(neck[0])}" y1="${f1(neck[1])}" x2="${f1(hip[0])}" y2="${f1(hip[1])}" stroke="#e8c1a0" stroke-width="5.4" stroke-linecap="round"/>` +
+      `<line x1="${f1(hip[0])}" y1="${f1(hip[1])}" x2="${f1(mid[0])}" y2="${f1(mid[1])}" stroke="#b9b6b0" stroke-width="5.4" stroke-linecap="round"/>` +
+      `<polyline points="${P([neck, elbow, hand])}" fill="none" stroke="#c99a7c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<circle cx="${f1(head[0])}" cy="${f1(head[1])}" r="3.4" fill="#e8c1a0" stroke="#c99a7c" stroke-width=".5"/>` +
+      `<path d="M${f1(head[0] + 3.2)},${f1(head[1] - 1.2)} A3.4,3.4 0 1 0 ${f1(head[0] - 1.2)},${f1(head[1] + 3.2)}Z" fill="#2a2421"/>`;
+  }
+
+  function renderScene(ms, st) {
+    const sk = skin(), svg = $("scene"), mark = MILESTONE[sk](ms);
+    if (sceneMark !== null && st === "playing" && mark > sceneMark) {
+      sound("flip");
+      if (sk === "tofu" || sk === "bowling") { svg.classList.remove("event"); void svg.getBoundingClientRect(); svg.classList.add("event"); }
+    }
+    sceneMark = mark;
+    const playing = st === "playing";
+    if (svg.classList.contains("running") !== playing) svg.classList.toggle("running", playing);
+    if (sk === "window") {
+      let light = lightColor(st === "stopped" ? 0 : ms);
+      if (!playing) light = mixColor(light, "#1a1424", 0.7);
+      if (document.body.style.getPropertyValue("--light") !== light) document.body.style.setProperty("--light", light);
+    }
+    const w = VIEW[sk], key = `${sk}|${st}|${Math.floor(ms / 60000)}`;
+    if (key === sceneKey) return;
+    sceneKey = key;
+    svg.setAttribute("viewBox", `0 0 ${w} 44`);
+    svg.style.width = `${Math.round(w * 0.9)}px`;
+    let out = "";
+    if (sk === "sushi") {  // the belt runs while you work, a plate is stacked every 10 minutes
+      out += `<rect x="1" y="4" width="${w - 2}" height="13" rx="6" fill="#3b3b40" stroke="#26262a"/><g class="belt">`;
+      for (let k = 0; k < 5; k++) {
+        const x = 15 + k * 30;
+        out += `<ellipse cx="${x}" cy="10.5" rx="7" ry="4.5" fill="${["#f4f1ea", "#c8323c", "#2f5d9a", "#d9a63a"][k % 4]}" stroke="#26262a" stroke-width=".5"/>` + nigiri(x, 10.5, 9, k % 2 ? "#f08a5d" : "#e85d5d");
+      }
+      out += `</g>`;
+      const n = Math.floor(ms / 600000);
+      for (let i = 0; i < Math.min(n, 9); i++) out += `<ellipse cx="15" cy="${f1(41 - i * 2.6 - 1)}" rx="11" ry="2" fill="${["#f4f1ea", "#c8323c", "#2f5d9a", "#d9a63a"][i % 4]}" stroke="#26262a" stroke-width=".5"/>`;
+      if (n) out += `<text x="31" y="38" font-size="8" font-weight="700" fill="#ff8f63" font-family="monospace">×${n}</text>`;
+    } else if (sk === "tulips") {  // grows from the bulb over an hour, closes on pause
+      out += `<ellipse cx="16" cy="40" rx="14" ry="3.5" fill="#7a5236"/>`;
+      const p = inHour(ms), color = TULIP_COLORS[hoursOf(ms) % 5];
+      if (st === "stopped" || p < 0.08) {
+        out += `<ellipse cx="16" cy="37" rx="4" ry="3.5" fill="#c9a77c" stroke="#8a6a4a" stroke-width=".5"/>`;
+        if (st !== "stopped") out += `<line x1="16" y1="34" x2="16" y2="${f1(34 - 10 * p / 0.08)}" stroke="#5fae4f" stroke-width="2" stroke-linecap="round"/>`;
+      } else {
+        const height = 34 * (0.35 + 0.65 * Math.min(1, p / 0.6)), bud = Math.min(1, Math.max(0, (p - 0.3) / 0.3));
+        out += tulipSvg(16, 38, height, mixColor("#7fbf5a", color, bud), st === "paused" ? 0 : Math.max(0, (p - 0.6) / 0.4));
+      }
+    } else if (sk === "tofu") {  // a cube every 5 minutes, browning; tossed and served every hour
+      const n = Math.floor((Math.max(0, ms) % HOUR) / 300000), inH = Math.max(0, ms) % HOUR, rnd = mulberry(4);
+      out += `<g class="steam">` + [0, 1, 2].map(k => `<path d="M${15 + k * 11},18 q2,-3 0,-6 q-2,-3 0,-6" fill="none" stroke="#fff" stroke-opacity=".35"/>`).join("") + `</g>`;
+      out += `<line x1="46" y1="22" x2="56" y2="17" stroke="#5a3b26" stroke-width="3.5" stroke-linecap="round"/>`;
+      out += `<path d="M2,20 A22,18 0 0 0 46,20 Z" fill="#2a2a2e" stroke="#111114"/><g class="food">`;
+      for (let k = 0; k < n; k++) {
+        const row = Math.floor(k / 4), col = k % 4, x = 6 + col * 6.3 + row * 2.7 + (rnd() - 0.5) * 2, y = 21 - row * 4.4;
+        const c = mixColor("#f3e3c3", "#c98a3a", Math.min(1, (inH - k * 300000) / 900000));
+        out += `<rect x="${f1(x)}" y="${f1(y - 5.5)}" width="5.5" height="5.5" fill="${c}" stroke="${mixColor(c, "#000000", 0.25)}" stroke-width=".5"/>`;
+      }
+      if (n >= 2) out += chiliSvg(9, 16, 9, -20) + chiliSvg(32, 15, 8, 200) + `<rect x="20" y="17" width="4" height="2" fill="#5fae3e"/><rect x="36" y="17" width="4" height="2" fill="#5fae3e"/>`;
+      out += `</g>`;
+    } else if (sk === "capoeira") {  // the ginga while the timer runs, a new cord every 30 minutes
+      const limb = (pts, color, width) => `<polyline points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}" fill="none" stroke="#2a1a10" stroke-width="${width + 1.5}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const man = (side, moving) => {
+        const cx = 15, floor = 41, hip = [cx, floor - 17], neck = [cx + side * 2, floor - 29];
+        const legs = moving ? [[hip, [cx - side * 6, floor - 8], [cx - side * 11, floor]], [hip, [cx + side * 5, floor - 9], [cx + side * 6, floor]]]
+          : [[hip, [cx - 3, floor - 8], [cx - 4, floor]], [hip, [cx + 3, floor - 8], [cx + 4, floor]]];
+        const arms = moving ? [[neck, [cx + side * 7, neck[1] + 1], [cx + side * 6, neck[1] - 5]], [neck, [cx - side * 6, neck[1] + 6], [cx - side * 9, neck[1] + 10]]]
+          : [[neck, [cx - 4, neck[1] + 7], [cx - 4, neck[1] + 13]], [neck, [cx + 4, neck[1] + 7], [cx + 4, neck[1] + 13]]];
+        return legs.map(l => limb(l, "#f5f5f0", 3)).join("") + limb([neck, hip], "#8a5a3c", 3.5) + arms.map(a => limb(a, "#8a5a3c", 2.2)).join("") +
+          `<circle cx="${neck[0] + side}" cy="${neck[1] - 4}" r="3.2" fill="#8a5a3c" stroke="#2a1a10" stroke-width=".7"/>`;
+      };
+      out += playing ? `<g class="ginga a">${man(1, true)}</g><g class="ginga b">${man(-1, true)}</g>` : man(1, false);
+      const [c1, c2] = CORDS[Math.min(Math.floor((st === "stopped" ? 0 : ms) / 1800000), CORDS.length - 1)];
+      const kx = 44, ky = 18.5, rope = `M${kx},${ky} C${kx - 14},${ky + 8} ${kx - 16},${ky - 12} ${kx},${ky - 11} C${kx + 16},${ky - 12} ${kx + 14},${ky + 8} ${kx},${ky} M${kx},${ky} Q${kx - 4},${ky + 10} ${kx - 6},${ky + 18} M${kx},${ky} Q${kx + 3},${ky + 11} ${kx + 3},${ky + 19}`;
+      out += `<path d="${rope}" fill="none" stroke="#2a1a10" stroke-width="4.5" stroke-linecap="round"/><path d="${rope}" fill="none" stroke="${c1}" stroke-width="3" stroke-linecap="round"/>` +
+        (c2 ? `<path d="${rope}" fill="none" stroke="${c2}" stroke-width="3" stroke-dasharray="3 3"/>` : "") + `<circle cx="${kx}" cy="${ky}" r="2.5" fill="${c1}" stroke="#2a1a10" stroke-width=".7"/>`;
+    } else if (sk === "bowling") {  // a pin falls every 6 minutes, a strike every full hour
+      out += `<polygon points="16,2 38,2 52,43 2,43" fill="#e3b878"/>` + [1, 2, 3, 4, 5].map(k => `<line x1="${f1(16 + 22 * k / 6)}" y1="2" x2="${f1(2 + 50 * k / 6)}" y2="43" stroke="#cf9e5c" stroke-width=".5"/>`).join("");
+      const down = new Set(PIN_ORDER.slice(0, Math.floor((Math.max(0, ms) % HOUR) / 360000)));
+      PIN_SPOTS.forEach(([dx, row], i) => { out += pinSvg(27 + dx * 7.5, 13 + row * 4.5, 10, down.has(i)); });
+      out += `<g class="ball"><circle cx="27" cy="37" r="5" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="25.3" cy="34.8" rx="1.8" ry="1.2" fill="#6a4a9a"/></g>`;
+    } else if (sk === "window") {  // the blind: light through its holes, dim while it is let down
+      out += `<rect x="2" y="2" width="40" height="40" fill="#3a2f2a" stroke="#1c1512"/><rect x="4" y="4" width="36" height="36" fill="#5a4a40"/>`;
+      for (let r = 0; r < 7; r++) {
+        const y = 5 + r * 34 / 7;
+        out += `<line x1="4" y1="${f1(y)}" x2="40" y2="${f1(y)}" stroke="#3e322b" stroke-width=".6"/>`;
+        for (let c = 0; c < 6; c++) out += `<rect class="hole" x="${f1(7 + c * 6 - 1.2)}" y="${f1(y + 1.4)}" width="2.4" height="1.6"/>`;
+      }
+    } else if (sk === "corporeal") {  // crouched against the white wall, standing after an hour of the task
+      out += `<rect x="0" y="0" width="4" height="44" fill="#000" fill-opacity=".05"/><line x1="0" y1="42" x2="36" y2="42" stroke="#000" stroke-opacity=".18"/>` +
+        figureSvg(st === "stopped" ? 0 : Math.min(1, ms / HOUR));
+    }
+    svg.innerHTML = out;
+  }
+
+  function renderFrames(strikes) {  // Kuglanje: the score sheet beside the title, an X for every strike
+    const key = `frames${strikes}`;
+    if (key === piecesKey) return;
+    piecesKey = key;
+    const box = k => `<i class="piece frame${k < strikes ? " x" : ""}"></i>`;
+    $("piecesL").innerHTML = [0, 1, 2, 3, 4].map(box).join("");
+    $("piecesR").innerHTML = [5, 6, 7, 8, 9].map(box).join("");
+  }
+
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
   function bulletHole() {
     const btn = $("playBtn");
@@ -786,7 +948,8 @@
     piecesKey = "-";
     renderPieces([]);
     applyLamp();
-    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi", "blades", "atmos", "graffiti"].includes(skin())
+    const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi", "blades", "atmos", "graffiti", "sushi",
+                   "tulips", "tofu", "capoeira", "window", "corporeal"].includes(skin())
       ? "round" : ["cyber", "kinetic"].includes(skin()) ? "sharp" : "hex";
     dandelionKey = "";
     hgKey = "";
@@ -798,6 +961,8 @@
     towersKey = ""; towerLevel = null;
     padsKey = ""; padsPhrases = null;
     growthKey = "";
+    sceneKey = ""; sceneMark = null;
+    document.body.style.removeProperty("--light");
     $("growth").innerHTML = "";
     document.body.classList.remove("raining", "racing");
     buildClock(style, eink() ? "88:88" : "88:88:88");
@@ -918,6 +1083,11 @@
       renderGrowth("jungle", st === "stopped" ? 0 : Math.floor(ms / PHRASE));
     }
     if (skin() === "graffiti") renderGrowth("tags", Math.min(9, Math.floor(today / 3600000)));
+    if (MILESTONE[skin()]) renderScene(st === "stopped" ? 0 : ms, st);
+    const n = st === "stopped" ? 0 : hoursOf(ms);
+    if (skin() === "tulips") renderPieces(Array.from({ length: Math.min(n, 12) }, (_, i) => `tu c${i % 5}`));
+    if (skin() === "tofu") renderPieces(Array(Math.min(n, 10)).fill("plate"));
+    if (skin() === "bowling") renderFrames(Math.min(n, 10));
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 

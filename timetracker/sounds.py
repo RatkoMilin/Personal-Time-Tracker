@@ -11,6 +11,13 @@ blades: soft glassy bloops and blade swishes, an achievement chime for every hou
 towers: a deep boot swoosh with crystal shimmer, a chime when the running tower grows an hour ("flip")
 atmos: a jungle break at 174 BPM, filter sweeps, a reese bass, a snare roll and a pad per phrase ("flip")
 graffiti: the spray can's rattle and hiss, a record scratch on PL, a long spray for every new tag ("flip")
+sushi: chopsticks tapping, a little bell, plates clinking as they stack ("flip")
+tulips: light plucked notes and birdsong, a chime for every tulip planted ("flip")
+tofu: oil sizzling in the wok, the spatula, a wok clang, the toss ("flip")
+capoeira: the berimbau and the caxixi, a pandeiro for every new cord ("flip"), agogô bells
+bowling: the ball rolling, pins crashing, a strike every full hour ("flip")
+window: a roller blind pulled up and let down, crickets at each turn of the sunset ("flip")
+corporeal: footsteps and a breath in a quiet gallery, its echo
 
 Each (skin, event) is rendered once to a small WAV file in the data folder and
 played asynchronously with winsound on Windows.
@@ -337,6 +344,110 @@ def _scratch(seed: int = 155) -> list[float]:
     return _lowpass([a + b for a, b in zip(out, grit)], 0.5)
 
 
+def _chirp(seed: int = 211) -> list[tuple[float, list[float]]]:
+    """A small bird: two quick rising whistles."""
+    rnd = random.Random(seed)
+    f = rnd.uniform(2800, 3400)
+    return [(0, tone(f, f * 1.5, 0.06, attack=0.003, tau=0.03, amp=0.5)),
+            (0.08, tone(f * 1.1, f * 1.6, 0.05, attack=0.003, tau=0.025, amp=0.45))]
+
+
+def _sizzle(dur: float, seed: int = 221) -> list[tuple[float, list[float]]]:
+    """Oil sizzling in a hot wok: a bright fizz and little popping drops."""
+    rnd = random.Random(seed)
+    fizz = noise(dur, amp=0.6, seed=seed, highpass=0.55,
+                 shape=lambda f: min(1.0, f / 0.02) * (1 - f) ** 0.6 * (0.7 + 0.3 * math.sin(f * 140)))
+    return [(0, fizz)] + [(rnd.uniform(0, dur * 0.85), noise(0.008, tau=0.003, amp=rnd.uniform(0.4, 0.9),
+                                                            seed=seed + k, highpass=0.3)) for k in range(int(dur * 30))]
+
+
+def _clang(base: float = 620, dur: float = 0.7) -> list[float]:
+    """A wok struck by the spatula: low inharmonic metal ringing."""
+    parts = [tone(base * r, base * r, dur, attack=0.001, tau=t, amp=a)
+             for r, a, t in ((1.0, 1.0, 0.25), (1.73, 0.6, 0.18), (2.41, 0.45, 0.12), (3.9, 0.25, 0.07))]
+    return [sum(v) for v in zip(*parts)]
+
+
+def _berimbau(f: float, dur: float = 0.4) -> list[float]:
+    """The berimbau: a twangy steel string whose pitch drops a little, through the gourd's resonance."""
+    string = tone(f * 1.05, f, dur, "saw", attack=0.002, tau=dur / 2.2, amp=0.6)
+    body = tone(f * 1.05, f, dur, attack=0.002, tau=dur / 2, amp=0.5)
+    return _lowpass([a + b for a, b in zip(string, body)], 0.18)
+
+
+def _tch(seed: int = 231) -> list[float]:
+    """The coin pressed on the berimbau's string: a short buzzing click."""
+    return noise(0.04, tau=0.01, amp=0.8, seed=seed, highpass=0.4)
+
+
+def _caxixi(dur: float = 0.2, seed: int = 232) -> list[tuple[float, list[float]]]:
+    """The caxixi shaker: a burst of seeds."""
+    return [(0, noise(dur, amp=0.6, seed=seed, highpass=0.5, shape=lambda f: min(1.0, f / 0.04) * (1 - f) ** 2))]
+
+
+def _jingles(n: int = 3, seed: int = 233) -> list[tuple[float, list[float]]]:
+    """The pandeiro's jingles: small metal clinks."""
+    rnd = random.Random(seed)
+    return [(i * 0.06, _clink(rnd.uniform(4200, 5200), seed + i, 0.6)) for i in range(n)]
+
+
+def _agogo(f: float) -> list[float]:
+    """An agogô bell: a bright metallic tone with an inharmonic overtone."""
+    return [a + b for a, b in zip(tone(f, f, 0.3, attack=0.001, tau=0.09), tone(f * 2.7, f * 2.7, 0.3, attack=0.001,
+                                                                                  tau=0.05, amp=0.4))]
+
+
+def _roll(dur: float, seed: int = 241) -> list[float]:
+    """A bowling ball rolling down the lane: a low rumble."""
+    rumble = noise(dur, amp=1.0, seed=seed, lowpass=(0.05, 0.08), shape=lambda f: min(1.0, f / 0.03) * (0.7 + 0.3 * f))
+    return [a + b for a, b in zip(rumble, tone(55, 70, dur, attack=0.01, amp=0.3))]
+
+
+def _crash(n: int, seed: int = 242) -> list[tuple[float, list[float]]]:
+    """Pins crashing: a cluster of wooden knocks."""
+    rnd = random.Random(seed)
+    return [(rnd.uniform(0, 0.12) if i else 0, _knock(rnd.uniform(1.3, 2.0), rnd.uniform(0.5, 1.0), seed + i))
+            for i in range(n)]
+
+
+def _ratchet(n: int, up: bool, seed: int = 251) -> list[tuple[float, list[float]]]:
+    """A roller blind's ratchet: a run of clicks, quickening as it goes up, slowing as it comes down."""
+    out, t = [], 0.0
+    for i in range(n):
+        f = 2600 + (i * 60 if up else -i * 60)
+        out.append((t, _tick(f)))
+        t += (0.07 - i * 0.004) if up else (0.04 + i * 0.006)
+    return out
+
+
+def _crickets(seed: int = 252) -> list[tuple[float, list[float]]]:
+    """Evening crickets: two short trilled chirps."""
+    return [(t, tone(4300, 4300, 0.09, attack=0.004, amp=0.4)) for t in (0, 0.12, 0.3, 0.42)]
+
+
+def _reverb(samples: list[float], taps=((0.05, 0.35), (0.11, 0.22), (0.19, 0.12))) -> list[float]:
+    """A quiet room: a few soft echoes of the sound."""
+    out = samples + [0.0] * int(taps[-1][0] * RATE)
+    for delay, gain in taps:
+        k = int(delay * RATE)
+        for i, v in enumerate(samples):
+            out[i + k] += v * gain
+    return out
+
+
+def _step(seed: int = 261, amp: float = 1.0) -> list[float]:
+    """A bare footstep on stone."""
+    thump = tone(110, 70, 0.08, attack=0.002, tau=0.025, amp=0.8 * amp)
+    scuff = noise(0.08, tau=0.02, amp=0.5 * amp, seed=seed, lowpass=(0.3, 0.1))
+    return _reverb([a + b for a, b in zip(thump, scuff)])
+
+
+def _breath(dur: float, seed: int = 262, out: bool = True) -> list[float]:
+    """A soft breath: airy noise swelling at once and fading."""
+    return noise(dur, amp=0.7, seed=seed, lowpass=(0.18, 0.1) if out else (0.1, 0.2),
+                 shape=lambda f: min(1.0, f / 0.05) * (1 - f) ** 1.5)
+
+
 def render(skin: str, event: str) -> list[float]:
     kit = _kit(skin)
     return mix(kit.get(event) or kit["click"])  # effects a skin lacks (e.g. "pl") fall back to its click
@@ -344,7 +455,71 @@ def render(skin: str, event: str) -> list[float]:
 
 def _kit(skin: str) -> dict:
     s16 = 60 / 174 / 4  # a sixteenth note at 174 BPM
-    if skin == "kinetic":
+    if skin == "sushi":
+        kit = {
+            "start": [(0, _knock(2.6, 0.6, seed=201)), (0.09, _knock(2.8, 0.6, seed=202)), (0.2, _bell(2637, 0.6, 0.25))],
+            "pause": [(0, _knock(2.4, 0.6, seed=203))],
+            "stop": [(0, _clink(2200, 204)), (0.08, _clink(1900, 205, 0.8))],
+            "click": [(0, _knock(3.0, 0.4, seed=206))],
+            "flip": [(0, _clink(1700, 207)), (0.06, _clink(2100, 208, 0.8)), (0.12, _clink(1850, 209, 0.6))],
+            "alert": [(0, _bell(2637, 0.4, 0.15)), (0.35, _bell(2637, 0.5, 0.2))],
+        }
+    elif skin == "tulips":
+        kit = {
+            "start": [(0, _pluck(523)), (0.08, _pluck(659)), (0.16, _pluck(784))] + [(0.3 + t, s) for t, s in _chirp()],
+            "pause": [(0, _pluck(659))],
+            "stop": [(0, _pluck(784)), (0.08, _pluck(659)), (0.16, _pluck(523))],
+            "click": [(0, _pluck(1047, 0.1))],
+            "flip": [(0, _bell(1568, 0.7, 0.3))] + [(0.25 + t, s) for t, s in _chirp(212)],
+            "alert": _chirp(213) + [(0.3 + t, s) for t, s in _chirp(214)] + [(0.6 + t, s) for t, s in _chirp(215)],
+        }
+    elif skin == "tofu":
+        kit = {
+            "start": _sizzle(0.7),
+            "pause": _sizzle(0.25, seed=222),
+            "stop": [(0, _clang())],
+            "click": [(0, noise(0.05, tau=0.012, amp=0.8, seed=223, highpass=0.3))],         # the spatula scrapes
+            "flip": [(0, _swoosh(0.25, rising=True, seed=224))] + [(0.2 + t, v) for t, v in _sizzle(0.6, seed=225)]
+                    + [(0, noise(0.03, tau=0.008, amp=0.6, seed=226, highpass=0.3))],
+            "alert": [(0, _clang()), (0.3, _clang(700, 0.6))],
+        }
+    elif skin == "capoeira":
+        kit = {
+            "start": [(0, _tch()), (0.14, _tch(234)), (0.28, _berimbau(196)), (0.52, _berimbau(220))],
+            "pause": _caxixi(),
+            "stop": [(0, _berimbau(147, 0.6))],
+            "click": [(0, _tch(235))],
+            "flip": _jingles() + [(0.2, _berimbau(220)), (0.45, _berimbau(247))],
+            "alert": [(0, _agogo(880)), (0.15, _agogo(660)), (0.4, _agogo(880)), (0.55, _agogo(660))],
+        }
+    elif skin == "bowling":
+        kit = {
+            "start": [(0, _roll(0.5))] + [(0.45 + t, v) for t, v in _crash(4, seed=243)],
+            "pause": [(0, _knock(0.7, 1.0, seed=244))],                                        # the ball comes back
+            "stop": _crash(6, seed=245),
+            "click": [(0, _knock(1.9, 0.5, seed=246))],
+            "flip": [(0, _roll(0.3, seed=247))] + [(0.25 + t, v) for t, v in _crash(10, seed=248)],   # strike
+            "alert": _crash(5, seed=249) + [(0.35, _bell(1568, 0.5, 0.2))],
+        }
+    elif skin == "window":
+        kit = {
+            "start": _ratchet(10, up=True),
+            "pause": _ratchet(7, up=False, seed=253),
+            "stop": [(0, _knock(0.6, 1.0, seed=254))] + [(0.05 + t, v) for t, v in _ratchet(4, up=False, seed=255)],
+            "click": [(0, _tick(2600))],
+            "flip": _crickets() + [(0.15, _keys((220.0, 277.2, 329.6), 0.7))],
+            "alert": [(0, _ping(1320, 0.4, 0.15)), (0.3, _ping(990, 0.5, 0.2))],
+        }
+    elif skin == "corporeal":
+        kit = {
+            "start": [(0, _step()), (0.32, _step(263, 0.9))],
+            "pause": [(0, _breath(0.45, out=False))],
+            "stop": [(0, _step(264)), (0.3, _step(265, 0.6)), (0.58, _step(266, 0.35))],
+            "click": [(0, _reverb(_knock(1.4, 0.4, seed=267)))],
+            "flip": [(0, _breath(0.6, seed=268))],
+            "alert": [(0, _reverb(_knock(1.6, 0.6, seed=269))), (0.3, _reverb(_knock(1.6, 0.6, seed=270)))],
+        }
+    elif skin == "kinetic":
         kit = {
             "start": [(0, _supersaw((440.0, 554.4, 659.3), 0.55)), (0, tone(110, 880, 0.4, "saw", tau=0.2, amp=0.2)),
                       (0.05, _swoosh(0.4, rising=True, seed=101))],                    # stab over the turbo

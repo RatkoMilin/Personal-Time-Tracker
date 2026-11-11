@@ -19,7 +19,7 @@ from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .hourglass import Hourglass, rounds_done
 from .vinyl import Turntable
-from . import y2k
+from . import scenes, y2k
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -162,7 +162,7 @@ class Player(tk.Tk):
         panel.pack(fill="x")
         lcd = panel.inner
         self.clock = self.dial = self.marquee = self.hourglass = self.turntable = None
-        self.speedo = self.ring = self.towers = self.pads = None
+        self.speedo = self.ring = self.towers = self.pads = self.scene = None
         if T.display == "analog":
             self.dial = skin.AnalogDial(lcd)
             self.dial.pack(side="left")
@@ -196,6 +196,8 @@ class Player(tk.Tk):
                 gadget = self.towers = y2k.Towers(lcd, on_level=self._sound("flip"))
             elif T.clock_deco == "pads":  # Atmos: a pad per 5 minutes, leaves for every full phrase
                 gadget = self.pads = y2k.Pads(lcd, on_phrase=self._sound("flip"))
+            elif T.clock_deco in scenes.SCENES:  # sushi belt, tulip, wok, roda, pins, blind, figure
+                gadget = self.scene = scenes.SCENES[T.clock_deco](lcd, on_event=self._sound("flip"))
             if gadget is not None:
                 gadget.pack(side="left", padx=(0, skin.px(8)))
             self.clock = skin.SevenSegment(lcd)
@@ -629,6 +631,18 @@ class Player(tk.Tk):
             self.pl_panel.set_moving(state == self.PLAYING)
         if self.speedo is not None:
             self.speedo.set(secs if state != self.STOPPED else 0, state)
+        if self.scene is not None:
+            self.scene.set(secs if state != self.STOPPED else 0, state)
+        if T.title_style in ("tulips", "tofu", "frames"):  # a tulip / a plate / a strike for every full hour
+            n = scenes.hours(secs) if state != self.STOPPED else 0
+            self.titlebar.set_pieces([str(i) for i in range(min(n, 12))] if T.title_style == "tulips"
+                                     else ["x"] * min(n, 10))
+        if T.pl_pattern == "blinds":  # Prozor: the sunset's light; dim while the blind is down
+            light = scenes.light_color(secs if state != self.STOPPED else 0)
+            if state != self.PLAYING:
+                light = skin.blend(light, T.lcd_bg, 0.7)
+            self.titlebar.set_pieces([light])
+            self.pl_panel.set_tint(light)
         if self.ring is not None:
             self.ring.set(secs if state != self.STOPPED else 0, state == self.PLAYING)
         if self.pads is not None:

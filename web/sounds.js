@@ -6,7 +6,9 @@
    lofi: vinyl crackle and needle drops, a warm electric-piano chord, a tape stop,
    kinetic: a trance stab over a turbo, brakes, a pass-by per lap, blades: glassy bloops and an achievement chime,
    towers: a deep boot swoosh with crystal shimmer, atmos: a jungle break at 174 BPM and a reese bass,
-   graffiti: the spray can's rattle and hiss, a record scratch on PL. */
+   graffiti: the spray can's rattle and hiss, a record scratch on PL, sushi: chopsticks, a bell, plates,
+   tulips: plucked notes and birdsong, tofu: oil sizzling in the wok, capoeira: berimbau, caxixi, pandeiro, agogô,
+   bowling: the ball and the pins, window: a roller blind and crickets, corporeal: footsteps and a breath in a gallery. */
 (function () {
   "use strict";
   const RATE = 22050;
@@ -201,7 +203,95 @@
   };
   const S16 = 60 / 174 / 4;  // a sixteenth note at 174 BPM
 
+  const seq = (parts, at) => parts.map(([t, v]) => [t + at, v]);
+  const chirp = (seed = 211) => { const f = 2800 + mulberry32(seed)() * 600;
+    return [[0, tone(f, f * 1.5, 0.06, "sine", 0.003, 0.03, 0.5)], [0.08, tone(f * 1.1, f * 1.6, 0.05, "sine", 0.003, 0.025, 0.45)]]; };
+  const sizzle = (dur, seed = 221) => {
+    const rnd = mulberry32(seed), out = [[0, noise(dur, { amp: 0.6, seed, highpass: 0.55,
+      shape: f => Math.min(1, f / 0.02) * Math.pow(1 - f, 0.6) * (0.7 + 0.3 * Math.sin(f * 140)) })]];
+    for (let k = 0; k < Math.floor(dur * 30); k++) out.push([rnd() * dur * 0.85, noise(0.008, { tau: 0.003, amp: 0.4 + rnd() * 0.5, seed: seed + k, highpass: 0.3 })]);
+    return out;
+  };
+  const clang = (base = 620, dur = 0.7) => add(...[[1, 1, 0.25], [1.73, 0.6, 0.18], [2.41, 0.45, 0.12], [3.9, 0.25, 0.07]]
+    .map(([r, a, t]) => tone(base * r, base * r, dur, "sine", 0.001, t, a)));
+  const berimbau = (f, dur = 0.4) => lowpass(add(tone(f * 1.05, f, dur, "saw", 0.002, dur / 2.2, 0.6), tone(f * 1.05, f, dur, "sine", 0.002, dur / 2, 0.5)), 0.18);
+  const tch = (seed = 231) => noise(0.04, { tau: 0.01, amp: 0.8, seed, highpass: 0.4 });
+  const caxixi = (dur = 0.2, seed = 232) => [[0, noise(dur, { amp: 0.6, seed, highpass: 0.5, shape: f => Math.min(1, f / 0.04) * Math.pow(1 - f, 2) })]];
+  const jingles = (n = 3, seed = 233) => { const rnd = mulberry32(seed); return Array.from({ length: n }, (_, i) => [i * 0.06, clink(4200 + rnd() * 1000, seed + i, 0.6)]); };
+  const agogo = f => add(tone(f, f, 0.3, "sine", 0.001, 0.09), tone(f * 2.7, f * 2.7, 0.3, "sine", 0.001, 0.05, 0.4));
+  const roll = (dur, seed = 241) => add(noise(dur, { amp: 1, seed, lowpass: [0.05, 0.08], shape: f => Math.min(1, f / 0.03) * (0.7 + 0.3 * f) }),
+                                         tone(55, 70, dur, "sine", 0.01, null, 0.3));
+  const crash = (n, seed = 242) => { const rnd = mulberry32(seed); return Array.from({ length: n }, (_, i) => [i ? rnd() * 0.12 : 0, knock(1.3 + rnd() * 0.7, 0.5 + rnd() * 0.5, seed + i)]); };
+  const ratchet = (n, up) => { const out = []; let t = 0;
+    for (let i = 0; i < n; i++) { out.push([t, tick(2600 + (up ? i * 60 : -i * 60))]); t += up ? 0.07 - i * 0.004 : 0.04 + i * 0.006; }
+    return out; };
+  const crickets = () => [0, 0.12, 0.3, 0.42].map(t => [t, tone(4300, 4300, 0.09, "sine", 0.004, null, 0.4)]);
+  const reverb = samples => {
+    const taps = [[0.05, 0.35], [0.11, 0.22], [0.19, 0.12]], out = new Float32Array(samples.length + Math.floor(0.19 * RATE));
+    out.set(samples);
+    for (const [d, g] of taps) { const k = Math.floor(d * RATE); for (let i = 0; i < samples.length; i++) out[i + k] += samples[i] * g; }
+    return out;
+  };
+  const step = (seed = 261, amp = 1) => reverb(add(tone(110, 70, 0.08, "sine", 0.002, 0.025, 0.8 * amp), noise(0.08, { tau: 0.02, amp: 0.5 * amp, seed, lowpass: [0.3, 0.1] })));
+  const breath = (dur, seed = 262, out = true) => noise(dur, { amp: 0.7, seed, lowpass: out ? [0.18, 0.1] : [0.1, 0.2], shape: f => Math.min(1, f / 0.05) * Math.pow(1 - f, 1.5) });
+
   const KITS = {
+    sushi: {
+      start: () => [[0, knock(2.6, 0.6, 201)], [0.09, knock(2.8, 0.6, 202)], [0.2, bell(2637, 0.6, 0.25)]],
+      pause: () => [[0, knock(2.4, 0.6, 203)]],
+      stop: () => [[0, clink(2200, 204)], [0.08, clink(1900, 205, 0.8)]],
+      click: () => [[0, knock(3.0, 0.4, 206)]],
+      flip: () => [[0, clink(1700, 207)], [0.06, clink(2100, 208, 0.8)], [0.12, clink(1850, 209, 0.6)]],
+      alert: () => [[0, bell(2637, 0.4, 0.15)], [0.35, bell(2637, 0.5, 0.2)]],
+    },
+    tulips: {
+      start: () => [[0, pluck(523)], [0.08, pluck(659)], [0.16, pluck(784)], ...seq(chirp(), 0.3)],
+      pause: () => [[0, pluck(659)]],
+      stop: () => [[0, pluck(784)], [0.08, pluck(659)], [0.16, pluck(523)]],
+      click: () => [[0, pluck(1047, 0.1)]],
+      flip: () => [[0, bell(1568, 0.7, 0.3)], ...seq(chirp(212), 0.25)],
+      alert: () => [...chirp(213), ...seq(chirp(214), 0.3), ...seq(chirp(215), 0.6)],
+    },
+    tofu: {
+      start: () => sizzle(0.7),
+      pause: () => sizzle(0.25, 222),
+      stop: () => [[0, clang()]],
+      click: () => [[0, noise(0.05, { tau: 0.012, amp: 0.8, seed: 223, highpass: 0.3 })]],
+      flip: () => [[0, swoosh(0.25, true, 224)], ...seq(sizzle(0.6, 225), 0.2), [0, noise(0.03, { tau: 0.008, amp: 0.6, seed: 226, highpass: 0.3 })]],
+      alert: () => [[0, clang()], [0.3, clang(700, 0.6)]],
+    },
+    capoeira: {
+      start: () => [[0, tch()], [0.14, tch(234)], [0.28, berimbau(196)], [0.52, berimbau(220)]],
+      pause: () => caxixi(),
+      stop: () => [[0, berimbau(147, 0.6)]],
+      click: () => [[0, tch(235)]],
+      flip: () => [...jingles(), [0.2, berimbau(220)], [0.45, berimbau(247)]],
+      alert: () => [[0, agogo(880)], [0.15, agogo(660)], [0.4, agogo(880)], [0.55, agogo(660)]],
+    },
+    bowling: {
+      start: () => [[0, roll(0.5)], ...seq(crash(4, 243), 0.45)],
+      pause: () => [[0, knock(0.7, 1, 244)]],
+      stop: () => crash(6, 245),
+      click: () => [[0, knock(1.9, 0.5, 246)]],
+      flip: () => [[0, roll(0.3, 247)], ...seq(crash(10, 248), 0.25)],
+      alert: () => [...crash(5, 249), [0.35, bell(1568, 0.5, 0.2)]],
+    },
+    window: {
+      start: () => ratchet(10, true),
+      pause: () => ratchet(7, false),
+      stop: () => [[0, knock(0.6, 1, 254)], ...seq(ratchet(4, false), 0.05)],
+      click: () => [[0, tick(2600)]],
+      flip: () => [...crickets(), [0.15, keys([220, 277.2, 329.6], 0.7)]],
+      alert: () => [[0, ping(1320, 0.4, 0.15)], [0.3, ping(990, 0.5, 0.2)]],
+    },
+    corporeal: {
+      start: () => [[0, step()], [0.32, step(263, 0.9)]],
+      pause: () => [[0, breath(0.45, 262, false)]],
+      stop: () => [[0, step(264)], [0.3, step(265, 0.6)], [0.58, step(266, 0.35)]],
+      click: () => [[0, reverb(knock(1.4, 0.4, 267))]],
+      flip: () => [[0, breath(0.6, 268)]],
+      alert: () => [[0, reverb(knock(1.6, 0.6, 269))], [0.3, reverb(knock(1.6, 0.6, 270))]],
+    },
     kinetic: {
       start: () => [[0, supersaw([440, 554.4, 659.3], 0.55)], [0, tone(110, 880, 0.4, "saw", 0.004, 0.2, 0.2)], [0.05, swoosh(0.4, true, 101)]],
       pause: () => [[0, noise(0.32, { amp: 0.9, seed: 102, lowpass: [0.5, 0.15], highpass: 0.2, shape: f => (1 - f) * (0.7 + 0.3 * Math.sin(f * 90)) })],

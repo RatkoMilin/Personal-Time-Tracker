@@ -152,7 +152,8 @@ def test_every_skin_renders(page):
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
     for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi",
-                 "kinetic", "blades", "towers", "atmos", "graffiti", "eink"):
+                 "kinetic", "blades", "towers", "atmos", "graffiti", "sushi", "tulips", "tofu", "capoeira", "bowling",
+                 "window", "corporeal", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
         page.click("#menuClose")
@@ -325,6 +326,43 @@ def test_towers_one_per_task_and_growth_around_the_list(page):
     assert page.evaluate("document.documentElement.scrollWidth") <= 390
 
 
+def start_task(page, skin, minutes):
+    pick_skin(page, skin)
+    page.fill("#task", skin)
+    page.click("#playBtn")
+    page.evaluate(f"window.PTT.db.entries.at(-1).start = Date.now() - {minutes} * 60000")
+
+
+def test_scene_skins_follow_the_task(page):
+    start_task(page, "sushi", 31)  # a plate every 10 minutes
+    page.wait_for_function("document.querySelector('#scene').textContent.includes('×3')")
+    assert page.locator("#scene.running .belt").count() == 1
+    page.click("#stopBtn")
+    start_task(page, "tulips", 125)  # two full hours: two tulips beside the title
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece.tu').length === 2")
+    page.click("#stopBtn")
+    start_task(page, "tofu", 21)  # a tofu cube every 5 minutes
+    page.wait_for_function("document.querySelectorAll('#scene .food rect[stroke]').length >= 4")
+    page.click("#stopBtn")
+    start_task(page, "capoeira", 31)  # the green cord after 30 minutes, swaying in the ginga
+    page.wait_for_selector("#scene path[stroke='#1f9d4a']")
+    assert page.locator("#scene .ginga").count() == 2
+    page.click("#stopBtn")
+    start_task(page, "bowling", 61)  # a strike: the first frame gets an X
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece.frame.x').length === 1")
+    assert page.locator(".titlebar .piece.frame").count() == 10
+    page.click("#stopBtn")
+    start_task(page, "window", 60)  # pink light at dusk, dimmed when the blind is let down
+    page.wait_for_function("getComputedStyle(document.body).getPropertyValue('--light').trim() !== ''")
+    lit = page.evaluate("getComputedStyle(document.body).getPropertyValue('--light').trim()")
+    page.click("#pauseBtn")
+    page.wait_for_function(f"getComputedStyle(document.body).getPropertyValue('--light').trim() !== '{lit}'")
+    page.click("#stopBtn")
+    start_task(page, "corporeal", 61)  # standing after an hour
+    page.wait_for_selector("#scene circle")
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+
+
 def test_csv_export_and_backup_restore(page, tmp_path):
     page.fill("#task", "rad; sa tačkom-zarezom")
     page.click("#playBtn")
@@ -351,22 +389,23 @@ def test_sounds_render_for_every_skin(page):
     result = page.evaluate("""() => {
         const out = {};
         for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'hourglass', 'lofi',
-                           'kinetic', 'blades', 'towers', 'atmos', 'graffiti', 'eink'])
+                           'kinetic', 'blades', 'towers', 'atmos', 'graffiti', 'sushi', 'tulips', 'tofu',
+                           'capoeira', 'bowling', 'window', 'corporeal', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
             }
         return out;
     }""")
-    assert len(result) == 90
+    assert len(result) == 125
     for key, (seconds, peak) in result.items():
         assert 0 < seconds < 1 and peak <= 0.81, key
 
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v9')")
-    cached = page.evaluate("caches.open('ptt-v9').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v10')")
+    cached = page.evaluate("caches.open('ptt-v10').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

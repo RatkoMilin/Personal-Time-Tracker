@@ -697,3 +697,32 @@ def test_2000s_skins_gadgets(app):
     assert app.pl_panel.growth == y2k.tags_for(sum(g[2] for g in reports.task_groups(app.db)))
     assert app.pl_panel.growth >= 2
     app.set_skin("matrix")
+
+
+def test_scene_skins(app):
+    from timetracker.ui import scenes
+
+    assert scenes.plates(29 * 60) == 2 and scenes.cubes(61 * 60) == 0 and scenes.cubes(26 * 60) == 5
+    assert scenes.grade(61 * 60) == 2 and scenes.pins_down(37 * 60) == 6 and scenes.dusk_phase(60 * 60) == 2
+    assert scenes.light_color(0) == "#ffd27a" and scenes.rise(30 * 60) == 0.5
+    assert scenes.pose(0)[0] == scenes.POSES[0][0] and scenes.pose(1)[0] == scenes.POSES[-1][0]
+    if not app.settings["show_playlist"]:
+        app.toggle_playlist()
+    for key in ("sushi", "tulips", "tofu", "capoeira", "bowling", "window", "corporeal"):
+        app.set_skin(key)
+        events = []
+        app.scene.on_event = lambda: events.append(1)
+        app.task_var.set(key)
+        app.play()
+        _run_for(app, 59.9)
+        _run_for(app, 60.1)  # every scene reaches a milestone at the full hour
+        assert events, key
+        if key in ("tulips", "bowling"):
+            assert len(app.titlebar.pieces) == 1, key
+        if key == "window":
+            assert app.pl_panel.tint == scenes.light_color(app.scene.seconds)
+            app.pause()
+            app._update_display()
+            assert app.pl_panel.tint != scenes.light_color(app.scene.seconds)  # the blind is down
+        app.stop()
+    app.set_skin("matrix")
