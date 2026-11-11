@@ -7,12 +7,12 @@
                  ["setsuna", "Setsuna"], ["mondrian", "Mondrian"], ["egg", "Jaje"], ["dandelion", "Maslačko"],
                  ["coffee", "My Passion"], ["hourglass", "Peščani sat"], ["lofi", "Lofi"], ["kinetic", "Kinetik"],
                  ["blades", "Blades"], ["towers", "Kristalne kule"], ["atmos", "Atmos"], ["graffiti", "Grafiti"],
-                 ["sushi", "Suši"], ["tulips", "Lale"], ["tofu", "Lazi tofu"], ["capoeira", "Kapoera"],
+                 ["sushi", "Suši"], ["tulips", "Lale"], ["tofu", "Lazi tofu"], ["jumprope", "Vijača"],
                  ["bowling", "Kuglanje"], ["window", "Prozor"], ["corporeal", "Korporealnost"], ["eink", "E-ink"]];
   const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
                         mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
                         kinetic: "#0d0b1e", blades: "#e9ecef", towers: "#05070f", atmos: "#0f1f1c", graffiti: "#ffd23f",
-                        sushi: "#f3ead9", tulips: "#fff6f2", tofu: "#f7efe4", capoeira: "#0e5a32", bowling: "#1a1d3a",
+                        sushi: "#f3ead9", tulips: "#fff6f2", tofu: "#3a0d0a", jumprope: "#0e5a32", bowling: "#1a1d3a",
                         window: "#241c2e", corporeal: "#f2f1ee",
                         eink: "#ffffff" };
   // The Android (Mudita Kompakt) build opens index.html?device=eink: start in the e-ink skin, quietly.
@@ -770,9 +770,9 @@
   }
   const duskPhase = ms => { const f = (Math.max(0, ms) % DUSK) / DUSK; return Math.floor(Math.max(0, ms) / DUSK) * 5 + DUSK_STOPS.slice(1, 5).filter(([a]) => f >= a).length; };
   // When each scene's milestone is reached while the timer runs, it plays the skin's "flip" sound.
-  const MILESTONE = { sushi: ms => Math.floor(ms / 600000), tulips: hoursOf, tofu: hoursOf, capoeira: ms => Math.floor(ms / 1800000),
+  const MILESTONE = { sushi: ms => Math.floor(ms / 600000), tulips: hoursOf, tofu: () => 0, jumprope: () => 0,
                       bowling: hoursOf, window: duskPhase, corporeal: hoursOf };
-  const VIEW = { sushi: 62, tulips: 74, tofu: 58, capoeira: 60, bowling: 54, window: 44, corporeal: 36 };
+  const VIEW = { sushi: 62, tulips: 74, tofu: 58, jumprope: 64, bowling: 54, window: 44, corporeal: 36 };
   let sceneKey = "", sceneMark = null;
 
   const nigiri = (x, y, w, top = "#f08a5d") => {
@@ -791,7 +791,7 @@
     return `<g transform="translate(${f1(x)} ${f1(y)}) rotate(${angle})"><path d="M0,${f1(-length * 0.18)} Q${f1(length * 0.5)},${f1(-length * 0.2)} ${f1(length)},0 Q${f1(length * 0.5)},${f1(length * 0.16)} 0,${f1(length * 0.18)}Z" fill="${color}" stroke="${mixColor(color, "#000000", 0.35)}" stroke-width=".5"/>` +
       `<line x1="0" y1="0" x2="${f1(-length * 0.15)}" y2="0" stroke="#4f7a2e" stroke-width="${f1(length * 0.15)}" stroke-linecap="round"/></g>`;
   }
-  const CORDS = [["#e8dcc0"], ["#1f9d4a"], ["#1f9d4a", "#ffd400"], ["#ffd400"], ["#ffd400", "#1f4fbf"], ["#1f4fbf"], ["#1f9d4a", "#1f4fbf"], ["#ffd400", "#ffffff"], ["#1f4fbf", "#ffffff"]];
+  const CORDS = [["#e8dcc0"], ["#1f9d4a"], ["#1f9d4a", "#ffd400"], ["#ffd400"], ["#ffd400", "#1f4fbf"], ["#1f4fbf"], ["#1f4fbf", "#ffffff"], ["#ffd400", "#ffffff"]];
   const PIN_ORDER = [9, 7, 8, 4, 5, 6, 0, 1, 2, 3], PIN_SPOTS = [[-1.5, 0], [-0.5, 0], [0.5, 0], [1.5, 0], [-1, 1], [0, 1], [1, 1], [-0.5, 2], [0.5, 2], [0, 3]];
   function pinSvg(x, base, h, down) {
     const w = h * 0.36;
@@ -820,7 +820,7 @@
     const sk = skin(), svg = $("scene"), mark = MILESTONE[sk](ms);
     if (sceneMark !== null && st === "playing" && mark > sceneMark) {
       sound("flip");
-      if (sk === "tofu" || sk === "bowling") { svg.classList.remove("event"); void svg.getBoundingClientRect(); svg.classList.add("event"); }
+      if (sk === "bowling") { svg.classList.remove("event"); void svg.getBoundingClientRect(); svg.classList.add("event"); }
     }
     sceneMark = mark;
     const playing = st === "playing";
@@ -831,7 +831,15 @@
       if (document.body.style.getPropertyValue("--light") !== light) document.body.style.setProperty("--light", light);
       return;  // the list is the window: no scene next to the clock
     }
-    const w = VIEW[sk], key = `${sk}|${st}|${Math.floor(ms / 60000)}`;
+    if (sk === "jumprope") { renderRope(); return; }
+    let extra = "";
+    if (sk === "corporeal") {  // he sinks back on pause and tires after three hours without a break
+      const now = Date.now(), r = running();
+      let pausedFor = 0;
+      if (st === "paused") { const last = entriesBetween(now - 86400000, now + 1).pop(); pausedFor = last && last.end ? now - last.end : 0; }
+      extra = f1(posture(ms, st, r ? now - r.start : 0, pausedFor) * 100);
+    }
+    const w = VIEW[sk], key = `${sk}|${st}|${Math.floor(ms / 60000)}|${extra}`;
     if (key === sceneKey) return;
     sceneKey = key;
     svg.setAttribute("viewBox", `0 0 ${w} 44`);
@@ -858,34 +866,18 @@
             : tulipSvg(x, base, size * 0.8, "#b5d3a2", 0, size > 12);
         }
       });
-    } else if (sk === "tofu") {  // a cube every 5 minutes, browning; tossed and served every hour
-      const n = Math.floor((Math.max(0, ms) % HOUR) / 300000), inH = Math.max(0, ms) % HOUR, rnd = mulberry(4);
-      out += `<g class="steam">` + [0, 1, 2].map(k => `<path d="M${15 + k * 11},18 q2,-3 0,-6 q-2,-3 0,-6" fill="none" stroke="#fff" stroke-opacity=".35"/>`).join("") + `</g>`;
-      out += `<line x1="46" y1="22" x2="56" y2="17" stroke="#5a3b26" stroke-width="3.5" stroke-linecap="round"/>`;
-      out += `<path d="M2,20 A22,18 0 0 0 46,20 Z" fill="#2a2a2e" stroke="#111114"/><g class="food">`;
-      for (let k = 0; k < n; k++) {
-        const row = Math.floor(k / 4), col = k % 4, x = 6 + col * 6.3 + row * 2.7 + (rnd() - 0.5) * 2, y = 21 - row * 4.4;
-        const c = mixColor("#f3e3c3", "#c98a3a", Math.min(1, (inH - k * 300000) / 900000));
-        out += `<rect x="${f1(x)}" y="${f1(y - 5.5)}" width="5.5" height="5.5" fill="${c}" stroke="${mixColor(c, "#000000", 0.25)}" stroke-width=".5"/>`;
-      }
-      if (n >= 2) out += chiliSvg(9, 16, 9, -20) + chiliSvg(32, 15, 8, 200) + `<rect x="20" y="17" width="4" height="2" fill="#5fae3e"/><rect x="36" y="17" width="4" height="2" fill="#5fae3e"/>`;
+    } else if (sk === "tofu") {  // wok hei: PLAY (or a tap) tosses the wok, the food flies and turns
+      out += `<g class="flame">` + [0, 1, 2, 3, 4, 5, 6].map(k => { const x = 9 + k * 5.4, t = 6 + (k % 3) * 1.5;
+        return `<path d="M${f1(x - 2)},41 Q${f1(x)},${f1(41 - t * 1.3)} ${f1(x)},${f1(41 - t)} Q${f1(x)},${f1(41 - t * 1.3)} ${f1(x + 2)},41Z" class="tongue"/>`; }).join("") + `</g>`;
+      out += `<rect x="8" y="41" width="34" height="2" fill="#3a3d44"/><g class="wok">`;
+      out += `<line x1="45" y1="22" x2="57" y2="17" stroke="#5a3b26" stroke-width="3.5" stroke-linecap="round"/>`;
+      out += `<path d="M4,22 A21,13 0 0 0 46,22 Z" fill="#232428" stroke="#0c0c0e"/><line x1="4" y1="22" x2="46" y2="22" stroke="#6a6e78" stroke-width="1.5"/>`;
+      const food = [[10, 26, "t", 16, 200], [17, 27, "t", 20, -160], [24, 26, "t", 14, 240], [31, 25, "t", 18, -220], [14, 22, "t", 22, 140],
+                    [26, 21, "t", 25, -120], [20, 23, "c", 20, 180], [33, 21, "c", 16, -240], [9, 21, "s", 24, 300], [29, 24, "s", 26, -320]];
+      out += food.map(([x, y, kind, hgt, spin]) => `<g class="f" style="--h:-${hgt}px;--s:${spin}deg">` + (kind === "t"
+        ? `<rect x="${x - 2.8}" y="${y - 2.8}" width="5.6" height="5.6" fill="#e0a84a" stroke="#8a5a22" stroke-width=".5"/>`
+        : kind === "c" ? chiliSvg(x - 4, y, 9, -15, "#c8231a") : `<circle cx="${x}" cy="${y}" r="1.8" fill="none" stroke="#6fbf4a" stroke-width="1.1"/>`) + `</g>`).join("");
       out += `</g>`;
-    } else if (sk === "capoeira") {  // the ginga while the timer runs, a new cord every 30 minutes
-      const limb = (pts, color, width) => `<polyline points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}" fill="none" stroke="#2a1a10" stroke-width="${width + 1.5}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${pts.map(([x, y]) => `${x},${y}`).join(" ")}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
-      const man = (side, moving) => {
-        const cx = 15, floor = 41, hip = [cx, floor - 17], neck = [cx + side * 2, floor - 29];
-        const legs = moving ? [[hip, [cx - side * 6, floor - 8], [cx - side * 11, floor]], [hip, [cx + side * 5, floor - 9], [cx + side * 6, floor]]]
-          : [[hip, [cx - 3, floor - 8], [cx - 4, floor]], [hip, [cx + 3, floor - 8], [cx + 4, floor]]];
-        const arms = moving ? [[neck, [cx + side * 7, neck[1] + 1], [cx + side * 6, neck[1] - 5]], [neck, [cx - side * 6, neck[1] + 6], [cx - side * 9, neck[1] + 10]]]
-          : [[neck, [cx - 4, neck[1] + 7], [cx - 4, neck[1] + 13]], [neck, [cx + 4, neck[1] + 7], [cx + 4, neck[1] + 13]]];
-        return legs.map(l => limb(l, "#f5f5f0", 3)).join("") + limb([neck, hip], "#8a5a3c", 3.5) + arms.map(a => limb(a, "#8a5a3c", 2.2)).join("") +
-          `<circle cx="${neck[0] + side}" cy="${neck[1] - 4}" r="3.2" fill="#8a5a3c" stroke="#2a1a10" stroke-width=".7"/>`;
-      };
-      out += playing ? `<g class="ginga a">${man(1, true)}</g><g class="ginga b">${man(-1, true)}</g>` : man(1, false);
-      const [c1, c2] = CORDS[Math.min(Math.floor((st === "stopped" ? 0 : ms) / 1800000), CORDS.length - 1)];
-      const kx = 44, ky = 18.5, rope = `M${kx},${ky} C${kx - 14},${ky + 8} ${kx - 16},${ky - 12} ${kx},${ky - 11} C${kx + 16},${ky - 12} ${kx + 14},${ky + 8} ${kx},${ky} M${kx},${ky} Q${kx - 4},${ky + 10} ${kx - 6},${ky + 18} M${kx},${ky} Q${kx + 3},${ky + 11} ${kx + 3},${ky + 19}`;
-      out += `<path d="${rope}" fill="none" stroke="#2a1a10" stroke-width="4.5" stroke-linecap="round"/><path d="${rope}" fill="none" stroke="${c1}" stroke-width="3" stroke-linecap="round"/>` +
-        (c2 ? `<path d="${rope}" fill="none" stroke="${c2}" stroke-width="3" stroke-dasharray="3 3"/>` : "") + `<circle cx="${kx}" cy="${ky}" r="2.5" fill="${c1}" stroke="#2a1a10" stroke-width=".7"/>`;
     } else if (sk === "bowling") {  // a pin falls every 6 minutes, a strike every full hour
       out += `<polygon points="16,2 38,2 52,43 2,43" fill="#e3b878"/>` + [1, 2, 3, 4, 5].map(k => `<line x1="${f1(16 + 22 * k / 6)}" y1="2" x2="${f1(2 + 50 * k / 6)}" y2="43" stroke="#cf9e5c" stroke-width=".5"/>`).join("");
       const down = new Set(PIN_ORDER.slice(0, Math.floor((Math.max(0, ms) % HOUR) / 360000)));
@@ -893,18 +885,270 @@
       out += `<g class="ball"><circle cx="27" cy="37" r="5" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="25.3" cy="34.8" rx="1.8" ry="1.2" fill="#6a4a9a"/></g>`;
     } else if (sk === "corporeal") {  // crouched against the white wall, standing after an hour of the task
       out += `<rect x="0" y="0" width="4" height="44" fill="#000" fill-opacity=".05"/><line x1="0" y1="42" x2="36" y2="42" stroke="#000" stroke-opacity=".18"/>` +
-        figureSvg(st === "stopped" ? 0 : Math.min(1, ms / HOUR));
+        figureSvg(Number(extra) / 100);
     }
     svg.innerHTML = out;
   }
 
-  function renderFrames(strikes) {  // Kuglanje: the score sheet beside the title, an X for every strike
-    const key = `frames${strikes}`;
+  // Korporealnost: how far the figure stands; he rises with the task, sinks back over 15 minutes of pause,
+  // drops when it stops, and bends again after three hours without a break (as on the laptop).
+  function posture(ms, st, run, pausedFor) {
+    if (st === "stopped") return 0;
+    let t = Math.min(1, ms / HOUR);
+    if (st === "paused") return t * Math.max(0, 1 - pausedFor / (15 * 60000));
+    if (run > 3 * HOUR) t *= 1 - 0.85 * Math.min(1, (run - 3 * HOUR) / HOUR);
+    return t;
+  }
+
+  function tossWok() {  // Lazi tofu
+    const svg = $("scene");
+    svg.classList.remove("toss");
+    void svg.getBoundingClientRect();
+    svg.classList.add("toss");
+    setTimeout(() => svg.classList.remove("toss"), 900);
+  }
+
+  // ------------------------------------------------------------------ Vijača: the jump rope clicker
+  // Every tap on the capoeirista is a jump worth today's minutes of work (at least 1 point; the phone does
+  // not measure productivity, so it counts them all). Points lift the skin through levels of color.
+  const ROPE_LEVELS = [100, 300, 1000, 5000, 10000, 50000, 100000];
+  const ROPE_NAMES = ["Početnik", "More", "Zalazak", "Karneval", "Kopakabana", "Mestre", "Noć u Riju", "Zlato"];
+  const ropeLevel = pts => ROPE_LEVELS.filter(t => pts >= t).length;
+  const ropeNext = pts => ROPE_LEVELS.find(t => pts < t) || null;
+  const ropeValue = () => Math.max(1, Math.round(totalBetween(...periodBounds("today"), Date.now()) / 60000));
+  let jumpFrame = 0, jumpGain = 0, ropeKey = "";
+  function jumperSvg(u) {
+    const pts = db.settings.ropePoints || 0, level = ropeLevel(pts), floor = 41, cx = 20;
+    const phi = Math.min(2 * Math.PI, 2 * Math.PI * u / 0.85), hop = u > 0.65 && u < 1.05 ? 6 * Math.sin(Math.PI * (u - 0.65) / 0.4) : 0;
+    const feet = floor - hop, hip = [cx, feet - 13], neck = [cx, feet - 25], hands = [[cx - 9, feet - 14], [cx + 9, feet - 14]];
+    const reach = Math.cos(phi) >= 0 ? floor + 2 - hands[0][1] : hands[0][1] - neck[1] + 11;
+    const ropeY = u ? hands[0][1] + reach * Math.cos(phi) : floor + 1, front = u > 0 && phi > Math.PI && phi < 2 * Math.PI;
+    const P = list => list.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" ");
+    const limb = (list, color, w) => `<polyline points="${P(list)}" fill="none" stroke="#2a1a10" stroke-width="${w + 1.5}" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${P(list)}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const rope = () => { const r = []; for (let k = 0; k <= 12; k++) { const t = k / 6 - 1; r.push([cx + t * 9 * (1 + 0.25 * (1 - t * t)), hands[0][1] + (ropeY - hands[0][1]) * (1 - t * t)]); }
+      return `<polyline points="${P(r)}" fill="none" stroke="#2a1a10" stroke-width="2.6"/><polyline points="${P(r)}" fill="none" stroke="#fff3d6" stroke-width="1.6"/>`; };
+    const bend = hop ? 3 : 0, [c1, c2] = CORDS[Math.min(level, 7)];
+    let out = front ? "" : rope();
+    out += `<ellipse cx="${cx}" cy="${floor + 0.5}" rx="8" ry="1.5" fill="#000" fill-opacity=".35"/>`;
+    for (const side of [-1, 1]) out += limb([hip, [cx + side * (3 + bend), feet - 6], [cx + side * 3, feet]], "#f5f5f0", 3);
+    out += limb([neck, hip], "#8a5a3c", 4) + hands.map(h => limb([neck, [(neck[0] + h[0]) / 2, neck[1] + 7], h], "#8a5a3c", 2.2)).join("");
+    out += `<line x1="${cx - 4}" y1="${hip[1] - 1}" x2="${cx + 4}" y2="${hip[1] - 1}" stroke="${c1}" stroke-width="2.5"/>` +
+      (c2 ? `<line x1="${cx - 4}" y1="${hip[1] - 1}" x2="${cx + 4}" y2="${hip[1] - 1}" stroke="${c2}" stroke-width="2.5" stroke-dasharray="2 2"/>` : "") +
+      `<line x1="${cx + 2}" y1="${hip[1]}" x2="${cx + 4}" y2="${hip[1] + 6}" stroke="${c1}" stroke-width="1.6"/>`;
+    out += `<ellipse cx="${cx}" cy="${neck[1] - 4.5}" rx="3.4" ry="3.6" fill="#8a5a3c" stroke="#2a1a10" stroke-width=".7"/>`;
+    out += hands.map(([x, y]) => `<rect x="${x - 1}" y="${y - 2.5}" width="2" height="4" fill="#c9a26a"/>`).join("");
+    if (front) out += rope();
+    out += `<text x="62" y="40" text-anchor="end" font-size="8" font-weight="700" font-family="monospace" class="value">+${ropeValue()}</text>`;
+    if (u && jumpGain) out += `<text x="50" y="${f1(6 + 10 * (1 - u))}" text-anchor="middle" font-size="8" font-weight="700" font-family="monospace" class="gain">+${jumpGain}</text>`;
+    return out;
+  }
+  function renderRope() {
+    const svg = $("scene"), pts = db.settings.ropePoints || 0, level = ropeLevel(pts);
+    if (document.body.dataset.level !== String(level)) document.body.dataset.level = String(level);
+    const nxt = ropeNext(pts), titleKey = `rope|${level}|${pts}`;
+    if (titleKey !== piecesKey) {
+      piecesKey = titleKey;
+      $("piecesL").innerHTML = `<span class="rope-level"></span>`;
+      $("piecesL").firstChild.textContent = `Nivo ${level}`;
+      const share = nxt ? Math.min(100, pts / nxt * 100) : 100, fmt = n => n.toLocaleString("sr-RS");
+      $("piecesR").innerHTML = `<span class="rope-bar"><i style="width:${f1(share)}%"></i><b></b></span>`;
+      $("piecesR").querySelector("b").textContent = nxt ? `${fmt(pts)} / ${fmt(nxt)}` : `${fmt(pts)} · max`;
+    }
+    if (jumpFrame) return;  // the jump draws itself
+    const key = `${level}|${ropeValue()}`;
+    if (key === ropeKey && sceneKey === "rope") return;
+    ropeKey = key; sceneKey = "rope";
+    svg.setAttribute("viewBox", "0 0 64 44");
+    svg.style.width = "58px";
+    svg.innerHTML = jumperSvg(0);
+  }
+  function jumpRope() {
+    const before = db.settings.ropePoints || 0;
+    jumpGain = ropeValue();
+    db.settings.ropePoints = before + jumpGain;
+    save();
+    sound("jump");
+    if (ropeLevel(db.settings.ropePoints) > ropeLevel(before)) { sound("flip"); confetti(); }
+    const start = jumpFrame === 0;
+    jumpFrame = 12;
+    if (!start) return;
+    const step = () => {
+      const svg = $("scene");
+      if (skin() !== "jumprope") { jumpFrame = 0; return; }
+      svg.innerHTML = jumperSvg(1 - jumpFrame / 12);
+      if (jumpFrame > 0) { jumpFrame--; setTimeout(step, 35); } else { ropeKey = ""; renderRope(); }
+    };
+    step();
+    renderRope();
+  }
+
+  // ------------------------------------------------------------------ Kuglanje: the game (as on the laptop)
+  const ALL_PINS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  function bFrames(rolls) {
+    const out = [];
+    let i = 0;
+    while (i < rolls.length) {
+      if (out.length === 9) { out.push(rolls.slice(i, i + 3)); break; }
+      if (rolls[i] === 10) { out.push([10]); i += 1; } else { out.push(rolls.slice(i, i + 2)); i += 2; }
+    }
+    return out;
+  }
+  function bOver(rolls) {
+    const fs = bFrames(rolls);
+    if (fs.length < 10) return false;
+    const last = fs[9];
+    return last.length === 3 || (last.length === 2 && last[0] + last[1] < 10);
+  }
+  function bOpen(rolls) {
+    const fs = bFrames(rolls);
+    if (!fs.length || bOver(rolls)) return false;
+    const last = fs[fs.length - 1];
+    if (fs.length < 10) return last.length === 1 && last[0] < 10;
+    if (last.length === 1) return last[0] < 10;
+    return last.length === 2 && last[0] === 10 && last[1] < 10;
+  }
+  function bMarks(rolls) {
+    return bFrames(rolls).map(f => {
+      let text = "", left = 10;
+      for (const r of f) {
+        if (left === 10 && r === 10) text += "X";
+        else if (left < 10 && r === left) { text += "/"; left = 10; }
+        else { text += r === 0 ? "-" : String(r); left = left === 10 ? left - r : 10; }
+      }
+      return text;
+    });
+  }
+  function bScores(rolls) {
+    const out = [];
+    let total = 0, i = 0;
+    for (let k = 0; k < 10 && i < rolls.length; k++) {
+      if (k === 9) { total += rolls.slice(i, i + 3).reduce((a, b) => a + b, 0); out.push(bOver(rolls) ? total : null); break; }
+      if (rolls[i] === 10) {
+        const bonus = rolls.slice(i + 1, i + 3);
+        if (bonus.length < 2) { out.push(null); break; }
+        total += 10 + bonus[0] + bonus[1]; i += 1;
+      } else {
+        const pair = rolls.slice(i, i + 2);
+        if (pair.length < 2) { out.push(null); break; }
+        if (pair[0] + pair[1] === 10) {
+          if (rolls.length <= i + 2) { out.push(null); break; }
+          total += 10 + rolls[i + 2];
+        } else total += pair[0] + pair[1];
+        i += 2;
+      }
+      out.push(total);
+    }
+    return out;
+  }
+  const bTotal = rolls => { const done = bScores(rolls).filter(v => v !== null); return done.length ? done[done.length - 1] : 0; };
+  function bThrow(aim, power, standing) {
+    if (Math.abs(aim) > 0.95 || !standing.size) return new Set();
+    const x = aim * 2;
+    if (standing.size === 10 && Math.abs(aim) > 0.08 && Math.abs(aim) < 0.3 && power > 0.6 && Math.random() < 0.25 + 0.35 * power) return new Set(standing);
+    const hit = new Set([...standing].filter(i => Math.abs(PIN_SPOTS[i][0] - x) < 0.55 + 0.3 * power)), chain = 0.35 + 0.5 * power;
+    for (const row of [3, 2, 1, 0]) {
+      for (const i of [...hit].filter(j => PIN_SPOTS[j][1] === row)) {
+        for (const j of [...standing].filter(j => !hit.has(j))) {
+          const dx = Math.abs(PIN_SPOTS[j][0] - PIN_SPOTS[i][0]);
+          const behind = PIN_SPOTS[j][1] === row - 1 && dx <= 0.5, beside = PIN_SPOTS[j][1] === row && dx <= 1;
+          if ((behind && Math.random() < chain) || (beside && Math.random() < chain * 0.35)) hit.add(j);
+        }
+      }
+    }
+    return hit;
+  }
+  const game = { phase: "aim", t: 0, aim: 0, power: 0, ball: 0, standing: new Set(ALL_PINS), knocked: new Set(), message: "", timer: null };
+  function bowlRolls() { return (db.settings.bowlingRolls || []).filter(r => Number.isInteger(r)); }
+  function openBowling() {
+    const rolls = bowlRolls();
+    game.standing = new Set(ALL_PINS);
+    if (bOpen(rolls)) {
+      const fs = bFrames(rolls), n = 10 - fs[fs.length - 1].slice(-1)[0], saved = (db.settings.bowlingPins || []).filter(i => i >= 0 && i < 10);
+      game.standing = new Set(saved.length === n ? saved : ALL_PINS.slice(0, n));
+    }
+    game.phase = bOver(rolls) ? "done" : "aim";
+    game.knocked = new Set(); game.message = ""; game.t = 0;
+    $("bowlDlg").showModal();
+    clearInterval(game.timer);
+    game.timer = setInterval(bowlStep, 30);
+    drawBowl();
+  }
+  function bowlClick() {
+    if (game.phase === "aim") { game.phase = "power"; game.t = 0; }
+    else if (game.phase === "power") { game.phase = "roll"; game.ball = 0; sound("roll"); }
+    else if (game.phase === "done") {
+      db.settings.bowlingRolls = []; db.settings.bowlingPins = []; save();
+      game.standing = new Set(ALL_PINS); game.message = ""; game.phase = "aim";
+    }
+  }
+  function bowlFinish() {
+    const rolls = bowlRolls(), fresh = !bOpen(rolls);
+    game.knocked = bThrow(game.aim, game.power, game.standing);
+    rolls.push(game.knocked.size);
+    game.knocked.forEach(i => game.standing.delete(i));
+    game.message = fresh && game.knocked.size === 10 ? "STRIKE!" : !fresh && !game.standing.size ? "SPARE!" : game.knocked.size ? String(game.knocked.size) : "Promašaj";
+    sound(game.message.endsWith("!") ? "flip" : game.knocked.size ? "stop" : "pause");
+    if (!bOpen(rolls)) game.standing = new Set(ALL_PINS);
+    if (bOver(rolls)) {
+      const score = bTotal(rolls);
+      if (score > (db.settings.bowlingBest || 0)) { db.settings.bowlingBest = score; game.message = `Rekord! ${score}`; }
+      else game.message = `Kraj: ${score}`;
+    }
+    db.settings.bowlingRolls = rolls; db.settings.bowlingPins = [...game.standing].sort();
+    save();
+    game.phase = "result"; game.t = 0;
+    piecesKey = "";
+  }
+  function bowlStep() {
+    if (!$("bowlDlg").open) { clearInterval(game.timer); return; }
+    game.t++;
+    if (game.phase === "aim") game.aim = Math.sin(game.t * 0.09) * 0.98;
+    else if (game.phase === "power") game.power = (1 - Math.cos(game.t * 0.12)) / 2;
+    else if (game.phase === "roll") { game.ball += 0.035 + 0.035 * game.power; if (game.ball >= 1) bowlFinish(); }
+    else if (game.phase === "result" && game.t > 28) {
+      game.phase = bOver(bowlRolls()) ? "done" : "aim";
+      game.knocked = new Set();
+      if (game.phase === "aim") game.message = "";
+    }
+    drawBowl();
+  }
+  function drawBowl() {
+    const W = 240, H = 380, top = 70, bottom = H - 16, lx0 = W * 0.18, lx1 = W * 0.82, rolls = bowlRolls();
+    let out = `<rect width="${W}" height="${H}" fill="#0a0a0a"/><rect x="${lx0 - 10}" y="${top}" width="${lx1 - lx0 + 20}" height="${bottom - top}" fill="#2a2a30"/>` +
+      `<rect x="${lx0}" y="${top}" width="${lx1 - lx0}" height="${bottom - top}" fill="#e3b878"/>`;
+    for (let k = 1; k < 12; k++) out += `<line x1="${f1(lx0 + (lx1 - lx0) * k / 12)}" x2="${f1(lx0 + (lx1 - lx0) * k / 12)}" y1="${top}" y2="${bottom}" stroke="#d9ab68"/>`;
+    for (let k = 0; k < 7; k++) { const x = lx0 + (lx1 - lx0) * (k + 1) / 8, y = bottom - 70 - Math.abs(k - 3) * 6;
+      out += `<polygon points="${f1(x - 3)},${y} ${f1(x + 3)},${y} ${f1(x)},${y - 9}" fill="#7a4a20"/>`; }
+    const fw = (W - 8) / 10, ms = bMarks(rolls), ss = bScores(rolls);
+    for (let k = 0; k < 10; k++) {
+      const x = 4 + k * fw;
+      out += `<rect x="${f1(x)}" y="6" width="${f1(fw)}" height="34" fill="none" stroke="#2ad1c9"/><rect x="${f1(x + fw / 2)}" y="6" width="${f1(fw / 2)}" height="12" fill="none" stroke="#2ad1c9"/>`;
+      if (ms[k]) out += `<text x="${f1(x + fw / 2)}" y="16" text-anchor="middle" class="bm">${ms[k]}</text>`;
+      if (ss[k] != null) out += `<text x="${f1(x + fw / 2)}" y="34" text-anchor="middle" class="bs">${ss[k]}</text>`;
+    }
+    out += `<text x="${W / 2}" y="56" text-anchor="middle" class="bi">ukupno ${bTotal(rolls)}   ·   rekord ${db.settings.bowlingBest || 0}</text>`;
+    PIN_SPOTS.forEach(([dx, row], i) => { if (game.standing.has(i) || game.knocked.has(i)) out += pinSvg(W / 2 + dx * 22, top + 28 + row * 16, 26, game.knocked.has(i)); });
+    const bx = W / 2 + game.aim * (lx1 - lx0) / 2, by = game.phase === "roll" ? bottom - 14 - (bottom - top - 60) * game.ball : bottom - 14;
+    if (["aim", "power", "roll"].includes(game.phase)) {
+      out += `<circle cx="${f1(bx)}" cy="${f1(by)}" r="11" fill="#3b1f5e" stroke="#1d0f30"/><ellipse cx="${f1(bx - 3)}" cy="${f1(by - 5)}" rx="3.5" ry="2.4" fill="#6a4a9a"/>` +
+        [[0.25, -0.2], [0.45, 0], [0.2, 0.15]].map(([fx, fy]) => `<circle cx="${f1(bx + fx * 11)}" cy="${f1(by + fy * 11)}" r="1.6" fill="#0d0618"/>`).join("");
+    }
+    if (game.phase === "aim") out += `<line x1="${f1(bx)}" y1="${f1(by - 15)}" x2="${f1(bx)}" y2="${f1(by - 48)}" stroke="#ff4f9a" stroke-width="3"/><polygon points="${f1(bx - 6)},${f1(by - 44)} ${f1(bx + 6)},${f1(by - 44)} ${f1(bx)},${f1(by - 56)}" fill="#ff4f9a"/>`;
+    if (game.phase === "power") { const px = lx1 + 14, h = 110 * game.power;
+      out += `<rect x="${px}" y="${bottom - 110}" width="9" height="110" fill="none" stroke="#2ad1c9"/><rect x="${px + 1}" y="${f1(bottom - h)}" width="7" height="${f1(h)}" fill="${mixColor("#2ad1c9", "#ff4f9a", game.power)}"/>`; }
+    if (game.message) out += `<text x="${W / 2}" y="${top + 150}" text-anchor="middle" class="bmsg">${game.message}</text>`;
+    const hint = { aim: "dodir: smer", power: "dodir: snaga", done: "dodir: nova igra" }[game.phase];
+    if (hint) out += `<text x="${W / 2}" y="${H - 4}" text-anchor="middle" class="bi">${hint}</text>`;
+    $("bowlLane").innerHTML = out;
+  }
+
+  function renderFrames() {  // Kuglanje: the game's score sheet beside the title
+    const rolls = bowlRolls(), marks = bMarks(rolls), key = `frames${rolls.join(",")}`;
     if (key === piecesKey) return;
     piecesKey = key;
-    const box = k => `<i class="piece frame${k < strikes ? " x" : ""}"></i>`;
+    const box = k => `<i class="piece frame">${marks[k] || ""}</i>`;
     $("piecesL").innerHTML = [0, 1, 2, 3, 4].map(box).join("");
-    $("piecesR").innerHTML = [5, 6, 7, 8, 9].map(box).join("");
+    $("piecesR").innerHTML = [5, 6, 7, 8, 9].map(box).join("") + (rolls.length ? `<b class="frames-total">${bTotal(rolls)}</b>` : "");
   }
 
   // My Passion: the play button takes a shot; the hole and a puff of smoke fade away.
@@ -944,7 +1188,7 @@
     renderPieces([]);
     applyLamp();
     const style = ["pastel", "cat", "setsuna", "egg", "dandelion", "hourglass", "lofi", "blades", "atmos", "graffiti", "sushi",
-                   "tulips", "tofu", "capoeira", "window", "corporeal"].includes(skin())
+                   "tulips", "jumprope", "window", "corporeal"].includes(skin())
       ? "round" : ["cyber", "kinetic"].includes(skin()) ? "sharp" : "hex";
     dandelionKey = "";
     hgKey = "";
@@ -956,7 +1200,8 @@
     towersKey = ""; towerLevel = null;
     padsKey = ""; padsPhrases = null;
     growthKey = "";
-    sceneKey = ""; sceneMark = null;
+    sceneKey = ""; sceneMark = null; ropeKey = "";
+    if (skin() !== "jumprope") delete document.body.dataset.level;
     document.body.style.removeProperty("--light");
     $("growth").innerHTML = "";
     document.body.classList.remove("raining", "racing");
@@ -991,6 +1236,7 @@
     scramble();
     if (skin() === "setsuna") confetti();
     if (skin() === "coffee") bulletHole();
+    if (skin() === "tofu") tossWok();
   }
 
   function pause() {
@@ -1081,8 +1327,7 @@
     if (MILESTONE[skin()]) renderScene(st === "stopped" ? 0 : ms, st);
     const n = st === "stopped" ? 0 : hoursOf(ms);
     if (skin() === "tulips") renderPieces(Array.from({ length: Math.min(n, 12) }, (_, i) => `tu c${i % 5}`));
-    if (skin() === "tofu") renderPieces(Array(Math.min(n, 10)).fill("plate"));
-    if (skin() === "bowling") renderFrames(Math.min(n, 10));
+    if (skin() === "bowling") renderFrames();
     document.title = r ? `${text} ${task}` : "Time Tracker";
   }
 
@@ -1318,6 +1563,13 @@
       commit();
       if (db.settings.showPlaylist && skin() === "pastel") bubbles();  // bubbles rising over the list
     }, "pl"));
+    $("scene").addEventListener("click", () => {
+      if (skin() === "jumprope") jumpRope();
+      else if (skin() === "tofu") tossWok();
+      else if (skin() === "bowling") openBowling();
+    });
+    $("bowlLane").addEventListener("click", bowlClick);
+    $("bowlClose").addEventListener("click", () => { $("bowlDlg").close(); render(); });
     $("dandelion").addEventListener("click", e => {
       if (e.target.closest(".head")) blowDandelion();
       else if (e.target.closest(".man")) waveGentleman();
@@ -1356,13 +1608,13 @@
   // Exposed for tests.
   // Android back button: close an open sheet first; returns true when it handled the press.
   function back() {
-    for (const id of ["entryDlg", "menuDlg"]) {
+    for (const id of ["entryDlg", "menuDlg", "bowlDlg"]) {
       if ($(id).open) { $(id).close(); return true; }
     }
     return false;
   }
 
   window.PTT = { get db() { return db; }, periodBounds, csvFor, entriesBetween, totalBetween, back, KEY, dandelionState,
-                 blowDandelion, achievementToast };
+                 blowDandelion, achievementToast, jumpRope, openBowling, bowlClick, bMarks, bScores };
   init();
 })();

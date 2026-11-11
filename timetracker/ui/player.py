@@ -19,7 +19,7 @@ from . import skin
 from .dandelion import DandelionColumn, FieldStrip, GradientStrip
 from .hourglass import Hourglass, rounds_done
 from .vinyl import Turntable
-from . import scenes, y2k
+from . import bowling, scenes, y2k
 from .dialogs import EntryDialog, IdleReminder, MiniBar, ProductivityDialog, SitesDialog
 
 PL_WIDTH = 50  # playlist width in characters
@@ -46,6 +46,7 @@ class Player(tk.Tk):
         self._scramble_left = 0
         self._clock_text = ""
         self._dusk_phase: int | None = None
+        self.bowling_window = None
         self.reminder: IdleReminder | None = None
         self.mini: MiniBar | None = None
         self.task_var = tk.StringVar()
@@ -93,6 +94,8 @@ class Player(tk.Tk):
             theme = skin.THEMES.get(theme.dark_variant, skin.THEMES["matrix"])
         if theme.lit_variant and self.db.running_entry():
             return theme.lit_variant
+        if theme.key == "jumprope":  # Vijača: its colors follow the level of points
+            return skin.rope_key(self.settings["rope_points"])
         return theme.key
 
     def _build_ui(self):
@@ -199,7 +202,9 @@ class Player(tk.Tk):
             elif T.clock_deco == "pads":  # Atmos: a pad per 5 minutes, leaves for every full phrase
                 gadget = self.pads = y2k.Pads(lcd, on_phrase=self._sound("flip"))
             elif T.clock_deco in scenes.SCENES:  # sushi belt, tulip, wok, roda, pins, blind, figure
-                gadget = self.scene = scenes.SCENES[T.clock_deco](lcd, on_event=self._sound("flip"))
+                extra = ({"on_jump": self._rope_jump} if T.clock_deco == "jumper" else
+                         {"on_click": self.open_bowling} if T.clock_deco == "pins" else {})
+                gadget = self.scene = scenes.SCENES[T.clock_deco](lcd, on_event=self._sound("flip"), **extra)
             if gadget is not None:
                 gadget.pack(side="left", padx=(0, skin.px(8)))
             self.clock = skin.SevenSegment(lcd)
@@ -355,6 +360,8 @@ class Player(tk.Tk):
             skin.confetti(self)
         if skin.T.play_fx == "bullet":  # My Passion: the play button gets shot
             self.play_btn.bullet_hole()
+        if isinstance(self.scene, scenes.Wok):  # Lazi tofu: toss the wok
+            self.scene.toss()
 
     def pause(self):
         if self.db.running_entry():
@@ -635,10 +642,26 @@ class Player(tk.Tk):
             self.speedo.set(secs if state != self.STOPPED else 0, state)
         if self.scene is not None:
             self.scene.set(secs if state != self.STOPPED else 0, state)
-        if T.title_style in ("tulips", "tofu", "frames"):  # a tulip / a plate / a strike for every full hour
+        if T.title_style == "tulips":  # a tulip for every full hour
             n = scenes.hours(secs) if state != self.STOPPED else 0
-            self.titlebar.set_pieces([str(i) for i in range(min(n, 12))] if T.title_style == "tulips"
-                                     else ["x"] * min(n, 10))
+            self.titlebar.set_pieces([str(i) for i in range(min(n, 12))])
+        if T.title_style == "frames":  # the bowling game's score sheet
+            self.titlebar.set_pieces(self._bowling_sheet())
+        if T.title_style == "rope":  # Vijača: the level and the way to the next one
+            points = self.settings["rope_points"]
+            nxt = scenes.rope_next(points)
+            self.titlebar.set_pieces([str(scenes.rope_level(points)), str(points), str(nxt or "")])
+        if isinstance(self.scene, scenes.Jumper):
+            self.scene.level = scenes.rope_level(self.settings["rope_points"])
+            if int(now) % 15 == 0 or self.scene.value == 1:
+                self.scene.value = self._rope_value()
+        if isinstance(self.scene, scenes.Figure):  # Korporealnost: sinks on pause, tires without a break
+            run = now - running.start_ts if running else 0.0
+            paused_for = 0.0
+            if state == self.PAUSED:
+                last = self.db.entries_between(now - 86400, now + 1)
+                paused_for = now - (last[-1].end_ts or now) if last else 0.0
+            self.scene.posture = scenes.posture(secs, state, run, paused_for)
         if T.pl_pattern == "blinds":  # Prozor: the list is the window; the sunset shines in, dim while the blind is down
             shown = secs if state != self.STOPPED else 0
             phase = scenes.dusk_phase(shown)
@@ -705,6 +728,49 @@ class Player(tk.Tk):
         if key != self._tray_key:
             self._tray_key = key
             self.tray.update(running is not None, tip)
+
+    # ------------------------------------------------------------- Vijača
+
+    def _rope_value(self) -> int:
+        """What one jump is worth now: today's minutes of work times the productive share (at least 1)."""
+        now = time.time()
+        a, b = timeutil.day_bounds(date.today())
+        minutes = reports.total_between(self.db, a, b, now) / 60
+        s = productivity.summarize(self.db, a, b)
+        return scenes.click_value(minutes, s.share(productivity.PRODUCTIVE) if s.total else 0.0)
+
+    def _rope_jump(self) -> int:
+        """A click on the jumper: add the jump's points; at a new level the whole skin changes color."""
+        value = self._rope_value()
+        before = self.settings["rope_points"]
+        after = before + value
+        self.settings.update({"rope_points": after})
+        self.sounds.play("jump")
+        if scenes.rope_level(after) > scenes.rope_level(before):
+            self.sounds.play("flip")
+            self.after(450, self._rope_level_up)  # let the jump finish first
+        self._update_display()
+        return value
+
+    def _rope_level_up(self):
+        if not self._quitting and skin.T.clock_deco == "jumper":
+            self._rebuild_ui()
+            skin.confetti(self)
+
+    # ------------------------------------------------------------- Kuglanje
+
+    def _bowling_sheet(self) -> list[str]:
+        rolls = [r for r in self.settings["bowling_rolls"] if isinstance(r, int)]
+        sheet = (bowling.marks(rolls) + [""] * 10)[:10]
+        return sheet + [str(bowling.total(rolls)) if rolls else ""]
+
+    def open_bowling(self):
+        """A click on the lane: the bowling game (one window at a time)."""
+        if self.bowling_window is not None and self.bowling_window.winfo_exists():
+            self.bowling_window.lift()
+            return
+        self.bowling_window = bowling.BowlingGame(self, self.settings, on_sound=self.sounds.play,
+                                                  on_change=lambda: self.titlebar.set_pieces(self._bowling_sheet()))
 
     def _achievement(self, hours: int):
         """Blades: a full ring of light (an hour on the task) pops up an achievement."""

@@ -30,6 +30,12 @@ DEFAULTS: dict = {
     "walnuts": [],
     # Dandelion skin: the date of the night its seeds were blown (00:00-01:00).
     "dandelion_blown": "",
+    # Vijača skin: the points of all the rope jumps so far (they set its level and colors).
+    "rope_points": 0,
+    # Kuglanje skin: the game in progress (the pins knocked by each ball, the pins still standing) and the best score.
+    "bowling_rolls": [],
+    "bowling_pins": [],
+    "bowling_best": 0,
 }
 
 

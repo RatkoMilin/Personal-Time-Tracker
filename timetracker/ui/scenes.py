@@ -3,15 +3,16 @@
 Suši: a conveyor belt runs while you work, and a plate lands on the stack every 10 minutes.
 Lale: a field of tulips whose buds open one by one over an hour of the task and close on pause;
   every full hour a tulip is planted beside the title.
-Lazi tofu: a tofu cube drops into the wok every 5 minutes and slowly turns golden; at the full hour
-  the wok is tossed and a plate is served beside the title.
-Kapoera: a capoeirista sways in the ginga while the timer runs; every 30 minutes earns the next cord.
-Kuglanje: a pin falls every 6 minutes; at the full hour the ball rolls a strike, marked on the
-  score sheet beside the title.
+Lazi tofu: wok hei, a wok over a red-hot flame; PLAY (or a click) tosses it, the food flying and turning.
+Vijača: a capoeirista skipping rope; every click is a jump worth today's minutes of work times the
+  productive share, and the points lift the skin through levels of color.
+Kuglanje: a pin falls every 6 minutes and the full hour rolls a strike; a click on the lane starts a
+  game of bowling (bowling.py), its score sheet beside the title.
 Prozor: the playlist is the window, dusk shining through the holes of its roller blind; over 90 minutes
   the light goes from gold to orange, pink, violet and night, and on pause the blind is let down.
   (No scene of its own: the player follows dusk_phase and tints the list.)
-Korporealnost: a figure crouches against the gallery wall and slowly rises over an hour of the task.
+Korporealnost: a figure crouches against the gallery wall and slowly rises over an hour of the task; he
+  sinks back on pause and bends again after three hours without a break.
 
 Every scene takes set(seconds, state) on each tick and calls on_event when its milestone is reached
 while the timer runs (the skin's "flip" sound).
@@ -27,8 +28,6 @@ from . import skin
 from .skin import blend, px
 
 PLATE = 10 * 60  # Suši
-CUBE = 5 * 60  # Lazi tofu
-GRADE = 30 * 60  # Kapoera
 PIN = 6 * 60  # Kuglanje
 DUSK = 90 * 60  # Prozor: one sunset
 HOUR = 3600
@@ -44,15 +43,6 @@ def hours(seconds: float) -> int:
 
 def hour_progress(seconds: float) -> float:
     return (max(0.0, seconds) % HOUR) / HOUR
-
-
-def cubes(seconds: float) -> int:
-    """Tofu cubes in the wok: one per 5 minutes, served (and the wok empty again) every hour."""
-    return int((max(0.0, seconds) % HOUR) // CUBE)
-
-
-def grade(seconds: float) -> int:
-    return int(max(0.0, seconds) // GRADE)
 
 
 def pins_down(seconds: float) -> int:
@@ -86,6 +76,23 @@ def light_color(seconds: float) -> str:
 def rise(seconds: float) -> float:
     """Korporealnost: how far the figure has risen (0 crouched, 1 standing), over an hour of the task."""
     return min(1.0, max(0.0, seconds) / HOUR)
+
+
+SINK = 15 * 60  # on pause he sinks back down over 15 minutes
+TIRED_AFTER = 3 * 3600  # working this long without a pause he starts to bend again, over the next hour
+
+
+def posture(task_seconds: float, state: str, run_seconds: float = 0.0, paused_seconds: float = 0.0) -> float:
+    """How far the figure stands (0 crouched, 1 upright): he rises with the task, sinks back while it is
+    paused, drops at once when it stops, and bends again after three hours without a break."""
+    if state == "stopped":
+        return 0.0
+    t = rise(task_seconds)
+    if state == "paused":
+        return t * max(0.0, 1 - paused_seconds / SINK)
+    if run_seconds > TIRED_AFTER:
+        t *= 1 - 0.85 * min(1.0, (run_seconds - TIRED_AFTER) / HOUR)
+    return t
 
 
 class Scene(tk.Canvas):
@@ -255,7 +262,7 @@ class TulipField(Scene):
 
 # ------------------------------------------------------------------ Lazi tofu
 
-TOFU_RAW, TOFU_GOLDEN = "#f3e3c3", "#c98a3a"
+TOFU_RAW, TOFU_GOLDEN = "#f3e3c3", "#e0a84a"
 
 
 def draw_chili(c: tk.Canvas, x: float, y: float, length: float, angle: float, color: str = "#b5231c") -> None:
@@ -272,80 +279,157 @@ def draw_chili(c: tk.Canvas, x: float, y: float, length: float, angle: float, co
                   capstyle="round")
 
 
+def _rot(points, angle: float, cx: float, cy: float) -> list[float]:
+    a = math.radians(angle)
+    ca, sa = math.cos(a), math.sin(a)
+    out = []
+    for x, y in points:
+        dx, dy = x - cx, y - cy
+        out += [cx + dx * ca - dy * sa, cy + dx * sa + dy * ca]
+    return out
+
+
+# What is in the wok: (x offset, y offset from the bottom, size, kind, how high it flies, spin), in units of the wok.
+WOK_FOOD = ((-0.45, 0.05, 0.16, "tofu", 1.0, 1.4), (-0.15, 0.0, 0.17, "tofu", 1.25, -1.1), (0.15, 0.02, 0.16, "tofu", 0.9, 1.7),
+            (0.42, 0.08, 0.15, "tofu", 1.15, -1.5), (-0.28, 0.22, 0.15, "tofu", 1.4, 0.9), (0.05, 0.25, 0.16, "tofu", 1.6, -0.8),
+            (-0.05, 0.12, 0.3, "chili", 1.3, 1.2), (0.32, 0.25, 0.26, "chili", 1.0, -1.6), (-0.5, 0.25, 0.1, "scallion", 1.5, 2.0),
+            (0.25, 0.1, 0.1, "scallion", 1.7, -2.2))
+TOSS_FRAMES = 22
+
+
 class Wok(Scene):
-    """A tofu cube drops in every 5 minutes and browns; at the full hour the wok is tossed."""
+    """Wok hei: a black wok over a red-hot flame. Pressing PLAY (or clicking the wok) tosses it: the wok
+    swings up, the tofu, chilies and scallions fly and turn in the air and land back, and the flame flares."""
 
     width, height = 58, 44
-    frame_ms = 150
+    frame_ms = 70
 
     def __init__(self, master, on_event=None):
-        self.toss = 0
+        self.toss_frame = 0
         super().__init__(master, on_event)
+        self.configure(cursor="hand2")
+        self.bind("<Button-1>", lambda e: self.toss())
 
-    def milestone(self, seconds: float) -> int:
-        return hours(seconds)
+    def toss(self) -> None:
+        start = self.toss_frame == 0
+        self.toss_frame = TOSS_FRAMES
+        if start and self.state != "playing":
+            self._toss_loop()  # not running: animate the toss by itself
 
-    def reached(self) -> None:
-        super().reached()
-        self.toss = 10  # frames of the toss
+    def _toss_loop(self) -> None:
+        if not self.winfo_exists() or self.toss_frame <= 0 or self.state == "playing":
+            return
+        self.frame += 1
+        self.draw()
+        self.after(self.frame_ms, self._toss_loop)
 
     def draw(self) -> None:
         self.delete("all")
         w, h = self.w, self.h
-        cx, rim = w * 0.42, h * 0.45
-        rx, depth = w * 0.38, h * 0.42
-        if self.state == "playing":  # steam rising off the wok
-            for k in range(3):
-                x0 = cx - rx * 0.5 + k * rx * 0.5
-                pts = []
-                for i in range(6):
-                    y = rim - px(3) - i * px(2.6)
-                    pts += [x0 + math.sin((i + self.frame + k * 2) * 0.9) * px(2), y]
-                self.create_line(pts, fill=blend(skin.T.lcd_bg, "#ffffff", 0.35), smooth=True)
-        self.create_line(cx + rx * 0.95, rim + px(2), w - px(2), rim - px(3), fill="#5a3b26", width=max(2, px(3.5)),
-                         capstyle="round")  # the handle
-        self.create_arc(cx - rx, rim - depth, cx + rx, rim + depth, start=180, extent=180, style="chord",
-                        fill="#2a2a2e", outline="#111114")
-        self.create_line(cx - rx, rim, cx + rx, rim, fill="#4a4a50", width=max(1, px(1.5)))
-        n = 0 if self.toss else cubes(self.seconds)
-        secs_in_hour = max(0.0, self.seconds) % HOUR
-        rnd = random.Random(4)
-        jump = math.sin(math.pi * self.toss / 10) * px(10) if self.toss else 0
-        size = px(5.5)
-        for k in range(n if not self.toss else 8):
-            row, col = divmod(k, 4)
-            x = cx - rx * 0.55 + col * size * 1.15 + row * size * 0.5 + rnd.uniform(-1, 1)
-            y = rim + px(1) - row * size * 0.8 - jump * rnd.uniform(0.7, 1.2)
-            age = secs_in_hour - k * CUBE if not self.toss else HOUR
-            color = blend(TOFU_RAW, TOFU_GOLDEN, min(1.0, age / (3 * CUBE)))
-            self.create_rectangle(x, y - size, x + size, y, fill=color, outline=blend(color, "#000000", 0.25))
-        if n >= 2 or self.toss:  # a few chilies and scallions in with the tofu
-            draw_chili(self, cx - rx * 0.6, rim - px(4) - jump, px(9), -20)
-            draw_chili(self, cx + rx * 0.25, rim - px(5) - jump, px(8), 200)
-            for x in (cx - rx * 0.1, cx + rx * 0.45):
-                self.create_rectangle(x, rim - px(3) - jump, x + px(4), rim - px(1) - jump, fill="#5fae3e", outline="")
-        if self.toss:
-            self.toss -= 1
+        u = 1 - self.toss_frame / TOSS_FRAMES if self.toss_frame else 0.0
+        tossing = self.toss_frame > 0
+        cx, rim, rx = w * 0.42, h * 0.5, w * 0.36
+        depth = h * 0.3
+        # the burner and its flame: blue while cooking, a tall orange flare in the toss, a pilot light on pause
+        by = h - px(3)
+        self.create_rectangle(cx - rx * 0.7, by, cx + rx * 0.7, by + px(2), fill="#3a3d44", outline="")
+        if self.state != "stopped" or tossing:
+            rnd = random.Random(self.frame)
+            n = 7
+            for k in range(n):
+                fx = cx - rx * 0.55 + k * rx * 1.1 / (n - 1)
+                tall = px(3) if self.state == "paused" and not tossing else px(5) + rnd.uniform(0, px(3))
+                if tossing:
+                    tall += math.sin(math.pi * u) * px(9)
+                outer = "#ff8a2a" if tossing else "#e8321e"  # red-hot, flaring orange in the toss
+                inner = "#ffe08a" if tossing else "#ffb347"
+                self.create_polygon(fx - px(2), by, fx, by - tall, fx + px(2), by, fill=outer, outline="", smooth=True)
+                self.create_polygon(fx - px(0.8), by, fx, by - tall * 0.5, fx + px(0.8), by, fill=inner, outline="")
+        # the wok swings forward and up, tilting, and comes back
+        lift = math.sin(math.pi * u) * px(6) if tossing else 0
+        tilt = math.sin(2 * math.pi * u) * 14 if tossing else 0
+        wy = rim - lift
+        bowl = [(cx - rx * math.cos(a), wy + depth * math.sin(a)) for a in (math.pi * k / 16 for k in range(17))]
+        self.create_line(_rot([(cx + rx * 0.9, wy + px(1)), (w - px(1), wy - px(4))], tilt, cx, wy),
+                         fill="#5a3b26", width=max(2, px(3.5)), capstyle="round")  # the handle
+        self.create_polygon(_rot(bowl, tilt, cx, wy), fill="#232428", outline="#0c0c0e")
+        self.create_line(_rot([(cx - rx, wy), (cx + rx, wy)], tilt, cx, wy), fill="#6a6e78", width=max(1, px(1.5)))
+        self.create_line(_rot([(cx - rx * 0.6, wy + depth * 0.55), (cx + rx * 0.1, wy + depth * 0.8)], tilt, cx, wy),
+                         fill="#3a3c44")  # a dull shine on the steel
+        # the food: resting in the wok, or flying and turning
+        for dx, dy, size, kind, high, spin in WOK_FOOD:
+            fly = math.sin(math.pi * u) * px(16) * high if tossing else 0
+            x = cx + dx * rx + (math.sin(math.pi * u) * dx * px(4) if tossing else 0)
+            y = wy + depth * 0.55 - dy * depth - fly
+            turn = u * 360 * spin if tossing else 0
+            sz = size * rx
+            if kind == "tofu":
+                sq = [(x - sz / 2, y - sz / 2), (x + sz / 2, y - sz / 2), (x + sz / 2, y + sz / 2), (x - sz / 2, y + sz / 2)]
+                self.create_polygon(_rot(sq, turn, x, y), fill=TOFU_GOLDEN, outline="#8a5a22")
+            elif kind == "chili":
+                draw_chili(self, x - sz / 2, y, sz, turn - 15, "#c8231a")
+            else:
+                ring = sz / 2
+                self.create_oval(x - ring, y - ring, x + ring, y + ring, outline="#6fbf4a", width=max(1, px(1.2)))
+        if self.toss_frame:
+            self.toss_frame -= 1
 
 
-# ------------------------------------------------------------------ Kapoera
+# ------------------------------------------------------------------ Vijača (jump rope clicker)
 
+ROPE_LEVELS = (100, 300, 1000, 5000, 10000, 50000, 100000)  # points at which the whole skin changes color
 CORDS = (("#e8dcc0", None), ("#1f9d4a", None), ("#1f9d4a", "#ffd400"), ("#ffd400", None), ("#ffd400", "#1f4fbf"),
-         ("#1f4fbf", None), ("#1f9d4a", "#1f4fbf"), ("#ffd400", "#ffffff"), ("#1f4fbf", "#ffffff"))
+         ("#1f4fbf", None), ("#1f4fbf", "#ffffff"), ("#ffd400", "#ffffff"))  # the capoeira cords, one per level
 
 
-def cord_colors(seconds: float) -> tuple[str, str | None]:
-    return CORDS[min(grade(seconds), len(CORDS) - 1)]
+def rope_level(points: int) -> int:
+    return sum(1 for t in ROPE_LEVELS if points >= t)
 
 
-class Roda(Scene):
-    """A capoeirista in the ginga (swaying while the timer runs) and the cord earned so far."""
+def rope_next(points: int) -> int | None:
+    """The points of the next level, None at the top."""
+    return next((t for t in ROPE_LEVELS if points < t), None)
 
-    width, height = 60, 44
-    frame_ms = 430  # the berimbau's beat
 
-    def milestone(self, seconds: float) -> int:
-        return grade(seconds)
+def click_value(minutes_today: float, productive_share: float) -> int:
+    """What one jump is worth: today's minutes of work times the productive share, at least 1 point."""
+    return max(1, round(minutes_today * max(0.0, min(1.0, productive_share))))
+
+
+JUMP_FRAMES = 12
+
+
+class Jumper(Scene):
+    """The capoeirista skips rope: every click (or tap) is one jump, worth click_value points. on_jump is
+    called on each click; the cord around the waist shows the level."""
+
+    width, height = 64, 44
+
+    def __init__(self, master, on_event=None, on_jump=None):
+        self.jump_frame = 0
+        self.level = 0
+        self.value = 1
+        self.gain = 0  # the "+N" floating up after a jump
+        super().__init__(master, on_event)
+        self.on_jump = on_jump
+        self.configure(cursor="hand2")
+        self.bind("<Button-1>", lambda e: self.jump())
+
+    def jump(self) -> None:
+        start = self.jump_frame == 0
+        self.jump_frame = JUMP_FRAMES
+        if self.on_jump:
+            self.gain = self.on_jump() or self.gain
+        if start:
+            self._jump_loop()
+
+    def _jump_loop(self) -> None:
+        if not self.winfo_exists():
+            return
+        self.draw()
+        if self.jump_frame > 0:
+            self.jump_frame -= 1
+            self.after(35, self._jump_loop)
 
     def _limb(self, pts, color, width) -> None:
         flat = [v for p in pts for v in p]
@@ -356,44 +440,57 @@ class Roda(Scene):
         self.delete("all")
         w, h = self.w, self.h
         floor = h - px(3)
-        moving = self.state == "playing"
-        side = -1 if moving and self.frame % 2 else 1  # the ginga: step back left, step back right
-        cx = px(15)
+        u = 1 - self.jump_frame / JUMP_FRAMES if self.jump_frame else 0.0
+        # The rope goes up behind the back (phi 0..pi), over the head and down in front (pi..2pi), and passes under
+        # the feet at u = 0.85, just as the jump is highest.
+        phi = min(2 * math.pi, 2 * math.pi * u / 0.85)
+        hop = px(6) * math.sin(math.pi * (u - 0.65) / 0.4) if 0.65 < u < 1.05 else 0.0
+        cx = px(20)
         sk, pants = "#8a5a3c", "#f5f5f0"
-        hip = (cx, floor - px(17))
-        neck = (cx + side * px(2), floor - px(29))
-        if moving:
-            legs = [((hip[0], hip[1]), (cx - side * px(6), floor - px(8)), (cx - side * px(11), floor)),
-                    ((hip[0], hip[1]), (cx + side * px(5), floor - px(9)), (cx + side * px(6), floor))]
-            arms = [(neck, (cx + side * px(7), neck[1] + px(1)), (cx + side * px(6), neck[1] - px(5))),
-                    (neck, (cx - side * px(6), neck[1] + px(6)), (cx - side * px(9), neck[1] + px(10)))]
-        else:
-            legs = [(hip, (cx - px(3), floor - px(8)), (cx - px(4), floor)), (hip, (cx + px(3), floor - px(8)),
-                                                                             (cx + px(4), floor))]
-            arms = [(neck, (cx - px(4), neck[1] + px(7)), (cx - px(4), neck[1] + px(13))),
-                    (neck, (cx + px(4), neck[1] + px(7)), (cx + px(4), neck[1] + px(13)))]
-        for leg in legs:
-            self._limb(leg, pants, max(2, px(3)))
-        self._limb((neck, hip), sk, max(2, px(3.5)))
-        for arm in arms:
-            self._limb(arm, sk, max(2, px(2.2)))
-        hx, hy = neck[0] + side * px(1), neck[1] - px(4)
-        self.create_oval(hx - px(3.2), hy - px(3.2), hx + px(3.2), hy + px(3.2), fill=sk, outline="#2a1a10")
-        # the cord: tied in a knot, two ends hanging
-        c1, c2 = cord_colors(self.seconds if self.state != "stopped" else 0)
-        kx, ky = w - px(16), h * 0.42
-        loop = [(kx - px(11), ky - px(8)), (kx - px(13), ky + px(2)), (kx - px(4), ky + px(6)), (kx, ky),
-                (kx + px(4), ky + px(6)), (kx + px(12), ky + px(2)), (kx + px(10), ky - px(8)), (kx, ky - px(11)),
-                (kx - px(11), ky - px(8))]
-        ends = [[(kx, ky), (kx - px(4), ky + px(10)), (kx - px(6), ky + px(18))],
-                [(kx, ky), (kx + px(3), ky + px(11)), (kx + px(3), ky + px(19))]]
-        for pts in (loop, *ends):
-            flat = [v for p in pts for v in p]
-            self.create_line(flat, fill="#2a1a10", width=max(3, px(4.5)), smooth=True, capstyle="round")
-            self.create_line(flat, fill=c1, width=max(2, px(3)), smooth=True, capstyle="round")
-            if c2:  # a two-colored cord: the second color twisted in
-                self.create_line(flat, fill=c2, width=max(2, px(3)), smooth=True, capstyle="round", dash=(3, 3))
-        self.create_oval(kx - px(2.5), ky - px(2.5), kx + px(2.5), ky + px(2.5), fill=c1, outline="#2a1a10")
+        feet = floor - hop
+        hip = (cx, feet - px(13))
+        neck = (cx, feet - px(25))
+        hands = ((cx - px(9), feet - px(14)), (cx + px(9), feet - px(14)))
+        reach = (floor + px(2) - hands[0][1]) if math.cos(phi) >= 0 else (hands[0][1] - neck[1] + px(11))
+        rope_y = hands[0][1] + reach * math.cos(phi) if self.jump_frame else floor + px(1)
+        front = math.pi < phi < 2 * math.pi and self.jump_frame > 0  # in front of the body on its way down
+
+        def rope() -> None:  # a parabola from hand to hand through the rope's lowest (or highest) point
+            mid_y = rope_y if self.jump_frame else floor + px(1)
+            pts = []
+            for k in range(13):
+                t = k / 6 - 1
+                pts += [cx + t * (hands[1][0] - cx) * (1 + 0.25 * (1 - t * t)),
+                        hands[0][1] + (mid_y - hands[0][1]) * (1 - t * t)]
+            self.create_line(pts, fill="#2a1a10", width=max(2, px(2.6)), smooth=True)
+            self.create_line(pts, fill="#fff3d6", width=max(1, px(1.6)), smooth=True)
+
+        if not front:
+            rope()
+        self.create_oval(cx - px(8), floor - px(1), cx + px(8), floor + px(2), fill=blend(skin.T.lcd_bg, "#000000", 0.35),
+                         outline="")  # the shadow stays on the ground
+        bend = px(3) if hop else 0
+        for side in (-1, 1):
+            self._limb((hip, (cx + side * (px(3) + bend), feet - px(6)), (cx + side * px(3), feet)), pants, max(2, px(3)))
+        self._limb((neck, hip), sk, max(2, px(4)))
+        for hand in hands:
+            self._limb((neck, ((neck[0] + hand[0]) / 2, neck[1] + px(7)), hand), sk, max(2, px(2.2)))
+        c1, c2 = CORDS[min(self.level, len(CORDS) - 1)]
+        self.create_line(cx - px(4), hip[1] - px(1), cx + px(4), hip[1] - px(1), fill=c1, width=max(2, px(2.5)))
+        if c2:
+            self.create_line(cx - px(4), hip[1] - px(1), cx + px(4), hip[1] - px(1), fill=c2, width=max(2, px(2.5)),
+                             dash=(2, 2))
+        self.create_line(cx + px(2), hip[1], cx + px(4), hip[1] + px(6), fill=c1, width=max(1, px(1.6)))
+        self.create_oval(cx - px(3.4), neck[1] - px(8), cx + px(3.4), neck[1] - px(1), fill=sk, outline="#2a1a10")
+        for hand in hands:  # the handles
+            self.create_rectangle(hand[0] - px(1), hand[1] - px(2.5), hand[0] + px(1), hand[1] + px(1.5), fill="#c9a26a",
+                                  outline="")
+        if front:
+            rope()
+        font = skin.T.font("mono", 8, "bold")
+        self.create_text(w - px(2), h - px(4), anchor="e", text=f"+{self.value}", fill=skin.T.lcd_dim, font=font)
+        if self.jump_frame and self.gain:  # the points just earned float up
+            self.create_text(w - px(14), px(6) + px(10) * (1 - u), text=f"+{self.gain}", fill=skin.T.lcd_on, font=font)
 
 
 # ------------------------------------------------------------------ Kuglanje
@@ -421,9 +518,12 @@ class Pins(Scene):
 
     width, height = 54, 44
 
-    def __init__(self, master, on_event=None):
+    def __init__(self, master, on_event=None, on_click=None):
         self.strike = 0
         super().__init__(master, on_event)
+        if on_click:  # a click on the lane starts a game of bowling
+            self.configure(cursor="hand2")
+            self.bind("<Button-1>", lambda e: on_click())
 
     def reached(self) -> None:
         super().reached()
@@ -498,17 +598,20 @@ def draw_figure(c: tk.Canvas, x0: float, y0: float, w: float, h: float, t: float
 
 
 class Figure(Scene):
-    """Crouched against the white wall when the task starts, standing after an hour of it."""
+    """Crouched against the white wall when the task starts, standing after an hour of it; `posture`, when
+    the player sets it, also lets him sink on pause and tire (see posture())."""
 
     width, height = 36, 44
+    posture: float | None = None
 
     def draw(self) -> None:
         self.delete("all")
         w, h = self.w, self.h
         self.create_rectangle(0, 0, px(4), h, fill=blend(skin.T.lcd_bg, "#000000", 0.05), outline="")  # the wall
         self.create_line(0, h - px(2), w, h - px(2), fill=blend(skin.T.lcd_bg, "#000000", 0.18))
-        draw_figure(self, 0, 0, w, h, rise(self.seconds) if self.state != "stopped" else 0.0)
+        t = self.posture if self.posture is not None else rise(self.seconds) if self.state != "stopped" else 0.0
+        draw_figure(self, 0, 0, w, h, t)
 
 
-SCENES = {"sushi": SushiBelt, "tulip": TulipField, "wok": Wok, "roda": Roda, "pins": Pins,
+SCENES = {"sushi": SushiBelt, "tulip": TulipField, "wok": Wok, "jumper": Jumper, "pins": Pins,
           "figure": Figure}

@@ -152,7 +152,7 @@ def test_every_skin_renders(page):
     page.fill("#project", "Sajt Beta")
     page.click("#playBtn")
     for skin in ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi",
-                 "kinetic", "blades", "towers", "atmos", "graffiti", "sushi", "tulips", "tofu", "capoeira", "bowling",
+                 "kinetic", "blades", "towers", "atmos", "graffiti", "sushi", "tulips", "tofu", "jumprope", "bowling",
                  "window", "corporeal", "eink"):
         page.click("#menuBtn")
         page.click(f"#skins [data-skin={skin}]")
@@ -342,17 +342,41 @@ def test_scene_skins_follow_the_task(page):
     page.wait_for_function("document.querySelectorAll('.titlebar .piece.tu').length === 2")
     assert page.locator("#scene path").count() > 40
     page.click("#stopBtn")
-    start_task(page, "tofu", 21)  # a tofu cube every 5 minutes
-    page.wait_for_function("document.querySelectorAll('#scene .food rect[stroke]').length >= 4")
+    start_task(page, "tofu", 21)  # PLAY tosses the wok
+    assert page.locator("#scene.toss .wok").count() == 1
     page.click("#stopBtn")
-    start_task(page, "capoeira", 31)  # the green cord after 30 minutes, swaying in the ginga
-    page.wait_for_selector("#scene path[stroke='#1f9d4a']")
-    assert page.locator("#scene .ginga").count() == 2
+
+
+def test_jump_rope_clicker_levels_up(page):
+    pick_skin(page, "jumprope")
+    page.fill("#task", "Rad")
+    page.click("#playBtn")
+    page.evaluate("window.PTT.db.entries.at(-1).start = Date.now() - 60 * 60000")  # an hour today: 60 points a jump
+    page.click("#scene")
+    page.wait_for_function("window.PTT.db.settings.ropePoints >= 60")
+    assert page.inner_text("#piecesL") == "Nivo 0" and "/ 100" in page.inner_text("#piecesR")
+    page.click("#scene")
+    page.wait_for_function("document.body.dataset.level === '1'")  # 100 points: the whole skin changes color
+    assert page.evaluate("getComputedStyle(document.body).getPropertyValue('--body').trim()") == "#123a8a"
     page.click("#stopBtn")
-    start_task(page, "bowling", 61)  # a strike: the first frame gets an X
-    page.wait_for_function("document.querySelectorAll('.titlebar .piece.frame.x').length === 1")
-    assert page.locator(".titlebar .piece.frame").count() == 10
-    page.click("#stopBtn")
+
+
+def test_bowling_game_and_score_sheet(page):
+    m = page.evaluate("window.PTT.bMarks([10, 7, 3, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 3, 7])")
+    assert m == ["X", "7/", "9-", "--", "--", "--", "--", "--", "--", "X3/"]
+    assert page.evaluate("window.PTT.bScores(Array(12).fill(10))")[-1] == 300
+    pick_skin(page, "bowling")
+    page.click("#scene")
+    assert page.locator("#bowlDlg").is_visible()
+    page.click("#bowlLane")  # aim
+    page.click("#bowlLane")  # power: the ball rolls
+    page.wait_for_function("(window.PTT.db.settings.bowlingRolls || []).length === 1", timeout=5000)
+    page.click("#bowlClose")
+    page.wait_for_function("document.querySelectorAll('.titlebar .piece.frame').length === 10")
+    assert page.locator("#piecesL .piece.frame").first.inner_text() != ""  # the first ball is on the sheet
+
+
+def test_window_and_corporeal_scenes(page):
     start_task(page, "window", 60)  # pink light at dusk in the list (the window), dimmed when the blind is let down
     assert page.locator("#scene").is_hidden()
     page.wait_for_function("getComputedStyle(document.body).getPropertyValue('--light').trim() !== ''")
@@ -360,8 +384,10 @@ def test_scene_skins_follow_the_task(page):
     page.click("#pauseBtn")
     page.wait_for_function(f"getComputedStyle(document.body).getPropertyValue('--light').trim() !== '{lit}'")
     page.click("#stopBtn")
-    start_task(page, "corporeal", 61)  # standing after an hour
+    start_task(page, "corporeal", 61)  # standing after an hour, sinking back on pause
     page.wait_for_selector("#scene circle")
+    page.evaluate("window.PTT.db.entries.at(-1).start = Date.now() - 4.5 * 3600000")  # four and a half hours without a break
+    page.wait_for_function("document.querySelector('#scene circle').getAttribute('cy') > 12")  # he bends again
     assert page.evaluate("document.documentElement.scrollWidth") <= 390
 
 
@@ -392,7 +418,7 @@ def test_sounds_render_for_every_skin(page):
         const out = {};
         for (const skin of ['matrix', 'pastel', 'wood', 'cyber', 'cat', 'setsuna', 'mondrian', 'egg', 'dandelion', 'coffee', 'hourglass', 'lofi',
                            'kinetic', 'blades', 'towers', 'atmos', 'graffiti', 'sushi', 'tulips', 'tofu',
-                           'capoeira', 'bowling', 'window', 'corporeal', 'eink'])
+                           'jumprope', 'bowling', 'window', 'corporeal', 'eink'])
             for (const ev of PTTSounds.EVENTS) {
                 const s = PTTSounds.render(skin, ev);
                 out[skin + ':' + ev] = [s.length / PTTSounds.RATE, Math.max(...s.map(Math.abs))];
@@ -406,8 +432,8 @@ def test_sounds_render_for_every_skin(page):
 
 def test_service_worker_caches_app_for_offline(page):
     page.evaluate("navigator.serviceWorker.ready.then(() => true)")
-    page.wait_for_function("caches.has('ptt-v10')")
-    cached = page.evaluate("caches.open('ptt-v10').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
+    page.wait_for_function("caches.has('ptt-v11')")
+    cached = page.evaluate("caches.open('ptt-v11').then(c => c.keys()).then(k => k.map(r => new URL(r.url).pathname))")
     assert "/index.html" in cached and "/app.js" in cached
 
 

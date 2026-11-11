@@ -7,7 +7,7 @@
    kinetic: a trance stab over a turbo, brakes, a pass-by per lap, blades: glassy bloops and an achievement chime,
    towers: a deep boot swoosh with crystal shimmer, atmos: a jungle break at 174 BPM and a reese bass,
    graffiti: the spray can's rattle and hiss, a record scratch on PL, sushi: chopsticks, a bell, plates,
-   tulips: plucked notes and birdsong, tofu: oil sizzling in the wok, capoeira: berimbau, caxixi, pandeiro, agogô,
+   tulips: plucked notes and birdsong, tofu: oil sizzling in the wok, jumprope: berimbau, caxixi, the rope's whip, pandeiro, agogô,
    bowling: the ball and the pins, window: a roller blind and crickets, corporeal: footsteps and a breath in a gallery. */
 (function () {
   "use strict";
@@ -253,24 +253,26 @@
       alert: () => [...chirp(213), ...seq(chirp(214), 0.3), ...seq(chirp(215), 0.6)],
     },
     tofu: {
-      start: () => sizzle(0.7),
+      start: () => [[0, swoosh(0.2, true, 227)], ...seq(sizzle(0.7), 0.12)],
       pause: () => sizzle(0.25, 222),
       stop: () => [[0, clang()]],
       click: () => [[0, noise(0.05, { tau: 0.012, amp: 0.8, seed: 223, highpass: 0.3 })]],
       flip: () => [[0, swoosh(0.25, true, 224)], ...seq(sizzle(0.6, 225), 0.2), [0, noise(0.03, { tau: 0.008, amp: 0.6, seed: 226, highpass: 0.3 })]],
       alert: () => [[0, clang()], [0.3, clang(700, 0.6)]],
     },
-    capoeira: {
+    jumprope: {
+      jump: () => [[0, swoosh(0.12, true, 236)], [0.1, knock(2.4, 0.7, 237)]],
       start: () => [[0, tch()], [0.14, tch(234)], [0.28, berimbau(196)], [0.52, berimbau(220)]],
       pause: () => caxixi(),
       stop: () => [[0, berimbau(147, 0.6)]],
       click: () => [[0, tch(235)]],
-      flip: () => [...jingles(), [0.2, berimbau(220)], [0.45, berimbau(247)]],
+      flip: () => [...jingles(), [0.2, berimbau(220)], [0.45, berimbau(247)], [0.6, agogo(880)]],
       alert: () => [[0, agogo(880)], [0.15, agogo(660)], [0.4, agogo(880)], [0.55, agogo(660)]],
     },
     bowling: {
       start: () => [[0, roll(0.5)], ...seq(crash(4, 243), 0.45)],
       pause: () => [[0, knock(0.7, 1, 244)]],
+      roll: () => [[0, roll(0.6, 250)]],
       stop: () => crash(6, 245),
       click: () => [[0, knock(1.9, 0.5, 246)]],
       flip: () => [[0, roll(0.3, 247)], ...seq(crash(10, 248), 0.25)],

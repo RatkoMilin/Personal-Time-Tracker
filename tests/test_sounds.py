@@ -6,7 +6,7 @@ import pytest
 from timetracker import sounds
 
 SKINS = ("matrix", "pastel", "wood", "cyber", "cat", "setsuna", "mondrian", "egg", "dandelion", "coffee", "hourglass", "lofi",
-         "kinetic", "blades", "towers", "atmos", "graffiti", "sushi", "tulips", "tofu", "capoeira", "bowling", "window",
+         "kinetic", "blades", "towers", "atmos", "graffiti", "sushi", "tulips", "tofu", "jumprope", "bowling", "window",
          "corporeal")
 
 

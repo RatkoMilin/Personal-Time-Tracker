@@ -14,8 +14,9 @@ graffiti: the spray can's rattle and hiss, a record scratch on PL, a long spray 
 sushi: chopsticks tapping, a little bell, plates clinking as they stack ("flip")
 tulips: light plucked notes and birdsong, a chime for every tulip planted ("flip")
 tofu: oil sizzling in the wok, the spatula, a wok clang, the toss ("flip")
-capoeira: the berimbau and the caxixi, a pandeiro for every new cord ("flip"), agogô bells
-bowling: the ball rolling, pins crashing, a strike every full hour ("flip")
+jumprope: the berimbau and the caxixi, the rope whipping round for a jump ("jump"), a pandeiro and berimbau
+  fanfare for every new level ("flip"), agogô bells
+bowling: the ball rolling ("roll"), pins crashing, a strike ("flip")
 window: a roller blind pulled up and let down, crickets at each turn of the sunset ("flip")
 corporeal: footsteps and a breath in a quiet gallery, its echo
 
@@ -475,7 +476,7 @@ def _kit(skin: str) -> dict:
         }
     elif skin == "tofu":
         kit = {
-            "start": _sizzle(0.7),
+            "start": [(0, _swoosh(0.2, rising=True, seed=227))] + [(0.12 + t, v) for t, v in _sizzle(0.7)],  # the toss
             "pause": _sizzle(0.25, seed=222),
             "stop": [(0, _clang())],
             "click": [(0, noise(0.05, tau=0.012, amp=0.8, seed=223, highpass=0.3))],         # the spatula scrapes
@@ -483,19 +484,21 @@ def _kit(skin: str) -> dict:
                     + [(0, noise(0.03, tau=0.008, amp=0.6, seed=226, highpass=0.3))],
             "alert": [(0, _clang()), (0.3, _clang(700, 0.6))],
         }
-    elif skin == "capoeira":
+    elif skin == "jumprope":
         kit = {
+            "jump": [(0, _swoosh(0.12, rising=True, seed=236)), (0.1, _knock(2.4, 0.7, seed=237))],  # whip, landing
             "start": [(0, _tch()), (0.14, _tch(234)), (0.28, _berimbau(196)), (0.52, _berimbau(220))],
             "pause": _caxixi(),
             "stop": [(0, _berimbau(147, 0.6))],
             "click": [(0, _tch(235))],
-            "flip": _jingles() + [(0.2, _berimbau(220)), (0.45, _berimbau(247))],
+            "flip": _jingles() + [(0.2, _berimbau(220)), (0.45, _berimbau(247)), (0.6, _agogo(880))],
             "alert": [(0, _agogo(880)), (0.15, _agogo(660)), (0.4, _agogo(880)), (0.55, _agogo(660))],
         }
     elif skin == "bowling":
         kit = {
             "start": [(0, _roll(0.5))] + [(0.45 + t, v) for t, v in _crash(4, seed=243)],
             "pause": [(0, _knock(0.7, 1.0, seed=244))],                                        # the ball comes back
+            "roll": [(0, _roll(0.6, seed=250))],
             "stop": _crash(6, seed=245),
             "click": [(0, _knock(1.9, 0.5, seed=246))],
             "flip": [(0, _roll(0.3, seed=247))] + [(0.25 + t, v) for t, v in _crash(10, seed=248)],   # strike

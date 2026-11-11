@@ -702,13 +702,12 @@ def test_2000s_skins_gadgets(app):
 def test_scene_skins(app):
     from timetracker.ui import scenes, skin
 
-    assert scenes.plates(29 * 60) == 2 and scenes.cubes(61 * 60) == 0 and scenes.cubes(26 * 60) == 5
-    assert scenes.grade(61 * 60) == 2 and scenes.pins_down(37 * 60) == 6 and scenes.dusk_phase(60 * 60) == 2
+    assert scenes.plates(29 * 60) == 2 and scenes.pins_down(37 * 60) == 6 and scenes.dusk_phase(60 * 60) == 2
     assert scenes.light_color(0) == "#ffd27a" and scenes.rise(30 * 60) == 0.5
     assert scenes.pose(0)[0] == scenes.POSES[0][0] and scenes.pose(1)[0] == scenes.POSES[-1][0]
     if not app.settings["show_playlist"]:
         app.toggle_playlist()
-    for key in ("sushi", "tulips", "tofu", "capoeira", "bowling", "window", "corporeal"):
+    for key in ("sushi", "tulips", "bowling", "window", "corporeal"):
         app.set_skin(key)
         events = []
         if key == "window":  # no scene: the list is the window, the player plays the sunset's turns
@@ -720,7 +719,7 @@ def test_scene_skins(app):
         _run_for(app, 59.9)
         _run_for(app, 60.1)  # every scene reaches a milestone at the full hour
         assert events, key
-        if key in ("tulips", "bowling"):
+        if key == "tulips":
             assert len(app.titlebar.pieces) == 1, key
         if key == "window":
             assert app.scene is None and "flip" in events
@@ -731,4 +730,77 @@ def test_scene_skins(app):
             assert app.pl_panel.tint != lit  # the blind is down
             del app.sounds.play
         app.stop()
+    app.set_skin("matrix")
+
+
+def test_lazi_tofu_toss_and_corporeal_posture(app):
+    from timetracker.ui import scenes
+
+    assert scenes.posture(3600, "stopped") == 0 and scenes.posture(3600, "playing", 600) == 1
+    assert scenes.posture(3600, "paused", 0, 7.5 * 60) == 0.5 and scenes.posture(3600, "paused", 0, 20 * 60) == 0
+    assert 0.1 < scenes.posture(3600, "playing", 3.5 * 3600) < 1 and scenes.posture(3600, "playing", 5 * 3600) < 0.2
+    app.set_skin("tofu")
+    app.task_var.set("Wok")
+    app.play()  # PLAY tosses the wok
+    assert app.scene.toss_frame > 0
+    app.stop()
+    app.db._exec("DELETE FROM entries")
+    app.set_skin("corporeal")
+    app.task_var.set("Telo")
+    app.play()
+    _run_for(app, 61)
+    assert app.scene.posture == 1
+    app.pause()
+    entry = [e for e in app.db.entries_between(time.time() - 7200, time.time() + 1) if e.description == "Telo"][-1]
+    app.db.update_entry(entry.id, entry.description, entry.project_id, entry.start_ts, time.time() - 600)
+    app._update_display()  # ten minutes into the pause he has sunk two thirds of the way
+    assert 0.2 < app.scene.posture < 0.5
+    app.stop()
+    app.set_skin("matrix")
+
+
+def test_jump_rope_clicker(app):
+    from timetracker.ui import scenes, skin
+
+    assert scenes.click_value(0, 0) == 1 and scenes.click_value(120, 0.5) == 60
+    assert scenes.rope_level(99) == 0 and scenes.rope_level(100) == 1 and scenes.rope_level(100000) == 7
+    assert scenes.rope_next(150) == 300 and scenes.rope_next(100000) is None
+    app.settings.update({"rope_points": 0})
+    app.set_skin("jumprope")
+    assert skin.T.key == "jumprope" and app.titlebar.pieces[:2] == ["0", "0"]
+    app.db.add_activity("productive", "Word", time.time() - 3600, time.time() - 1)
+    app.db.add_entry("Rad", None, time.time() - 3600, time.time() - 1)
+    value = app._rope_value()
+    assert value >= 55  # an hour of productive work: about 60 points a jump
+    app.scene.jump()
+    assert app.settings["rope_points"] == value and app.scene.jump_frame > 0
+    app.scene.jump()
+    app.update()
+    app._rope_level_up()  # (normally after the jump finishes) past 100 points the whole skin changes color
+    assert skin.T.key == "jumprope_1" and app.settings["skin"] == "jumprope"
+    assert skin.T.body == skin.ROPE_PALETTES[1][1]
+    app.db._exec("DELETE FROM activity")
+    app.settings.update({"rope_points": 0})
+    app.set_skin("matrix")
+
+
+def test_bowling_game(app):
+    import random
+    from timetracker.ui import bowling
+
+    assert bowling.total([10] * 12) == 300 and bowling.marks([3, 7, 10, 0, 0])[:3] == ["3/", "X", "--"]
+    assert bowling.scores([3, 7, 10, 4]) == [20, None] and bowling.game_over([9, 0] * 10)
+    assert bowling.throw(0.99, 1.0, set(bowling.ALL_PINS), random.Random(1)) == set()  # the gutter
+    app.settings.update({"bowling_rolls": [], "bowling_pins": [], "bowling_best": 0})
+    app.set_skin("bowling")
+    app.open_bowling()
+    game = app.bowling_window
+    game.click()  # aim
+    game.click()  # power: the ball rolls
+    for _ in range(80):
+        game._step()
+    assert len(app.settings["bowling_rolls"]) == 1
+    assert app.titlebar.pieces[0] != ""  # the score sheet beside the title shows the first ball
+    game.destroy()
+    app.settings.update({"bowling_rolls": [], "bowling_pins": []})
     app.set_skin("matrix")
