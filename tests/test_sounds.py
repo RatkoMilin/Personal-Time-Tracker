@@ -31,14 +31,19 @@ def test_player_caches_files_and_respects_toggle(tmp_path):
     enabled = {"on": True}
     player = sounds.SoundPlayer(tmp_path, lambda: enabled["on"], lambda: "wood",
                                 backend=lambda p: played.append(p) or True)
-    assert player.play("start")
+    assert player.play("start")  # not rendered yet: the worker renders and plays it, the caller goes on
+    player.wait()
     assert played[0].name == f"wood_start_v{sounds.VERSION}.wav" and played[0].exists()
     enabled["on"] = False
     assert not player.play("click")
     assert player.play("alert", force=True)  # the idle reminder can force a sound
+    player.wait()
     assert len(played) == 2
     player.prepare("cyber").join()
-    assert len(list(tmp_path.glob("cyber_*.wav"))) == len(sounds.EVENTS)
+    assert len(list(tmp_path.glob("cyber_*.wav"))) == len(sounds.events("cyber"))
+    played.clear()
+    enabled["on"] = True
+    assert player.play("start") and played  # ready: played at once, not through the worker
 
 
 def test_extra_effects_fall_back_to_click():
@@ -54,3 +59,30 @@ def test_button_sounds_start_right_away(skin):
         peak = max(abs(v) for v in samples)
         onset = next(i for i, v in enumerate(samples) if abs(v) >= 0.3 * peak) / sounds.RATE
         assert onset < 0.07, (skin, event, onset)
+
+
+def test_play_never_waits_for_synthesis(tmp_path):
+    """The first play of a skin's sound must not hold up the window while the sound is being made."""
+    import time
+
+    played = []
+    player = sounds.SoundPlayer(tmp_path, lambda: True, lambda: "bowling", backend=lambda p: played.append(p) or True)
+    sounds._kit_cached.cache_clear()
+    sounds._render.cache_clear()
+    t = time.perf_counter()
+    assert player.play("start")
+    assert time.perf_counter() - t < 0.05
+    player.wait()
+    assert played and played[0].name.startswith("bowling_start")
+
+
+def test_the_mestres_phrase_is_one_sound(tmp_path):
+    played = []
+    player = sounds.SoundPlayer(tmp_path, lambda: True, lambda: "jumprope", backend=lambda p: played.append(p) or True)
+    notes = [(0.0, "pad0"), (0.34, "pad1"), (0.68, "pad2"), (1.36, "pad3")]
+    assert player.play_sequence(notes)
+    assert len(played) == 1 and played[0].name.startswith("phrase_")
+    import wave
+    with wave.open(str(played[0])) as w:  # every note whole: the last one rings out after its offset
+        assert w.getnframes() / w.getframerate() > 1.36 + 0.5
+    assert "pad0" in sounds.events("jumprope") and sounds.events("jumprope")[0] == "start"

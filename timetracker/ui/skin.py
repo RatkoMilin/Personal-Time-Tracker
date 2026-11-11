@@ -81,6 +81,7 @@ class Theme:
     pl_pattern: str = ""
     clock_deco: str = ""
     leaf: str = "#3f8f2f"
+    spot_colors: tuple = ("#5c5a61", "#2a292d", "#e9e0d0")  # the "spots" pattern's dots
     # Productivity meter look: "" (bar), "sword" (katana glows neon), "flowers" (branch blossoms, flowers can be
     # turned into walnuts), "lanterns" (lit paper lanterns), "cat" (bar with a cat at 80%+), "mondrian", "glow".
     meter: str = ""
@@ -221,7 +222,7 @@ THEMES: dict[str, Theme] = {t.key: t for t in (
         mono=("Consolas", "DejaVu Sans Mono"), sans=("Segoe UI", "DejaVu Sans"),
         label_size=9, label_weight="bold", upper=False,
         shape="round", radius=14, panel_outline="#111111", title_style="oranges", segments="round",
-        button="circle", pl_pattern="leaves", clock_deco="oranges", meter="lanterns", confetti=True,
+        button="circle", pl_pattern="leaves", clock_deco="oranges", meter="leaves", confetti=True,
     ),
     Theme(
         key="mondrian", name="Mondrian",
@@ -839,7 +840,7 @@ class Panel(tk.Frame):
         if self.pattern == "spots":
             for x, y in spots:
                 r = rnd.uniform(px(2), px(5))
-                color = rnd.choice(("#5c5a61", "#2a292d", "#e9e0d0"))
+                color = rnd.choice(T.spot_colors)
                 c.create_oval(x - r * 1.2, y - r, x + r * 1.2, y + r, fill=color, outline="")
         elif self.pattern == "leaves":
             for x, y in spots[::2]:
@@ -1574,7 +1575,7 @@ class ProductivityMeter(tk.Canvas):
     Styles (theme `meter`): "" text and a three-part bar; "sword" a katana whose blade glows neon blue
     for the productive share; "flowers" a branch that blossoms for the productive share, and a click on
     a flower turns it into a walnut for the rest of the day (on_walnut stores it); "lanterns" a string of
-    paper lanterns that light up; "cat" a bar with a fat white cat lying on it at 80%+ (click: tail wag,
+    paper lanterns that light up; "leaves" an orange twig whose leaves turn green; "cat" a bar with a fat white cat lying on it at 80%+ (click: tail wag,
     blink or paw swat, in random order); "mondrian" color fields in thick black lines; "glow" a lamp bar
     whose light grows with the share.
     """
@@ -1646,6 +1647,8 @@ class ProductivityMeter(tk.Canvas):
             self._branch(x0, x1, h / 2, prod)
         elif style == "lanterns":
             self._lanterns(x0, x1, prod)
+        elif style == "leaves":
+            self._leaves(x0, x1, h / 2, prod)
         elif style == "mondrian":
             self._mondrian(x0, x1, h / 2, prod, dist)
         elif style == "glow":
@@ -1785,6 +1788,25 @@ class ProductivityMeter(tk.Canvas):
             y = cy + ry * dy
             self.create_line(cx - rx * 0.7, y, cx - rx * 0.25, y - px(1), fill="#6e4a24")
             self.create_line(cx + rx * 0.25, y + px(1), cx + rx * 0.7, y, fill="#6e4a24")
+
+    def _leaves(self, x0: float, x1: float, cy: float, prod: float) -> None:
+        """An orange tree's twig: its leaves turn fresh green for the productive share, the rest stay pale;
+        at 80% and more a little orange hangs at the tip."""
+        tip = x1 - px(12)
+        self.create_line([(x0 + (tip - x0) * i / 16, cy + px(1.5) * math.sin(i * 0.9)) for i in range(17)],
+                         fill="#6b4a2e", width=max(1, px(1.6)), smooth=True)
+        count = max(2, int((tip - x0) // px(13)))
+        green_n = round(count * prod)
+        for i in range(count):
+            x = x0 + (tip - x0) * (i + 0.5) / count
+            up = i % 2 == 0
+            color = T.leaf if i < green_n else "#dfe6d2"
+            draw_leaf(self, x + px(3), cy + (-px(5) if up else px(5)), px(12), -35 if up else 35, color)
+        if prod >= 0.8:
+            r = px(5)
+            self.create_oval(tip + px(1), cy - r + px(3), tip + px(1) + 2 * r, cy + r + px(3), fill="#f08a24",
+                             outline="#c8641a")
+            self.create_line(tip + px(1) + r, cy - r + px(3), tip + px(1) + r, cy - r, fill="#6b4a2e")
 
     def _lanterns(self, x0: float, x1: float, prod: float) -> None:
         """Paper lanterns (chochin) on a sagging string; productive ones are lit and glow."""

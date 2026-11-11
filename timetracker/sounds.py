@@ -26,12 +26,16 @@ played asynchronously with winsound on Windows.
 
 from __future__ import annotations
 
+import array
+import functools
 import io
 import math
 import os
+import queue
 import random
-import struct
+import sys
 import threading
+import time
 import wave
 from pathlib import Path
 from typing import Callable
@@ -529,9 +533,25 @@ def _breath(dur: float, seed: int = 262, out: bool = True) -> list[float]:
                  shape=lambda f: min(1.0, f / 0.05) * (1 - f) ** 1.5)
 
 
+@functools.lru_cache(maxsize=4)
+def _kit_cached(skin: str) -> dict:
+    """A skin's whole kit, built once: building it synthesizes every one of its sounds."""
+    return _kit(skin)
+
+
+@functools.lru_cache(maxsize=64)
+def _render(skin: str, event: str) -> tuple[float, ...]:
+    kit = _kit_cached(skin)
+    return tuple(mix(kit.get(event) or kit["click"]))  # effects a skin lacks (e.g. "pl") fall back to its click
+
+
 def render(skin: str, event: str) -> list[float]:
-    kit = _kit(skin)
-    return mix(kit.get(event) or kit["click"])  # effects a skin lacks (e.g. "pl") fall back to its click
+    return list(_render(skin, event))
+
+
+def events(skin: str) -> list[str]:
+    """Every effect a skin has, the button sounds first."""
+    return list(EVENTS) + [e for e in _kit_cached(skin) if e not in EVENTS]
 
 
 def _kit(skin: str) -> dict:
@@ -783,12 +803,17 @@ def wav_bytes(samples: list[float]) -> bytes:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(RATE)
-        w.writeframes(b"".join(struct.pack("<h", int(max(-1.0, min(1.0, v)) * 32767)) for v in samples))
+        pcm = array.array("h", (int(max(-1.0, min(1.0, v)) * 32767) for v in samples))
+        if sys.byteorder == "big":
+            pcm.byteswap()
+        w.writeframes(pcm.tobytes())
     return buf.getvalue()
 
 
 class SoundPlayer:
-    """Plays the active skin's effects; renders missing WAV files on demand (or ahead in a thread)."""
+    """Plays the active skin's effects. Sounds are synthesized once into WAV files; that takes a moment, so
+    it happens in the background (prepare), and a sound that is not ready yet is rendered and played by a
+    worker thread: the window never waits for it."""
 
     def __init__(self, cache_dir: Path, enabled: Callable[[], bool], skin: Callable[[], str],
                  backend: Callable[[Path], bool] = platform_win.play_wav):
@@ -796,28 +821,90 @@ class SoundPlayer:
         self.enabled = enabled
         self.skin = skin
         self.backend = backend
-        self._lock = threading.Lock()
+        self._write_lock = threading.Lock()
+        self._jobs: queue.Queue = queue.Queue()
+        self._worker = threading.Thread(target=self._work, daemon=True)
+        self._worker.start()
 
-    def path(self, skin: str, event: str) -> Path:
-        path = self.cache_dir / f"{skin}_{event}_v{VERSION}.wav"
-        with self._lock:
+    def _file(self, skin: str, event: str) -> Path:
+        return self.cache_dir / f"{skin}_{event}_v{VERSION}.wav"
+
+    def _write(self, path: Path, samples) -> Path:
+        data = wav_bytes(samples)
+        with self._write_lock:
             if not path.exists():
                 self.cache_dir.mkdir(parents=True, exist_ok=True)
-                tmp = path.with_suffix(".tmp")
-                tmp.write_bytes(wav_bytes(render(skin, event)))
+                tmp = path.with_name(f"{path.stem}.{threading.get_ident()}.tmp")
+                tmp.write_bytes(data)
                 os.replace(tmp, path)
         return path
 
+    def path(self, skin: str, event: str) -> Path:
+        """The effect's WAV file, synthesized first if it is not there yet."""
+        path = self._file(skin, event)
+        return path if path.exists() else self._write(path, _render(skin, event))
+
     def prepare(self, skin: str) -> threading.Thread:
-        """Render a skin's sounds in the background so the first click plays instantly."""
-        t = threading.Thread(target=lambda: [self.path(skin, e) for e in EVENTS], daemon=True)
+        """Render all of a skin's sounds in the background, the button sounds first, so they play instantly."""
+        t = threading.Thread(target=lambda: [self.path(skin, e) for e in events(skin)], daemon=True)
         t.start()
         return t
+
+    def prepare_all(self, skins, first: str | None = None) -> threading.Thread:
+        """Render every skin's sounds, slowly, in the background (once per synthesis VERSION)."""
+        def run():
+            for sk in ([first] if first else []) + [k for k in skins if k != first]:
+                for e in events(sk):
+                    if not self._file(sk, e).exists():
+                        self.path(sk, e)
+                        time.sleep(0.02)  # leave the window room to breathe
+        t = threading.Thread(target=run, daemon=True)
+        t.start()
+        return t
+
+    def _work(self) -> None:
+        while True:
+            job = self._jobs.get()
+            try:
+                job()
+            except OSError:
+                pass
+            finally:
+                self._jobs.task_done()
+
+    def wait(self) -> None:
+        """Until the sounds handed to the worker have played (for tests)."""
+        self._jobs.join()
 
     def play(self, event: str, force: bool = False) -> bool:
         if not (force or self.enabled()):
             return False
+        skin_ = self.skin()
+        path = self._file(skin_, event)
         try:
-            return self.backend(self.path(self.skin(), event))
+            if path.exists() and self._jobs.empty():
+                return self.backend(path)
+        except OSError:
+            return False
+        self._jobs.put(lambda: self.backend(self.path(skin_, event)))  # not ready: rendered and played aside
+        return True
+
+    def play_sequence(self, notes: list[tuple[float, str]]) -> bool:
+        """Several effects at their offsets (seconds) as one sound, e.g. the mestre's phrase: one WAV, so the
+        notes ring into each other instead of cutting each other off, and keep their time exactly."""
+        if not self.enabled() or not notes:
+            return False
+        skin_ = self.skin()
+        mixed = mix([(off, _render(skin_, event)) for off, event in notes])
+        key = abs(hash((skin_, tuple(notes)))) % 10 ** 8
+        path = self.cache_dir / f"phrase_{key}_v{VERSION}.wav"
+        for old in self.cache_dir.glob("phrase_*.wav"):  # keep just the latest few
+            if old != path and time.time() - old.stat().st_mtime > 60:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass
+        try:
+            return self.backend(self._write(path, mixed))
         except OSError:
             return False
