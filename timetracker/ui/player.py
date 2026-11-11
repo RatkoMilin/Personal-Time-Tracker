@@ -69,6 +69,8 @@ class Player(tk.Tk):
             self.task_var.set(running.description)
             self.project_var.set(db.project_names().get(running.project_id, ""))
         self._build_ui()
+        if start_tracker:  # every skin's sounds, rendered once in the background, so switching skins is instant
+            self.after(4000, self._prepare_sounds)
         self.bind("<Button-3>", self._popup_menu)  # root binding tag: any widget in this window
         self.bind_all("<Control-space>", lambda e: self.play_pause())
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -759,13 +761,19 @@ class Player(tk.Tk):
         self._update_display()
         return value
 
+    def _prepare_sounds(self):
+        if self.settings["sounds"]:
+            kits = sorted({t.dark_variant or t.key for t in skin.THEMES.values()})
+            self.sounds.prepare_all(kits, first=skin.T.dark_variant or skin.T.key)
+
     def open_simon(self):
         """The bonus round (one window at a time)."""
         if self.simon_window is not None and self.simon_window.winfo_exists():
             self.simon_window.lift()
             return
         self.settings.update({"rope_bonus_ready": False})
-        self.simon_window = simon.SimonRound(self, on_sound=self.sounds.play, on_done=self._simon_done)
+        self.simon_window = simon.SimonRound(self, on_sound=self.sounds.play, on_done=self._simon_done,
+                                             on_phrase=self.sounds.play_sequence)
         self._update_display()
 
     def _simon_done(self, minutes: int):

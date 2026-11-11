@@ -296,7 +296,7 @@ WOK_FOOD = ((-0.5, 0.3, 0.16, "tofu", 1.0, 1), (-0.18, 0.15, 0.17, "tofu", 1.25,
             (0.5, 0.35, 0.15, "tofu", 1.15, -2), (-0.3, 0.75, 0.15, "tofu", 1.4, 1), (0.08, 0.8, 0.16, "tofu", 1.6, -1),
             (-0.02, 0.45, 0.3, "chili", 1.3, 1), (0.34, 0.7, 0.26, "chili", 1.0, -2), (-0.6, 0.7, 0.1, "scallion", 1.5, 2),
             (0.3, 0.1, 0.1, "scallion", 1.7, -2))
-TOSS_FRAMES = 22
+TOSS_FRAMES = 24  # at 40 ms: a toss takes about a second
 
 
 class Wok(Scene):
@@ -304,7 +304,7 @@ class Wok(Scene):
     swings up, the tofu, chilies and scallions fly and turn in the air and land back, and the flame flares."""
 
     width, height = 58, 44
-    frame_ms = 70
+    frame_ms = 40
 
     def __init__(self, master, on_event=None):
         self.toss_frame = 0
@@ -336,7 +336,7 @@ class Wok(Scene):
         by = h - px(3)
         self.create_rectangle(cx - rx * 0.7, by, cx + rx * 0.7, by + px(2), fill="#3a3d44", outline="")
         if self.state != "stopped" or tossing:
-            rnd = random.Random(self.frame)
+            rnd = random.Random(self.frame // 2)  # the flame flickers every other frame
             n = 7
             for k in range(n):
                 fx = cx - rx * 0.55 + k * rx * 1.1 / (n - 1)
@@ -352,7 +352,7 @@ class Wok(Scene):
                 x0 = cx - rx * 0.45 + k * rx * 0.45
                 pts = []
                 for i in range(6):
-                    pts += [x0 + math.sin((i + self.frame * 0.6 + k * 2) * 0.9) * px(2), rim - px(2) - i * px(3)]
+                    pts += [x0 + math.sin((i + self.frame * 0.35 + k * 2) * 0.9) * px(2), rim - px(2) - i * px(3)]
                 self.create_line(pts, fill=blend(skin.T.lcd_bg, "#ffffff", 0.3), smooth=True)
         # the wok swings forward and up, tilting, and comes back. Seen from a little above: the dark inside of
         # the opening, then the food, then the front wall over it, so the food sits in the wok, not on it.

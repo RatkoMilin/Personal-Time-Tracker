@@ -57,11 +57,12 @@ class SimonGame:
 class SimonRound(tk.Toplevel):
     """The roda: four instrument pads. on_done(minutes) gets the double-points minutes won."""
 
-    def __init__(self, master, on_sound=None, on_done=None):
+    def __init__(self, master, on_sound=None, on_done=None, on_phrase=None):
         super().__init__(master, bg=skin.T.body)
         self.title("Roda: bonus")
         self.resizable(False, False)
         self.on_sound, self.on_done = on_sound, on_done
+        self.on_phrase = on_phrase  # plays the whole phrase as one sound; True if it did
         self.game = SimonGame()
         self.lit: int | None = None
         self.listening = False
@@ -87,23 +88,29 @@ class SimonRound(tk.Toplevel):
         self.listening = False
         self.message = "Slušaj mestrea..."
 
-        def note(k=0):
-            if not self.winfo_exists():
-                return
-            if k >= len(self.game.sequence):
+        seq = list(self.game.sequence)
+        at = [sum(TOQUE_MS[j % len(TOQUE_MS)] for j in range(k)) for k in range(len(seq))]
+        # the laptop plays one sound at a time: one sound for the whole phrase keeps every note whole and on time
+        whole = bool(self.on_phrase and self.on_phrase([(t / 1000, f"pad{p}") for t, p in zip(at, seq)]))
+
+        def note(k):
+            if self.winfo_exists():
+                self._flash(seq[k], sound=not whole)
+
+        def your_turn():
+            if self.winfo_exists():
                 self.lit = None
                 self.listening = True
                 self.message = "Tvoj red: ponovi"
                 self.draw()
-                return
-            self._flash(self.game.sequence[k])
-            self.after(TOQUE_MS[k % len(TOQUE_MS)], note, k + 1)
 
-        note()
+        for k, t in enumerate(at):
+            self.after(t, note, k)
+        self.after(at[-1] + 450, your_turn)
 
-    def _flash(self, pad: int) -> None:
+    def _flash(self, pad: int, sound: bool = True) -> None:
         self.lit = pad
-        if self.on_sound:
+        if sound and self.on_sound:
             self.on_sound(f"pad{pad}")
         self.draw()
         self.after(260, self._unflash, pad)

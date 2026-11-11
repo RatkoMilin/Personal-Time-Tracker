@@ -9,7 +9,7 @@
                  ["blades", "Blades"], ["towers", "Kristalne kule"], ["atmos", "Atmos"], ["graffiti", "Grafiti"],
                  ["sushi", "Suši"], ["tulips", "Lale"], ["tofu", "Lazi tofu"], ["jumprope", "Vijača"],
                  ["bowling", "Kuglanje"], ["window", "Prozor"], ["corporeal", "Korporealnost"], ["eink", "E-ink"]];
-  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#f4ecdf", setsuna: "#ffffff",
+  const THEME_COLOR = { matrix: "#2b2b3a", pastel: "#f7dbe7", wood: "#4a2f1d", cyber: "#23262b", cat: "#e3ecd6", setsuna: "#ffffff",
                         mondrian: "#ffffff", egg: "#3a3a3a", egg_lit: "#fbf6ea", dandelion: "#fdfbf9", coffee: "#171211", hourglass: "#ead3a2", lofi: "#2a2440",
                         kinetic: "#0d0b1e", blades: "#e9ecef", towers: "#05070f", atmos: "#0f1f1c", graffiti: "#ffd23f",
                         sushi: "#f3ead9", tulips: "#fff6f2", tofu: "#3a0d0a", jumprope: "#0e5a32", bowling: "#1a1d3a",
@@ -881,7 +881,7 @@
                     [0.3, 0.1, 0.1, "s", 1.7, -2]].map((f, i) => [...f, i]).sort((p, q) => q[1] - p[1]);
       out += food.map(([dx, back, size, kind, high, spin, i]) => {
         const x = 25 + dx * 16.8, y = 22 + 4 * (0.55 - back * 1.1), sz = size * 21;
-        return `<g class="f" style="--x:${f1(dx * 4.2)}px;--h:-${f1(9 * high)}px;--s:${360 * spin}deg;animation-delay:${0.024 * (i % 5)}s">` + (kind === "t"
+        return `<g class="f" style="--x:${f1(dx * 4.2)}px;--h:-${f1(9 * high)}px;--s:${360 * spin}deg;animation-delay:${0.015 * (i % 5)}s">` + (kind === "t"
           ? `<rect x="${f1(x - sz / 2)}" y="${f1(y - sz / 2)}" width="${f1(sz)}" height="${f1(sz)}" fill="#e0a84a" stroke="#8a5a22" stroke-width=".5"/>`
           : kind === "c" ? chiliSvg(x - sz / 2, y, sz, -15, "#c8231a")
           : `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(sz / 2)}" fill="none" stroke="#6fbf4a" stroke-width="1.1"/>`) + `</g>`;
@@ -916,7 +916,7 @@
     svg.classList.remove("toss");
     void svg.getBoundingClientRect();
     svg.classList.add("toss");
-    setTimeout(() => svg.classList.remove("toss"), 900);
+    setTimeout(() => svg.classList.remove("toss"), 560);
   }
 
   // ------------------------------------------------------------------ Vijača: the jump rope clicker
