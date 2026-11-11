@@ -30,6 +30,15 @@ DEFAULTS: dict = {
     "walnuts": [],
     # Dandelion skin: the date of the night its seeds were blown (00:00-01:00).
     "dandelion_blown": "",
+    # Vijača skin: the points of all the rope jumps so far (they set its level and colors).
+    "rope_points": 0,
+    "rope_jumps": 0,  # jumps so far: every 25 a bonus round (the mestre's phrase) is offered
+    "rope_bonus_ready": False,
+    "rope_bonus_until": 0.0,  # until when jumps count double (won in the bonus round)
+    # Kuglanje skin: the game in progress (the pins knocked by each ball, the pins still standing) and the best score.
+    "bowling_rolls": [],
+    "bowling_pins": [],
+    "bowling_best": 0,
 }
 
 

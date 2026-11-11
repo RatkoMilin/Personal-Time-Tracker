@@ -33,6 +33,7 @@
         <svg id="ring" class="ring" viewBox="0 0 44 44" aria-hidden="true"></svg>
         <svg id="towers" class="towers" viewBox="0 0 66 44" aria-hidden="true"></svg>
         <svg id="pads" class="pads" viewBox="0 0 44 44" aria-hidden="true"></svg>
+        <svg id="scene" class="scene" viewBox="0 0 44 44" aria-hidden="true"></svg>
         <svg id="clock" class="clock" aria-label="Vreme"></svg>
         <svg id="dial" class="dial" viewBox="0 0 100 100" aria-label="Vreme"></svg>
       </div>
@@ -119,6 +120,22 @@
       </div>
       <p class="note">Podaci se čuvaju samo na ovom telefonu. Povremeno sačuvaj rezervnu kopiju.</p>
     </form>
+  </dialog>
+
+  <dialog id="bowlDlg" class="sheet bowl">
+    <div class="sheet-title">Kuglanje</div>
+    <svg id="bowlLane" class="bowl-lane" viewBox="0 0 240 380" aria-label="Staza za kuglanje"></svg>
+    <div class="sheet-buttons"><span class="spacer"></span><button class="btn" type="button" id="bowlClose">Zatvori</button></div>
+  </dialog>
+
+  <dialog id="simonDlg" class="sheet simon">
+    <div class="sheet-title">Roda: bonus</div>
+    <div id="simonPads" class="simon-pads">
+      <button type="button" class="pad p0">Berimbau</button><button type="button" class="pad p1">Atabaque</button>
+      <button type="button" class="pad p2">Pandeiro</button><button type="button" class="pad p3">Agogô</button>
+    </div>
+    <p id="simonMsg" class="simon-msg"></p>
+    <div class="sheet-buttons"><span class="spacer"></span><button class="btn" type="button" id="simonClose">Zatvori</button></div>
   </dialog>
 
   <script src="sounds.js"></script>
